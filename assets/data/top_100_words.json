@@ -1,0 +1,202 @@
+[
+  {
+    "rank": 1,
+    "word": "مِنْ",
+    "translation_tajik": "аз",
+    "transliteration_tajik": "мин",
+    "example": "مِنَ الْجِنَّةِ وَالنَّاسِ",
+    "example_transliteration": "мина-л-ҷиннати ва-н-нас",
+    "example_translation": "аз ҷинҳо ва одамон",
+    "reference": "114:6"
+  },
+  {
+    "rank": 2,
+    "word": "اللَّهُ",
+    "translation_tajik": "Аллоҳ",
+    "transliteration_tajik": "Аллоҳ",
+    "example": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ",
+    "example_transliteration": "Аллоҳу ла илаҳа илла ҳув",
+    "example_translation": "Аллоҳ — нест маъбуде ҷуз Ӯ",
+    "reference": "2:255"
+  },
+  {
+    "rank": 3,
+    "word": "فِي",
+    "translation_tajik": "дар",
+    "transliteration_tajik": "фӣ",
+    "example": "فِي قُلُوبِهِمْ مَرَضٌ",
+    "example_transliteration": "фӣ қулубиҳим маразун",
+    "example_translation": "Дар дилҳояшон беморӣ аст",
+    "reference": "2:10"
+  },
+  {
+    "rank": 4,
+    "word": "مَا",
+    "translation_tajik": "чӣ",
+    "transliteration_tajik": "ма",
+    "example": "مَا عِندَكُمۡ يَنفَدُ وَمَا عِندَ ٱللَّهِ بَاقٖۗ",
+    "example_transliteration": "Ма ъиндакум янфаду ва мо ъиндаллоҳи бақ",
+    "example_translation": "Он чӣ назди шумо аст, ба поён мерасад, ва он чӣ назди Аллоҳ аст, боқӣ мемонад",
+    "reference": "16:96"
+  },
+  {
+    "rank": 5,
+    "word": "إِنَّ",
+    "translation_tajik": "воқеан, ҳамоно, ба дурустӣ",
+    "transliteration_tajik": "инна",
+    "example": "إِنَّ اللَّهَ غَفُورٌ رَّحِيمٌ",
+    "example_transliteration": "Инналлоҳа ғафурур-раҳим",
+    "example_translation": "Воқеан, Аллоҳ Бахшоянда ва Меҳрубон аст",
+    "reference": "2:173"
+  },
+  {
+    "rank": 6,
+    "word": "لَا",
+    "translation_tajik": "не",
+    "transliteration_tajik": "ла",
+    "example": "لَا خَوْفٌ عَلَيْهِمْ",
+    "example_transliteration": "ла хавфун ъалайҳим",
+    "example_translation": "Бар онҳо тарсе нест",
+    "reference": "2:38"
+  },
+  {
+    "rank": 7,
+    "word": "الَّذِينَ",
+    "translation_tajik": "онҳое ки",
+    "transliteration_tajik": "аллазина",
+    "example": "ٱلَّذِينَ يُؤۡمِنُونَ بِٱلۡغَيۡبِ",
+    "example_transliteration": "аллазина юъминувна бил ғайб",
+    "example_translation": "онҳое ки ба ғайб имон меоваранд",
+    "reference": "2:3"
+  },
+  {
+    "rank": 8,
+    "word": "عَلَىٰ",
+    "translation_tajik": "бар",
+    "transliteration_tajik": "ъала",
+    "example": "عَلَىٰ صِرَاطٍ مُّسْتَقِيمٍ",
+    "example_transliteration": "ъало сиротин мустақим",
+    "example_translation": "бар роҳи рост",
+    "reference": "36:4"
+  },
+  {
+    "rank": 9,
+    "word": "إِلَّا",
+    "translation_tajik": "ҷуз, ба ғайр аз",
+    "transliteration_tajik": "илла",
+    "example": "إِلَّا ٱلَّذِينَ تَابُواْ",
+    "example_transliteration": "илла-л-лазӣна табув",
+    "example_translation": "ҷуз касоне ки тавба карданд",
+    "reference": "24:5"
+  },
+  {
+    "rank": 10,
+    "word": "وَلَا",
+    "translation_tajik": "ва на[-кардан]",
+    "transliteration_tajik": "вала",
+    "example": "وَلَا تَقۡرَبَا هَٰذِهِ ٱلشَّجَرَةَ",
+    "example_transliteration": "вала тақраба ҳазиҳи-ш-шаҷарата",
+    "example_translation": "ва ба ин дарахт наздик нашавед",
+    "reference": "2:35"
+  },
+  {
+    "rank": 11,
+    "word": "وَمَا",
+    "translation_tajik": "ва он чӣ",
+    "transliteration_tajik": "вама",
+    "example": "وَمَآ أُنزِلَ مِن قَبۡلِكَ",
+    "example_transliteration": "вама унзила мин қаблика",
+    "example_translation": "ва он чӣ пеш аз Ту нозил шудааст",
+    "reference": "2:4"
+  },
+  {
+    "rank": 12,
+    "word": "أَنَّ",
+    "translation_tajik": "ки",
+    "transliteration_tajik": "анна",
+    "example": "أَلَمۡ تَعۡلَمۡ أَنَّ ٱللَّهَ عَلَىٰ كُلِّ شَيۡءٖ قَدِيرٌ",
+    "example_transliteration": "Алам таълам анналлоҳа ъало кулли шай-ин Қадир",
+    "example_translation": "Оё намедонӣ, ки Аллоҳ бар ҳар чизе Тавоно аст",
+    "reference": "2:106"
+  },
+  {
+    "rank": 13,
+    "word": "قَالَ",
+    "translation_tajik": "гуфт",
+    "transliteration_tajik": "қола",
+    "example": "قَالَ رَبِّ اشْرَحْ لِي صَدْرِي",
+    "example_transliteration": "қола рабби-шраҳ лӣ садрӣ",
+    "example_translation": "Гуфт: Парвардигоро, синаи маро кушода гардон",
+    "reference": "20:25"
+  },
+  {
+    "rank": 14,
+    "word": "إِلَىٰ",
+    "translation_tajik": "ба сӯи",
+    "transliteration_tajik": "ила",
+    "example": "إِنَّ إِلَىٰ رَبِّكَ ٱلرُّجۡعَىٰٓ",
+    "example_transliteration": "Инна ила Раббика-р-руҷъа",
+    "example_translation": "Албатта бозгашт ба сӯи Парвардигори туст",
+    "reference": "96:8"
+  },
+  {
+    "rank": 15,
+    "word": "لَهُمْ",
+    "translation_tajik": "барояшон",
+    "transliteration_tajik": "лаҳум",
+    "example": "وَلَهُمۡ عَذَابٌ عَظِيمٞ",
+    "example_transliteration": "Ва лаҳум ъазабун ъазим",
+    "example_translation": "ва барояшон азобест бузург",
+    "reference": "2:7"
+  },
+  {
+    "rank": 16,
+    "word": "يَا",
+    "translation_tajik": "эй",
+    "transliteration_tajik": "йа",
+    "example": "قُلۡ يَٰٓأَيُّهَا ٱلۡكَٰفِرُونَ",
+    "example_transliteration": "Қул йа айюҳа-л-кафирун",
+    "example_translation": "Бигӯ: «Эй кофирон!",
+    "reference": "109:1"
+  },
+  {
+    "rank": 17,
+    "word": "وَمِنْ",
+    "translation_tajik": "ва аз",
+    "transliteration_tajik": "вамин",
+    "example": "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِي ٱلۡعُقَدِ",
+    "example_transliteration": "Ва миu шарри-н-наффасати фи-л-ъуқад",
+    "example_translation": "Ва аз шарри ҷодугароне, ки дар гиреҳҳо афсун медаманд",
+    "reference": "113:4"
+  },
+  {
+    "rank": 18,
+    "word": "ثُمَّ",
+    "translation_tajik": "сипас",
+    "transliteration_tajik": "сумма",
+    "example": "ثُمَّ إِنَّكُمۡ يَوۡمَ ٱلۡقِيَٰمَةِ تُبۡعَثُونَ",
+    "example_transliteration": "сумма иннакум явма-л қийамати тубъасун",
+    "example_translation": "Сипас дар рӯзи қиёмат зинда мегардед",
+    "reference": "23:16"
+  },
+  {
+    "rank": 19,
+    "word": "لَكُمْ",
+    "translation_tajik": "бароятон",
+    "transliteration_tajik": "лакум",
+    "example": "لَكُمْ دِينُكُمْ وَلِيَ دِينِ",
+    "example_transliteration": "Лакум динукум валия дин",
+    "example_translation": "Шуморо дини худ ва маро дини худ",
+    "reference": "109:6"
+  },
+  {
+    "rank": 20,
+    "word": "بِهِ",
+    "translation_tajik": "бо он",
+    "transliteration_tajik": "биҳи",
+    "example": " وَٱتَّقُواْ ٱللَّهَ ٱلَّذِيٓ أَنتُم بِهِۦ مُؤۡمِنُونَ",
+    "example_transliteration": "Ва-т-тақуллоҳа-л-лази антум биҳӣ муъминун",
+    "example_translation": "Ва аз Худое, ки ба Ӯ имон овардаед, битарсед",
+    "reference": "5:88"
+  }
+]

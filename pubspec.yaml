@@ -1,0 +1,93 @@
+name: quran_app
+description: A comprehensive Flutter app for reading the Quran in Tajik with advanced features
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.2
+  riverpod: ^2.4.9
+  flutter_riverpod: ^2.4.9
+
+  # Network
+  dio: ^5.7.0
+  connectivity_plus: ^7.0.0
+
+  # UI
+  flutter_screenutil: ^5.9.3
+  cached_network_image: ^3.4.1
+  flutter_staggered_animations: ^1.1.1
+  shimmer: ^3.0.0
+  lottie: ^3.3.2
+
+  # Audio
+  just_audio: ^0.10.5
+  audio_service: ^0.18.13
+  path_provider: ^2.1.4
+  share_plus: ^10.0.2
+
+  # Utils
+  shared_preferences: ^2.3.2
+  intl: ^0.20.2
+  equatable: ^2.0.5
+  json_annotation: ^4.9.0
+
+  # Navigation
+  go_router: ^16.2.4
+
+  # Icons
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10+1
+  hive_flutter: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Integration Testing
+  integration_test:
+    sdk: flutter
+
+  # Code Generation (removed; not used)
+
+  # Linting
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
+
+  # Testing
+  mockito: ^5.5.0
+  bloc_test: ^10.0.0
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/audio/
+    - assets/data/
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path_android: assets/icons/app_icon.png
+  image_path_ios: assets/icons/app_icon.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#000000"
+  image: assets/icons/app_icon.png
+  android: true
+  ios: true
+  android_12:
+    image: assets/icons/app_icon.png
+    icon_background_color: "#FFFFFF"
+    icon_background_color_dark: "#000000"

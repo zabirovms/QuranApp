@@ -1,9 +1,12 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../datasources/remote/api_service.dart';
+
+// Conditional import for File/Directory operations
+import 'audio_service_io.dart' if (dart.library.html) 'audio_service_web.dart';
 
 class QuranAudioService {
   static final QuranAudioService _instance = QuranAudioService._internal();
@@ -37,16 +40,21 @@ class QuranAudioService {
   factory QuranAudioService() => _instance;
 
   Future<void> _ensureInitialized() async {
-    if (!_isInitialized) {
-      _audioHandler = await AudioService.init(
-        builder: () => QuranAudioHandler(),
-        config: const AudioServiceConfig(
-          androidNotificationChannelId: 'com.tajikquran.audio',
-          androidNotificationChannelName: 'Quran Audio',
-          androidNotificationOngoing: true,
-          androidStopForegroundOnPause: true,
-        ),
-      );
+    if (!_isInitialized && !kIsWeb) {
+      // AudioService is not supported on web, only initialize on mobile platforms
+      try {
+        _audioHandler = await AudioService.init(
+          builder: () => QuranAudioHandler(),
+          config: const AudioServiceConfig(
+            androidNotificationChannelId: 'com.tajikquran.audio',
+            androidNotificationChannelName: 'Quran Audio',
+            androidNotificationOngoing: true,
+            androidStopForegroundOnPause: true,
+          ),
+        );
+      } catch (e) {
+        // Ignore audio service errors on unsupported platforms
+      }
       _isInitialized = true;
     }
   }
@@ -199,8 +207,14 @@ class QuranAudioService {
     ];
   }
 
-  // Download audio file for offline use
+  // Download audio file for offline use (not supported on web)
   Future<String> downloadAudioFile(String url, String fileName) async {
+    if (kIsWeb) {
+      // On web, we can't download files for offline use
+      // Just return the URL for streaming
+      return url;
+    }
+    
     try {
       final directory = await getApplicationDocumentsDirectory();
       final audioDir = Directory('${directory.path}/audio');
@@ -226,8 +240,12 @@ class QuranAudioService {
     }
   }
 
-  // Check if audio file exists locally
+  // Check if audio file exists locally (not supported on web)
   Future<bool> isAudioFileCached(String fileName) async {
+    if (kIsWeb) {
+      return false; // No caching on web
+    }
+    
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/audio/$fileName');
@@ -237,8 +255,12 @@ class QuranAudioService {
     }
   }
 
-  // Get cached audio file path
+  // Get cached audio file path (not supported on web)
   Future<String?> getCachedAudioPath(String fileName) async {
+    if (kIsWeb) {
+      return null; // No local files on web
+    }
+    
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/audio/$fileName');

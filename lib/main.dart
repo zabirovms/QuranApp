@@ -4,15 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app/app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/performance_optimizer.dart';
+import 'core/utils/hive_utils.dart';
 import 'presentation/pages/settings/settings_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  await HiveUtils.init();
   
   // Initialize performance optimizations
   await PerformanceOptimizer().initialize();

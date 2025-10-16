@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PerformanceOptimizer {
   static final PerformanceOptimizer _instance = PerformanceOptimizer._internal();
@@ -29,9 +29,13 @@ class PerformanceOptimizer {
   }
 
   void _cleanupMemory() {
-    // Force garbage collection
-    if (Platform.isAndroid) {
-      SystemChannels.platform.invokeMethod('System.gc');
+    // Force garbage collection (only on mobile platforms)
+    if (!kIsWeb) {
+      try {
+        SystemChannels.platform.invokeMethod('System.gc');
+      } catch (e) {
+        // Ignore errors on platforms that don't support this
+      }
     }
     
     // Clear old cache entries
@@ -334,15 +338,17 @@ class _MemoryUsageWidgetState extends State<MemoryUsageWidget> {
   }
 
   void _updateMemoryUsage() {
-    // This is a simplified memory usage calculation
-    // In a real app, you'd use platform channels to get actual memory usage
-    final runtime = ProcessInfo.currentRss;
-    final memoryInMB = (runtime / 1024 / 1024).toStringAsFixed(1);
+    // Memory usage is only available on native platforms, not web
+    if (kIsWeb) {
+      _memoryUsage = 'N/A (Web)';
+    } else {
+      // This is a simplified memory usage calculation
+      // In a real app, you'd use platform channels to get actual memory usage
+      _memoryUsage = 'N/A';
+    }
     
     if (mounted) {
-      setState(() {
-        _memoryUsage = '$memoryInMB MB';
-      });
+      setState(() {});
     }
   }
 

@@ -21,7 +21,15 @@ class IntegratedQuranRepository {
     final res = await _apiService.getSurahByNumber(surahNumber);
     final data = res.data;
     if (data == null) return null;
-    return SurahModel.fromJson(data);
+    if (data is List) {
+      if (data.isEmpty) return null;
+      final first = data.first as Map<String, dynamic>;
+      return SurahModel.fromJson(first);
+    }
+    if (data is Map<String, dynamic>) {
+      return SurahModel.fromJson(data);
+    }
+    return null;
   }
 
   Future<List<VerseModel>> getSupabaseVerses(int surahNumber) async {

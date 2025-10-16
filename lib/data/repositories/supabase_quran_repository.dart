@@ -29,8 +29,16 @@ class SupabaseQuranRepository implements QuranRepository {
     try {
       final response = await _apiService.getSurahByNumber(number);
       final surahData = response.data;
-      
-      if (surahData != null) {
+
+      if (surahData == null) return null;
+
+      // Supabase returns an array for filtered selects. Handle both array and object.
+      if (surahData is List) {
+        if (surahData.isEmpty) return null;
+        final first = surahData.first as Map<String, dynamic>;
+        return SurahModel.fromJson(first);
+      }
+      if (surahData is Map<String, dynamic>) {
         return SurahModel.fromJson(surahData);
       }
       return null;

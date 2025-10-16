@@ -83,3 +83,10 @@ coverage/
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
+
+# Replit environment
+/home/runner/flutter/
+.flutter/
+
+# Web build artifacts
+.dart_tool/build/

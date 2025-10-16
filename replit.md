@@ -102,17 +102,70 @@ The app is configured for Replit deployment with autoscale settings for web host
   - Configured web server to run on port 5000 with 0.0.0.0 binding
   - Set up workflow for automatic web server startup
   - Updated .gitignore for Replit environment
+  - Fixed web compatibility issues:
+    - Removed dart:io dependencies in performance_optimizer.dart
+    - Added web-safe conditionals for File/Directory operations in audio_service.dart
+    - Disabled AudioService on web (not supported)
+    - Initialized Hive properly in main.dart
+    - Created web stub files for mobile-only APIs
+  - Configured deployment for autoscale with Flutter web build
 
 ## User Preferences
 - None specified yet
 
-## Known Issues
-- Some packages have newer versions available but are incompatible with current constraints
-- Web platform has limitations compared to mobile (e.g., some audio features may behave differently)
-- Performance may vary based on browser and device capabilities
+## Known Issues and Limitations
+
+### Critical Web Compatibility Issues
+- **UI Rendering**: The app loads successfully on port 5000 but shows a blank screen in the browser. The Flutter framework loads all 846 scripts correctly, but the UI doesn't render.
+- **Potential Causes**: 
+  - Deep integration with mobile-specific packages that don't have full web support
+  - Possible initialization errors that aren't being surfaced in browser console
+  - Some Riverpod providers or data services may not be initializing correctly on web
+
+### Package Limitations
+- Some packages have newer versions available but are incompatible with current dependency constraints
+- AudioService package is disabled on web (background audio not supported in browsers)
+- File system operations (downloading audio, caching) are disabled on web
+- Path provider functionality is limited on web
+
+### Performance Considerations
+- Web performance may vary based on browser and device capabilities
+- No offline storage capability on web (Hive works but with browser storage limits)
+- Memory monitoring features disabled on web
+
+## Troubleshooting
+
+### If the app doesn't load:
+1. Check that Flutter Web Server workflow is running
+2. Verify port 5000 is accessible
+3. Try hard refresh in browser (Ctrl+Shift+R or Cmd+Shift+R)
+4. Check browser console for JavaScript errors
+
+### For development:
+```bash
+# Hot reload (if workflow is running)
+# Press 'r' in the terminal where flutter run is active
+
+# Hot restart
+# Press 'R' in the terminal
+
+# Stop and restart workflow
+# Use Replit workflows panel
+```
 
 ## Notes
-- This is primarily a mobile app adapted for web. Some mobile-specific features may have limited functionality on web.
-- The app uses clean architecture principles with proper separation of concerns.
-- Audio playback uses the AlQuran Cloud API for recitations.
-- Local data includes Quranic duas, tasbeehs, and top 100 words for learning.
+- **Important**: This is primarily a mobile app (Android/iOS) that has been adapted for web. The web version has significant limitations and may not be fully functional.
+- The backend server runs correctly and serves the app, but UI rendering on web needs additional work
+- For full functionality, this app should be run as a mobile application using Flutter's mobile build targets
+- The app uses clean architecture principles with proper separation of concerns
+- Audio playback uses the AlQuran Cloud API for recitations
+- Local data includes Quranic duas, tasbeehs, and top 100 words for learning
+
+## Recommendations for Full Web Support
+To make this app fully functional on web, the following changes would be needed:
+1. Replace mobile-specific packages with web-compatible alternatives
+2. Implement web-specific storage solutions (IndexedDB via Hive)
+3. Add error boundaries and better error handling for web platform
+4. Test and fix all Riverpod providers for web compatibility
+5. Implement progressive web app (PWA) features for offline support
+6. Consider using Flutter's `kIsWeb` flag throughout to provide platform-specific implementations

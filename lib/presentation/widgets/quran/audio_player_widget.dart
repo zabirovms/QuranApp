@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio/just_audio.dart';
 
 import '../../../data/services/audio_service.dart';
 
@@ -57,10 +56,10 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
     });
 
     // Listen to duration changes
-    _audioService.processingStateStream.listen((processingState) {
-      if (mounted && processingState == ProcessingState.completed) {
+    _audioService.durationStream.listen((duration) {
+      if (mounted) {
         setState(() {
-          _duration = _audioService.duration ?? Duration.zero;
+          _duration = duration ?? Duration.zero;
         });
       }
     });
@@ -68,10 +67,13 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
 
   Future<void> _playAudio() async {
     try {
+      // Avoid redundant reloads: if already playing same source, do nothing
+      // For surah-level play, verseNumber is null
+      // We rely on service-level duplicate guard too
       if (widget.surahNumber != null && widget.verseNumber != null) {
-        await _audioService.playVerse(widget.surahNumber!, widget.verseNumber!);
+        await _audioService.playVerse(widget.surahNumber!, widget.verseNumber!, edition: 'ar.alafasy');
       } else if (widget.surahNumber != null) {
-        await _audioService.playSurah(widget.surahNumber!);
+        await _audioService.playSurah(widget.surahNumber!, edition: 'ar.alafasy');
       }
     } catch (e) {
       if (mounted) {
@@ -95,17 +97,37 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
   }
 
   Future<void> _setVolume(double volume) async {
-    await _audioService.setVolume(volume);
-    setState(() {
-      _volume = volume;
-    });
+    try {
+      await _audioService.setVolume(volume);
+      if (mounted) {
+        setState(() {
+          _volume = volume;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Хатои тағйири садо: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _setSpeed(double speed) async {
-    await _audioService.setSpeed(speed);
-    setState(() {
-      _speed = speed;
-    });
+    try {
+      await _audioService.setSpeed(speed);
+      if (mounted) {
+        setState(() {
+          _speed = speed;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Хатои тағйири суръат: $e')),
+        );
+      }
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -158,11 +180,17 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Slider(
-                  value: _position.inMilliseconds.toDouble(),
-                  max: _duration.inMilliseconds.toDouble(),
-                  onChanged: (value) {
-                    _seekTo(Duration(milliseconds: value.toInt()));
-                  },
+                  value: _duration.inMilliseconds > 0
+                      ? _position.inMilliseconds.clamp(0, _duration.inMilliseconds).toDouble()
+                      : 0.0,
+                  max: (_duration.inMilliseconds > 0)
+                      ? _duration.inMilliseconds.toDouble()
+                      : 0.0,
+                  onChanged: (_duration.inMilliseconds > 0)
+                      ? (value) {
+                          _seekTo(Duration(milliseconds: value.toInt()));
+                        }
+                      : null,
                   activeColor: colorScheme.primary,
                 ),
                 Row(
@@ -238,11 +266,17 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
           
           // Progress bar
           Slider(
-            value: _position.inMilliseconds.toDouble(),
-            max: _duration.inMilliseconds.toDouble(),
-            onChanged: (value) {
-              _seekTo(Duration(milliseconds: value.toInt()));
-            },
+            value: _duration.inMilliseconds > 0
+                ? _position.inMilliseconds.clamp(0, _duration.inMilliseconds).toDouble()
+                : 0.0,
+            max: (_duration.inMilliseconds > 0)
+                ? _duration.inMilliseconds.toDouble()
+                : 0.0,
+            onChanged: (_duration.inMilliseconds > 0)
+                ? (value) {
+                    _seekTo(Duration(milliseconds: value.toInt()));
+                  }
+                : null,
             activeColor: colorScheme.primary,
           ),
           

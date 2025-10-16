@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../data/datasources/remote/api_service.dart';
 import '../../data/repositories/supabase_quran_repository.dart';
@@ -76,6 +77,18 @@ final searchResultsProvider = StateNotifierProvider<SearchNotifier, AsyncValue<L
 final bookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
   final useCase = ref.watch(bookmarkUseCaseProvider);
   return await useCase.getBookmarksByUser('default_user');
+});
+
+// Connectivity status provider (true when online, false when offline)
+final connectivityStatusProvider = StreamProvider<bool>((ref) async* {
+  final connectivity = Connectivity();
+  // Emit initial status
+  final initial = await connectivity.checkConnectivity();
+  yield initial != ConnectivityResult.none;
+  // Emit changes
+  await for (final result in connectivity.onConnectivityChanged) {
+    yield result != ConnectivityResult.none;
+  }
 });
 
 // Search notifier

@@ -41,9 +41,20 @@ class IntegratedQuranRepository {
   Future<Map<String, List<WordByWordModel>>> getWordByWordForSurah(int surahNumber) async {
     final verses = await getSupabaseVerses(surahNumber);
     final keys = verses.map((v) => v.uniqueKey).toList();
-    final res = await _apiService.getWordByWordByKeys(keys);
-    final list = (res.data as List?) ?? const [];
-    final items = list.map((e) => WordByWordModel.fromJson(e)).toList();
+
+    // Fetch in batches to avoid URL length limits and 414/empty responses
+    const int batchSize = 50;
+    final items = <WordByWordModel>[];
+    for (var i = 0; i < keys.length; i += batchSize) {
+      final batch = keys.sublist(i, i + batchSize > keys.length ? keys.length : i + batchSize);
+      try {
+        final res = await _apiService.getWordByWordByKeys(batch);
+        final list = (res.data as List?) ?? const [];
+        items.addAll(list.map((e) => WordByWordModel.fromJson(e)));
+      } catch (e) {
+        // Continue with other batches; optionally log
+      }
+    }
     final grouped = <String, List<WordByWordModel>>{};
     for (final item in items) {
       grouped.putIfAbsent(item.uniqueKey, () => []).add(item);

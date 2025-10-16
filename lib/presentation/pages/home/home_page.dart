@@ -36,10 +36,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             onPressed: () => context.push('/search'),
           ),
           IconButton(
-            icon: const Icon(Icons.bookmark),
-            onPressed: () => context.push('/bookmarks'),
-          ),
-          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
           ),
@@ -79,22 +75,64 @@ class _SurahsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final surahsAsync = ref.watch(surahsProvider);
+    final isOnlineAsync = ref.watch(connectivityStatusProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Offline banner
+          isOnlineAsync.when(
+            data: (isOnline) => isOnline
+                ? const SizedBox.shrink()
+                : Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.wifi_off, color: Colors.amber),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Пайвастшавӣ ба интернет нест. Сураҳо наметавонанд боргирӣ шаванд.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
           
           // Surahs List
           Expanded(
             child: surahsAsync.when(
               data: (surahs) {
                 if (surahs.isEmpty) {
-                  return const EmptyStateWidget(
-                    title: 'Қуръон ёфт нашуд',
-                    message: 'Дар ҳоли ҳозир ҳеҷ сурае дар барнома нест. Лутфан пас аз чанд лаҳза такрор кӯшиш кунед.',
-                    icon: Icons.menu_book,
+                  return isOnlineAsync.maybeWhen(
+                    data: (isOnline) => isOnline
+                        ? const EmptyStateWidget(
+                            title: 'Қуръон ёфт нашуд',
+                            message: 'Дар ҳоли ҳозир ҳеҷ сурае дар барнома нест. Лутфан пас аз чанд лаҳза такрор кӯшиш кунед.',
+                            icon: Icons.menu_book,
+                          )
+                        : const EmptyStateWidget(
+                            title: 'Пайвастшавӣ нест',
+                            message: 'Барои боргирии сураҳо интернетро фаъол кунед.',
+                            icon: Icons.wifi_off,
+                          ),
+                    orElse: () => const EmptyStateWidget(
+                      title: 'Қуръон ёфт нашуд',
+                      message: 'Дар ҳоли ҳозир ҳеҷ сурае дар барнома нест. Лутфан пас аз чанд лаҳза такрор кӯшиш кунед.',
+                      icon: Icons.menu_book,
+                    ),
                   );
                 }
 

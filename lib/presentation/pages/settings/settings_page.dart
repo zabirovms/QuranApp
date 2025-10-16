@@ -242,32 +242,15 @@ class SettingsPage extends ConsumerWidget {
           // Display Settings
           _buildSectionHeader('Намоиш'),
           _buildThemeSetting(settings, ref, context),
-          _buildLanguageSetting(settings, ref, context),
           _buildFontSizeSetting(settings, ref, context),
           _buildFontFamilySetting(settings, ref, context),
-          _buildContentVisibilitySettings(settings, ref),
           
           const Divider(),
           
           // Audio Settings
           _buildSectionHeader('Аудио'),
           _buildAudioEnabledSetting(settings, ref),
-          _buildAudioVolumeSetting(settings, ref),
           _buildReciterSetting(settings, ref, context),
-          _buildAudioPlaybackSettings(settings, ref),
-          
-          const Divider(),
-          
-          // Notification Settings
-          _buildSectionHeader('Огоҳиҳо'),
-          _buildNotificationSettings(settings, ref),
-          _buildHapticFeedbackSetting(settings, ref),
-          
-          const Divider(),
-          
-          // Data & Storage
-          _buildSectionHeader('Маълумот ва захира'),
-          _buildDataSettings(context, ref),
           
           const Divider(),
           
@@ -305,15 +288,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildLanguageSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.language),
-      title: const Text('Забон'),
-      subtitle: Text(_getLanguageName(settings.language)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _showLanguageDialog(context, ref),
-    );
-  }
 
   Widget _buildFontSizeSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
     return ListTile(
@@ -335,30 +309,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildContentVisibilitySettings(AppSettings settings, WidgetRef ref) {
-    return Column(
-      children: [
-        SwitchListTile(
-          title: const Text('Транслитератсияро нишон диҳед'),
-          subtitle: const Text('Намоиши транслитератсияи арабӣ'),
-          value: settings.showTransliteration,
-          onChanged: (value) => ref.read(settingsProvider.notifier).setShowTransliteration(value),
-        ),
-        SwitchListTile(
-          title: const Text('Тарҷумаро нишон диҳед'),
-          subtitle: const Text('Намоиши тарҷумаи тоҷикӣ'),
-          value: settings.showTranslation,
-          onChanged: (value) => ref.read(settingsProvider.notifier).setShowTranslation(value),
-        ),
-        SwitchListTile(
-          title: const Text('Тафсирро нишон диҳед'),
-          subtitle: const Text('Намоиши тафсири оятҳо'),
-          value: settings.showTafsir,
-          onChanged: (value) => ref.read(settingsProvider.notifier).setShowTafsir(value),
-        ),
-      ],
-    );
-  }
 
   Widget _buildAudioEnabledSetting(AppSettings settings, WidgetRef ref) {
     return SwitchListTile(
@@ -369,16 +319,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildAudioVolumeSetting(AppSettings settings, WidgetRef ref) {
-    return ListTile(
-      leading: const Icon(Icons.volume_up),
-      title: const Text('Садо'),
-      subtitle: Slider(
-        value: settings.audioVolume,
-        onChanged: (value) => ref.read(settingsProvider.notifier).setAudioVolume(value),
-      ),
-    );
-  }
 
   Widget _buildReciterSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
     return ListTile(
@@ -390,63 +330,7 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildAudioPlaybackSettings(AppSettings settings, WidgetRef ref) {
-    return Column(
-      children: [
-        SwitchListTile(
-          title: const Text('Пахши худкор'),
-          subtitle: const Text('Пахши худкори аудио'),
-          value: settings.autoPlay,
-          onChanged: (value) => ref.read(settingsProvider.notifier).setAutoPlay(value),
-        ),
-        SwitchListTile(
-          title: const Text('Такрор'),
-          subtitle: const Text('Такрори пахши аудио'),
-          value: settings.repeatMode,
-          onChanged: (value) => ref.read(settingsProvider.notifier).setRepeatMode(value),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildNotificationSettings(AppSettings settings, WidgetRef ref) {
-    return SwitchListTile(
-      title: const Text('Огоҳиҳо'),
-      subtitle: const Text('Огоҳиҳои барнома'),
-      value: settings.notificationsEnabled,
-      onChanged: (value) => ref.read(settingsProvider.notifier).setNotificationsEnabled(value),
-    );
-  }
-
-  Widget _buildHapticFeedbackSetting(AppSettings settings, WidgetRef ref) {
-    return SwitchListTile(
-      title: const Text('Ларзиш'),
-      subtitle: const Text('Ларзиши телефон'),
-      value: settings.hapticFeedbackEnabled,
-      onChanged: (value) => ref.read(settingsProvider.notifier).setHapticFeedbackEnabled(value),
-    );
-  }
-
-  Widget _buildDataSettings(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.storage),
-          title: const Text('Ҳаҷми захира'),
-          subtitle: const Text('Тақрибан 50 MB'),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _showStorageInfo(context),
-        ),
-        ListTile(
-          leading: const Icon(Icons.clear_all),
-          title: const Text('Тоза кардани кэш'),
-          subtitle: const Text('Тоза кардани маълумоти захирашуда'),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _showClearCacheDialog(context, ref),
-        ),
-      ],
-    );
-  }
 
   Widget _buildAboutSettings(BuildContext context) {
     return Column(
@@ -486,14 +370,6 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  String _getLanguageName(String language) {
-    switch (language) {
-      case 'tajik': return 'Тоҷикӣ';
-      case 'arabic': return 'Арабӣ';
-      case 'english': return 'Инглисӣ';
-      default: return 'Тоҷикӣ';
-    }
-  }
 
   String _getReciterName(String reciter) {
     switch (reciter) {
@@ -546,37 +422,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Интихоби забон'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String>(
-              title: const Text('Тоҷикӣ'),
-              value: 'tajik',
-              groupValue: ref.watch(settingsProvider).language,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setLanguage(value!);
-                Navigator.of(context).pop();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Арабӣ'),
-              value: 'arabic',
-              groupValue: ref.watch(settingsProvider).language,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setLanguage(value!);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showFontSizeDialog(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -687,57 +532,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showStorageInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ҳаҷми захира'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Қуръон: 15 MB'),
-            Text('Аудио: 25 MB'),
-            Text('Маълумот: 10 MB'),
-            SizedBox(height: 8),
-            Text('Ҳаҷми умумӣ: 50 MB'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бас'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showClearCacheDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Тоза кардани кэш'),
-        content: const Text('Оё шумо мехоҳед ҳамаи маълумоти захирашударо тоза кунед?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бекор кардан'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Clear cache logic here
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Кэш тоза карда шуд')),
-              );
-            },
-            child: const Text('Тоза кардан'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(

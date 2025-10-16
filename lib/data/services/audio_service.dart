@@ -1,9 +1,9 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
-import '../datasources/remote/api_service.dart';
+// Removed unused ApiService import
 
 // Conditional import for File/Directory operations
 import 'audio_service_io.dart' if (dart.library.html) 'audio_service_web.dart';
@@ -12,8 +12,7 @@ class QuranAudioService {
   static final QuranAudioService _instance = QuranAudioService._internal();
   late AudioPlayer _audioPlayer;
   AudioHandler? _audioHandler;
-  final ApiService _apiService = ApiService();
-  bool _isInitialized = false;
+  String? _currentUrl;
 
   // Number of verses per surah (1..114)
   static const List<int> _versesPerSurah = <int>[
@@ -39,49 +38,39 @@ class QuranAudioService {
 
   factory QuranAudioService() => _instance;
 
-  Future<void> _ensureInitialized() async {
-    if (!_isInitialized && !kIsWeb) {
-      // AudioService is not supported on web, only initialize on mobile platforms
-      try {
-        _audioHandler = await AudioService.init(
-          builder: () => QuranAudioHandler(),
-          config: const AudioServiceConfig(
-            androidNotificationChannelId: 'com.tajikquran.audio',
-            androidNotificationChannelName: 'Quran Audio',
-            androidNotificationOngoing: true,
-            androidStopForegroundOnPause: true,
-          ),
-        );
-      } catch (e) {
-        // Ignore audio service errors on unsupported platforms
-      }
-      _isInitialized = true;
-    }
-  }
+  // Removed unused _ensureInitialized method
 
-  // Play surah audio
-  Future<void> playSurah(int surahNumber, {String reciter = 'Abdul_Basit_Murattal'}) async {
+  // Play surah audio using AlQuran Cloud CDN
+  Future<void> playSurah(int surahNumber, {String edition = 'ar.alafasy'}) async {
     try {
-      // Play first ayah of surah using CDN as a simple behavior
-      final global = _globalAyahNumber(surahNumber, 1);
-      final edition = 'ar.alafasy';
-      final audioUrl = 'https://cdn.islamic.network/quran/audio/192/$edition/$global.mp3';
+      final audioUrl = 'https://cdn.islamic.network/quran/audio-surah/128/$edition/$surahNumber.mp3';
+      if (_currentUrl == audioUrl && _audioPlayer.playing) {
+        return; // already playing this track
+      }
+      _currentUrl = audioUrl;
+      debugPrint('[Audio] Play surah $surahNumber edition=$edition -> $audioUrl');
       await _audioPlayer.setUrl(audioUrl);
       await _audioPlayer.play();
     } catch (e) {
+      debugPrint('[Audio][Error] playSurah failed: $e');
       throw Exception('Failed to play surah audio: $e');
     }
   }
 
-  // Play verse audio
-  Future<void> playVerse(int surahNumber, int verseNumber, {String reciter = 'Abdul_Basit_Murattal'}) async {
+  // Play verse audio using AlQuran Cloud CDN
+  Future<void> playVerse(int surahNumber, int verseNumber, {String edition = 'ar.alafasy'}) async {
     try {
       final global = _globalAyahNumber(surahNumber, verseNumber);
-      final edition = 'ar.alafasy';
-      final audioUrl = 'https://cdn.islamic.network/quran/audio/192/$edition/$global.mp3';
+      final audioUrl = 'https://cdn.islamic.network/quran/audio/128/$edition/$global.mp3';
+      if (_currentUrl == audioUrl && _audioPlayer.playing) {
+        return; // already playing this ayah
+      }
+      _currentUrl = audioUrl;
+      debugPrint('[Audio] Play verse $surahNumber:$verseNumber edition=$edition -> $audioUrl');
       await _audioPlayer.setUrl(audioUrl);
       await _audioPlayer.play();
     } catch (e) {
+      debugPrint('[Audio][Error] playVerse failed: $e');
       throw Exception('Failed to play verse audio: $e');
     }
   }
@@ -98,17 +87,30 @@ class QuranAudioService {
 
   // Pause audio
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    try {
+      await _audioPlayer.pause();
+    } catch (e) {
+      debugPrint('[Audio][Error] pause failed: $e');
+    }
   }
 
   // Resume audio
   Future<void> resume() async {
-    await _audioPlayer.play();
+    try {
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('[Audio][Error] resume failed: $e');
+    }
   }
 
   // Stop audio
   Future<void> stop() async {
-    await _audioPlayer.stop();
+    try {
+      await _audioPlayer.stop();
+      _currentUrl = null;
+    } catch (e) {
+      debugPrint('[Audio][Error] stop failed: $e');
+    }
   }
 
   // Seek to position
@@ -147,63 +149,41 @@ class QuranAudioService {
   // Listen to processing state changes
   Stream<ProcessingState> get processingStateStream => _audioPlayer.processingStateStream;
 
+  // Listen to duration changes
+  Stream<Duration?> get durationStream => _audioPlayer.durationStream;
+
   // Check if playing
   bool get isPlaying => _audioPlayer.playing;
 
   // Check if paused
-  bool get isPaused => _audioPlayer.playerState.processingState == ProcessingState.completed && !_audioPlayer.playing;
+  bool get isPaused => !_audioPlayer.playing && _audioPlayer.playerState.processingState == ProcessingState.ready;
 
   // Check if stopped
   bool get isStopped => _audioPlayer.playerState.processingState == ProcessingState.idle;
 
-  // Get available reciters
+  // Get available reciters (AlQuran Cloud editions)
   List<String> getAvailableReciters() {
     return [
-      'Abdul_Basit_Murattal',
-      'Abdul_Basit_Mujawwad',
-      'Abdullah_Matroud',
-      'Abdurrahmaan_As_Sudais',
-      'Abdurrahmaan_As_Sudais_192kbps',
-      'Abdussamad',
-      'Abdussamad_192kbps',
-      'Ahmed_ibn_Ali_al_Ajamy',
-      'Ahmed_ibn_Ali_al_Ajamy_192kbps',
-      'Alafasy',
-      'Alafasy_192kbps',
-      'Ali_Hajjaj_Al_Suwaysi',
-      'Ali_Hajjaj_Al_Suwaysi_192kbps',
-      'Fares_Abbad',
-      'Fares_Abbad_192kbps',
-      'Hani_Rifai',
-      'Hani_Rifai_192kbps',
-      'Husary',
-      'Husary_192kbps',
-      'Husary_Muallim',
-      'Husary_Muallim_192kbps',
-      'Ibrahim_Akhdar',
-      'Ibrahim_Akhdar_192kbps',
-      'Maher_Al_Muaiqly',
-      'Maher_Al_Muaiqly_192kbps',
-      'Mishary_Rashid_Alafasy',
-      'Mishary_Rashid_Alafasy_192kbps',
-      'Muhammad_AbdulKareem',
-      'Muhammad_AbdulKareem_192kbps',
-      'Muhammad_Ayyoub',
-      'Muhammad_Ayyoub_192kbps',
-      'Muhammad_Jibreel',
-      'Muhammad_Jibreel_192kbps',
-      'Saad_Al_Ghamdi',
-      'Saad_Al_Ghamdi_192kbps',
-      'Salah_Al_Budair',
-      'Salah_Al_Budair_192kbps',
-      'Saud_Al_Shuraim',
-      'Saud_Al_Shuraim_192kbps',
-      'Tareq_Abdul_Wahed',
-      'Tareq_Abdul_Wahed_192kbps',
-      'Yasser_Ad_Dussary',
-      'Yasser_Ad_Dussary_192kbps',
-      'Yasser_Ad_Dussary_192kbps',
-      'Yasser_Ad_Dussary_192kbps',
+      'ar.alafasy',
+      'ar.husary',
+      'ar.abdulbasit',
+      'ar.minshawi',
+      'ar.sudais',
+      'ar.shuraim',
+      'ar.maher',
+      'ar.ayyoub',
+      'ar.jibreel',
+      'ar.budair',
+      'ar.ghamdi',
+      'ar.ajamy',
+      'ar.matroud',
+      'ar.rifai',
+      'ar.akhdar',
+      'ar.hajjaj',
+      'ar.abbad',
+      'ar.abdulkareem',
+      'ar.abdulwahed',
+      'ar.dussary',
     ];
   }
 
@@ -230,7 +210,7 @@ class QuranAudioService {
       }
       
       // Download the file
-      final response = await _audioPlayer.setUrl(url);
+      await _audioPlayer.setUrl(url);
       // Note: This is a simplified implementation
       // In a real app, you'd use a proper download manager
       
@@ -327,44 +307,44 @@ class QuranAudioHandler extends BaseAudioHandler {
         ));
       }
     });
+
+    // Provide default media item for notifications
+    mediaItem.add(const MediaItem(
+      id: 'quran_stream',
+      album: 'Қуръон',
+      title: 'Плеери Қуръон',
+      artist: 'Қорӣ',
+    ));
   }
 
-  @override
   Future<void> play() async {
     await _player.play();
   }
 
-  @override
   Future<void> pause() async {
     await _player.pause();
   }
 
-  @override
   Future<void> stop() async {
     await _player.stop();
   }
 
-  @override
   Future<void> seek(Duration position) async {
     await _player.seek(position);
   }
 
-  @override
   Future<void> setUrl(String url) async {
     await _player.setUrl(url);
   }
 
-  @override
   Future<void> setVolume(double volume) async {
     await _player.setVolume(volume);
   }
 
-  @override
   Future<void> setSpeed(double speed) async {
     await _player.setSpeed(speed);
   }
 
-  @override
   Future<void> dispose() async {
     await _player.dispose();
   }

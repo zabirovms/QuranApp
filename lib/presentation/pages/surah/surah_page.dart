@@ -237,6 +237,36 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         ),
                       ],
                     ),
+                  const SizedBox(height: 8),
+                  if ((surah.description ?? '').trim().isNotEmpty)
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        dividerColor: Colors.transparent,
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                      ),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        collapsedBackgroundColor: Colors.transparent,
+                        backgroundColor: Colors.transparent,
+                        leading: const Icon(Icons.info_outline),
+                        title: Text(
+                          'Description',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        childrenPadding: const EdgeInsets.only(top: 8),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              surah.description!.trim(),
+                              textAlign: TextAlign.start,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );

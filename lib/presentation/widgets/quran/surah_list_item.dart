@@ -76,7 +76,7 @@ class SurahListItem extends ConsumerWidget {
                     
                     const SizedBox(height: 2),
                     
-                    // English name and verses count
+                    // English name and verses count (localized)
                     Row(
                       children: [
                         Flexible(
@@ -98,7 +98,7 @@ class SurahListItem extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            '${surah.versesCount} verses',
+                            '${surah.versesCount} оят',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurface.withOpacity(0.6),
                             ),
@@ -121,7 +121,7 @@ class SurahListItem extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  surah.revelationType,
+                  surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: surah.revelationType == 'Meccan' 
                         ? Colors.green[700]

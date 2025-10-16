@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../data/models/verse_model.dart';
 
@@ -16,6 +17,8 @@ class VerseItem extends ConsumerStatefulWidget {
   final VoidCallback? onPlayAudio;
   final bool isBookmarked;
   final bool isHighlighted;
+  final bool? isTafsirOpen;
+  final VoidCallback? onToggleTafsir;
 
   const VerseItem({
     super.key,
@@ -30,6 +33,8 @@ class VerseItem extends ConsumerStatefulWidget {
     this.onPlayAudio,
     this.isBookmarked = false,
     this.isHighlighted = false,
+    this.isTafsirOpen,
+    this.onToggleTafsir,
   });
 
   @override
@@ -97,16 +102,7 @@ class _VerseItemState extends ConsumerState<VerseItem> {
               
               const SizedBox(height: 12),
               
-              // Translation (override if provided)
-              Text(
-                widget.translationTextOverride ?? widget.verse.tajikText,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  height: 1.6,
-                ),
-                textAlign: TextAlign.justify,
-              ),
-              
-              // Transliteration (if enabled)
+              // Transliteration directly under Arabic (if enabled)
               if (widget.showTransliteration && widget.verse.transliteration != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -118,52 +114,99 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                 ),
               ],
 
+              const SizedBox(height: 8),
+
+              // Translation (override if provided)
+              Text(
+                widget.translationTextOverride ?? widget.verse.tajikText,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.justify,
+              ),
+              
+              // (moved transliteration above translation)
+
               // Word by word tokens (if enabled)
               if (widget.isWordByWordMode && (widget.wordByWordTokens?.isNotEmpty ?? false)) ...[
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    for (final t in widget.wordByWordTokens!)
-                      Tooltip(
-                        message: t['meaning'] ?? '',
-                        child: Chip(
-                          label: Text(t['arabic'] ?? ''),
-                        ),
-                      ),
-                  ],
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.end,
+                      children: [
+                        for (final t in widget.wordByWordTokens!)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Chip(
+                                label: Text(
+                                  t['arabic'] ?? '',
+                                  textDirection: TextDirection.rtl,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                              if ((t['meaning'] ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    t['meaning']!,
+                                    textDirection: TextDirection.ltr,
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
               
               // Tafsir (lazy expand or globally enabled)
-              if ((widget.showTafsir || _isExpanded) && widget.verse.tafsir != null) ...[
+              if (((widget.isTafsirOpen ?? _isExpanded)) && widget.verse.tafsir != null) ...[
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tafsir:',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (widget.onToggleTafsir != null) {
+                      widget.onToggleTafsir!();
+                    } else {
+                      setState(() {
+                        _isExpanded = false;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Тафсир:',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.verse.tafsir!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          height: 1.5,
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.verse.tafsir!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.5,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -189,25 +232,44 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                     tooltip: widget.isBookmarked ? 'Remove Bookmark' : 'Add Bookmark',
                   ),
                   
-                  // Share button
-                  IconButton(
-                    onPressed: () {
-                      final text = '${widget.verse.arabicText}\n\n${widget.verse.tajikText}\n\n(${widget.verse.surahId}:${widget.verse.verseNumber})';
-                      Clipboard.setData(ClipboardData(text: text));
-                    },
-                    icon: const Icon(Icons.share),
-                    tooltip: 'Share',
-                  ),
-                  
                   // Copy button
                   IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       final text = '${widget.verse.arabicText}\n\n${widget.verse.tajikText}\n\n(${widget.verse.surahId}:${widget.verse.verseNumber})';
-                      Clipboard.setData(ClipboardData(text: text));
+                      await Clipboard.setData(ClipboardData(text: text));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Оят нусхабардорӣ карда шуд'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.copy),
-                    tooltip: 'Copy',
+                    tooltip: 'Нусхабардорӣ',
                   ),
+
+                  // Share button (uses share_plus)
+                  IconButton(
+                    onPressed: () async {
+                      final text = '${widget.verse.arabicText}\n\n${widget.verse.tajikText}\n\n(${widget.verse.surahId}:${widget.verse.verseNumber})';
+                      await Share.share(text);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Оят мубодила карда шуд'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Мубодила',
+                  ),
+                  
+                  // Duplicate copy removed
+                  
                   
                   const Spacer(),
                   
@@ -215,12 +277,16 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                   if (widget.verse.tafsir != null)
                     IconButton(
                       onPressed: () {
-                        setState(() {
-                          _isExpanded = !_isExpanded;
-                        });
+                        if (widget.onToggleTafsir != null) {
+                          widget.onToggleTafsir!();
+                        } else {
+                          setState(() {
+                            _isExpanded = !(widget.isTafsirOpen ?? _isExpanded);
+                          });
+                        }
                       },
                       icon: Icon(
-                        _isExpanded ? Icons.expand_less : Icons.expand_more,
+                        (widget.isTafsirOpen ?? _isExpanded) ? Icons.expand_less : Icons.expand_more,
                       ),
                     ),
                 ],

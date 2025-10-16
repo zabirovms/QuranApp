@@ -6,114 +6,13 @@ import '../../../data/models/bookmark_model.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../providers/quran_provider.dart';
-import '../../../domain/repositories/quran_repository.dart';
 
-// Providers
-final bookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
-  final repository = ref.watch(quranRepositoryProvider);
-  return await repository.getBookmarksByUser('default_user');
-});
 
-final bookmarkNotifierProvider = StateNotifierProvider<BookmarkNotifier, BookmarkState>((ref) => BookmarkNotifier(ref.watch(quranRepositoryProvider)));
-
-// Bookmark state
-class BookmarkState {
-  final List<BookmarkModel> bookmarks;
-  final bool isLoading;
-  final String? error;
-
-  BookmarkState({
-    this.bookmarks = const [],
-    this.isLoading = false,
-    this.error,
-  });
-
-  BookmarkState copyWith({
-    List<BookmarkModel>? bookmarks,
-    bool? isLoading,
-    String? error,
-  }) {
-    return BookmarkState(
-      bookmarks: bookmarks ?? this.bookmarks,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-    );
-  }
-}
-
-// Bookmark notifier
-class BookmarkNotifier extends StateNotifier<BookmarkState> {
-  final QuranRepository _repository;
-
-  BookmarkNotifier(this._repository) : super(BookmarkState());
-
-  Future<void> loadBookmarks() async {
-    state = state.copyWith(isLoading: true, error: null);
-    
-    try {
-      final bookmarks = await _repository.getBookmarksByUser('default_user');
-      state = state.copyWith(
-        bookmarks: bookmarks,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Хатоги дар боргирии захираҳо: $e',
-      );
-    }
-  }
-
-  Future<void> addBookmark(BookmarkModel bookmark) async {
-    try {
-      await _repository.addBookmark(bookmark);
-      await loadBookmarks();
-    } catch (e) {
-      state = state.copyWith(error: 'Хатоги дар илова кардани захира: $e');
-    }
-  }
-
-  Future<void> removeBookmark(int id) async {
-    try {
-      await _repository.removeBookmark(id);
-      await loadBookmarks();
-    } catch (e) {
-      state = state.copyWith(error: 'Хатоги дар ҳазф кардани захира: $e');
-    }
-  }
-
-  Future<void> clearAllBookmarks() async {
-    try {
-      // Get all bookmarks and remove them one by one
-      final bookmarks = await _repository.getBookmarksByUser('default_user');
-      for (final bookmark in bookmarks) {
-        await _repository.removeBookmark(bookmark.id);
-      }
-      await loadBookmarks();
-    } catch (e) {
-      state = state.copyWith(error: 'Хатоги дар тоза кардани ҳамаи захираҳо: $e');
-    }
-  }
-}
-
-class BookmarksPage extends ConsumerStatefulWidget {
+class BookmarksPage extends ConsumerWidget {
   const BookmarksPage({super.key});
 
   @override
-  ConsumerState<BookmarksPage> createState() => _BookmarksPageState();
-}
-
-class _BookmarksPageState extends ConsumerState<BookmarksPage> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(bookmarkNotifierProvider.notifier).loadBookmarks();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bookmarkState = ref.watch(bookmarkNotifierProvider);
 
     return Scaffold(
@@ -135,29 +34,29 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
           },
         ),
         actions: [
-          if (bookmarkState.bookmarks.isNotEmpty)
+          if (bookmarkState.hasValue && bookmarkState.value!.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep),
-              onPressed: () => _showClearAllDialog(context),
+              onPressed: () => _showClearAllDialog(context, ref),
             ),
         ],
       ),
-      body: bookmarkState.isLoading
-          ? const Center(child: LoadingWidget())
-          : bookmarkState.error != null
-              ? Center(
-                  child: CustomErrorWidget(
-                    message: bookmarkState.error!,
-                    onRetry: () => ref.read(bookmarkNotifierProvider.notifier).loadBookmarks(),
-                  ),
-                )
-              : bookmarkState.bookmarks.isEmpty
-                  ? _buildEmptyState()
-                  : _buildBookmarksList(bookmarkState.bookmarks),
+      body: bookmarkState.when(
+        data: (bookmarks) => bookmarks.isEmpty
+            ? _buildEmptyState(context)
+            : _buildBookmarksList(bookmarks, context, ref),
+        loading: () => const Center(child: LoadingWidget()),
+        error: (error, stackTrace) => Center(
+          child: CustomErrorWidget(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(bookmarkNotifierProvider),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -193,7 +92,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     );
   }
 
-  Widget _buildBookmarksList(List<BookmarkModel> bookmarks) {
+  Widget _buildBookmarksList(List<BookmarkModel> bookmarks, BuildContext context, WidgetRef ref) {
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
       itemCount: bookmarks.length,
@@ -201,18 +100,18 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
         final bookmark = bookmarks[index];
         return BookmarkCard(
           bookmark: bookmark,
-          onTap: () => _navigateToVerse(bookmark),
-          onDelete: () => _deleteBookmark(bookmark),
+          onTap: () => _navigateToVerse(bookmark, context),
+          onDelete: () => _deleteBookmark(bookmark, context, ref),
         );
       },
     );
   }
 
-  void _navigateToVerse(BookmarkModel bookmark) {
+  void _navigateToVerse(BookmarkModel bookmark, BuildContext context) {
     context.go('/surah/${bookmark.surahNumber}/verse/${bookmark.verseNumber}');
   }
 
-  void _deleteBookmark(BookmarkModel bookmark) {
+  void _deleteBookmark(BookmarkModel bookmark, BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -224,12 +123,23 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
             child: const Text('Бекор кардан'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(bookmarkNotifierProvider.notifier).removeBookmark(bookmark.id);
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Захира ҳазф карда шуд')),
-              );
+            onPressed: () async {
+              try {
+                await ref.read(bookmarkNotifierProvider.notifier).removeBookmark(bookmark.id);
+                Navigator.of(context).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Захира ҳазф карда шуд')),
+                  );
+                }
+              } catch (e) {
+                Navigator.of(context).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Хатоги дар ҳазф кардан: $e')),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -241,7 +151,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     );
   }
 
-  void _showClearAllDialog(BuildContext context) {
+  void _showClearAllDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -253,12 +163,26 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
             child: const Text('Бекор кардан'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(bookmarkNotifierProvider.notifier).clearAllBookmarks();
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Ҳамаи захираҳо тоза карда шуданд')),
-              );
+            onPressed: () async {
+              try {
+                final bookmarks = ref.read(bookmarkNotifierProvider).value ?? [];
+                for (final bookmark in bookmarks) {
+                  await ref.read(bookmarkNotifierProvider.notifier).removeBookmark(bookmark.id);
+                }
+                Navigator.of(context).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Ҳамаи захираҳо тоза карда шуданд')),
+                  );
+                }
+              } catch (e) {
+                Navigator.of(context).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Хатоги дар тоза кардан: $e')),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,

@@ -33,6 +33,20 @@ class SurahModel extends Equatable {
   factory SurahModel.fromJson(Map<String, dynamic> json) =>
       _$SurahModelFromJson(json);
 
+  /// Factory method for AlQuran Cloud JSON format
+  factory SurahModel.fromAlQuranCloudJson(Map<String, dynamic> json) {
+    return SurahModel(
+      id: json['number'] as int,
+      number: json['number'] as int,
+      nameArabic: json['name'] as String,
+      nameTajik: json['name_tajik'] as String,
+      nameEnglish: '', // Not available in new format
+      revelationType: json['revelationType'] as String,
+      versesCount: (json['ayahs'] as List).length,
+      description: json['description'] as String?,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$SurahModelToJson(this);
 
   SurahModel copyWith({

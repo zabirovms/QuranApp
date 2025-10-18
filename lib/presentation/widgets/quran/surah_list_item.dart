@@ -76,36 +76,12 @@ class SurahListItem extends ConsumerWidget {
                     
                     const SizedBox(height: 2),
                     
-                    // English name and verses count (localized)
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            surah.nameEnglish,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.4),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            '${surah.versesCount} оят',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    // Verses count (localized)
+                    Text(
+                      '${surah.versesCount} оят',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
                   ],
                 ),
@@ -115,15 +91,15 @@ class SurahListItem extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: surah.revelationType == 'Meccan' 
+                  color: surah.revelationType == 'Маккӣ' 
                       ? Colors.green.withOpacity(0.1)
                       : Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ',
+                  surah.revelationType,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: surah.revelationType == 'Meccan' 
+                    color: surah.revelationType == 'Маккӣ' 
                         ? Colors.green[700]
                         : Colors.blue[700],
                     fontWeight: FontWeight.w500,

@@ -19,6 +19,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   final List<Widget> _pages = [
     const _SurahsTab(),
+    const _MushafTab(),
     const _TasbeehTab(),
     const _LearnWordsTab(),
     const _DuasTab(),
@@ -53,6 +54,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.menu_book),
             label: 'Сураҳо',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.auto_stories),
+            label: 'Мусҳаф',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
@@ -123,6 +128,22 @@ class _SurahsTab extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _MushafTab extends StatelessWidget {
+  const _MushafTab();
+
+  @override
+  Widget build(BuildContext context) {
+    // Start immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final loc = GoRouter.of(context).routerDelegate.currentConfiguration.fullPath;
+      if (loc != '/mushaf') {
+        context.go('/mushaf');
+      }
+    });
+    return const SizedBox.shrink();
   }
 }
 

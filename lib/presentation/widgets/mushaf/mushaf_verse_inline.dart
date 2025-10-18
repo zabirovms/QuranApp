@@ -23,7 +23,7 @@ class MushafVerseInline extends StatelessWidget {
             letterSpacing: 0.3,
           ),
           children: [
-            if (verse.numberInSurah == 1 && verse.surahNumber != 9)
+            if (verse.numberInSurah == 1 && verse.surahNumber != 1 && verse.surahNumber != 9)
               const TextSpan(
                 text: 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ ',
                 style: TextStyle(

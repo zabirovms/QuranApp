@@ -1,0 +1,67 @@
+Create a Mushaf-style Arabic Quran reading screen in Flutter that faithfully represents the Arabic Mushaf pages using my JSON files (alquran_cloud_complete_quran.json for verses, pages, and surah info). The app should display pages, verses, and surahs exactly as in the Mushaf with proper Arabic layout, verse numbers, and symbols.
+
+Requirements:
+
+Data Handling:
+
+Use alquran_cloud_complete_quran.json as the single source of truth.
+
+Each verse has fields like: surahId, verseNumber, arabicText, page.
+
+Pages must be grouped exactly according to the page field. Do not reset page numbers per surah.
+
+Surahs can start on any page, possibly continuing from the previous surah.
+
+Verse Layout:
+
+Verses must flow inline, not each starting on a new line.
+
+End-of-verse symbols must appear exactly as in the Mushaf.
+
+Verse numbers should be in Arabic numerals (١, ٢, ٣…) and appear at the end of the verse, not at the beginning.
+
+Only show Bismillah at the start of a new surah (except Al-Fatihah where it appears normally).
+
+Page Layout & Scrolling:
+
+Display pages horizontally (right-to-left), like a real Mushaf.
+
+Users should see the current page number from JSON and total pages.
+
+Each page should contain all verses belonging to that page, respecting line breaks and spacing as in the real Mushaf.
+
+Ensure that verses do not get cut off or overflow beyond the visible screen area; implement proper scrolling or scaling if needed.
+
+Typography & Styling:
+
+Use a proper Arabic font (Amiri, Uthmanic, or similar).
+
+Maintain Mushaf-style spacing, alignment, and line height.
+
+Optionally, provide responsive font scaling for different screen sizes.
+
+Minimize extra UI clutter (page controls, headers) so the focus is on the verses themselves.
+
+Performance & UX:
+
+Implement lazy loading of pages to optimize memory usage.
+
+Allow smooth horizontal swipe navigation between pages.
+
+Optional features: bookmarks, progress tracking, night mode.
+
+Implementation Constraints:
+
+Do not manually hardcode verses or pages; all content must come from JSON.
+
+Maintain continuous flow of surahs across pages; follow JSON page assignments strictly.
+
+All logic should be modular and maintainable.
+
+Deliverables:
+
+Flutter widget(s) that display the Mushaf screen exactly like a real Quran.
+
+Code that reads the JSON and generates pages, verses, and layout dynamically.
+
+Example of rendering 1–2 pages correctly using the JSON.

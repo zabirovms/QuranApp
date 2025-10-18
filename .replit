@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["unzip", "git", "curl", "bash", "which", "file"]
+packages = ["unzip", "git", "curl", "bash", "which", "file", "jq"]
 
 [workflows]
 runButton = "Project"
@@ -35,7 +35,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 44267
+localPort = 32997
 externalPort = 3000
 
 [deployment]

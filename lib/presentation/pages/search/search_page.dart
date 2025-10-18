@@ -2,123 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/models/verse_model.dart';
-import '../../../domain/repositories/quran_repository.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../providers/search_provider.dart';
 import '../../providers/quran_provider.dart';
-
-// Providers
-final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((ref) => SearchNotifier(ref.read(quranRepositoryProvider)));
-
-// Search state
-class SearchState {
-  final String query;
-  final List<VerseModel> results;
-  final bool isLoading;
-  final String? error;
-  final List<String> searchHistory;
-  final String selectedFilter;
-
-  SearchState({
-    this.query = '',
-    this.results = const [],
-    this.isLoading = false,
-    this.error,
-    this.searchHistory = const [],
-    this.selectedFilter = 'all',
-  });
-
-  SearchState copyWith({
-    String? query,
-    List<VerseModel>? results,
-    bool? isLoading,
-    String? error,
-    List<String>? searchHistory,
-    String? selectedFilter,
-  }) {
-    return SearchState(
-      query: query ?? this.query,
-      results: results ?? this.results,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-      searchHistory: searchHistory ?? this.searchHistory,
-      selectedFilter: selectedFilter ?? this.selectedFilter,
-    );
-  }
-}
-
-// Search notifier
-class SearchNotifier extends StateNotifier<SearchState> {
-  final QuranRepository _repository;
-
-  SearchNotifier(this._repository) : super(SearchState());
-
-  Future<void> search(String query) async {
-    if (query.trim().isEmpty) {
-      state = state.copyWith(
-        query: query,
-        results: [],
-        isLoading: false,
-        error: null,
-      );
-      return;
-    }
-
-    state = state.copyWith(
-      query: query,
-      isLoading: true,
-      error: null,
-    );
-
-    try {
-      final results = await _repository.searchVerses(query);
-      
-      // Add to search history
-      final newHistory = [query, ...state.searchHistory.where((h) => h != query).take(9)];
-      
-      state = state.copyWith(
-        results: results,
-        isLoading: false,
-        searchHistory: newHistory,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Хатоги дар ҷустуҷӯ: $e',
-      );
-    }
-  }
-
-  void clearSearch() {
-    state = state.copyWith(
-      query: '',
-      results: [],
-      error: null,
-    );
-  }
-
-  void setFilter(String filter) {
-    state = state.copyWith(selectedFilter: filter);
-  }
-
-  void removeFromHistory(String query) {
-    final newHistory = state.searchHistory.where((h) => h != query).toList();
-    state = state.copyWith(searchHistory: newHistory);
-  }
-
-  void clearHistory() {
-    state = state.copyWith(searchHistory: []);
-  }
-}
 
 class SearchPage extends ConsumerStatefulWidget {
   final String? initialQuery;
   
-  const SearchPage({
-    super.key,
-    this.initialQuery,
-  });
+  const SearchPage({super.key, this.initialQuery});
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -131,12 +23,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialQuery != null) {
+    
+    // Set initial query if provided
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(searchProvider.notifier).search(widget.initialQuery!);
-      });
     }
+    
+    // Focus on search field when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocusNode.requestFocus();
+      
+      // Perform initial search if query is provided
+      if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+        ref.read(searchNotifierProvider.notifier).search(widget.initialQuery!);
+      }
+    });
   }
 
   @override
@@ -148,25 +49,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final searchState = ref.watch(searchProvider);
+    final searchState = ref.watch(searchNotifierProvider);
+    final surahsAsync = ref.watch(surahsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ҷустуҷӯ'),
-        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            try {
-              if (GoRouter.of(context).canPop()) {
-                GoRouter.of(context).pop();
-              } else {
-                GoRouter.of(context).go('/');
-              }
-            } catch (e) {
-              GoRouter.of(context).go('/');
-            }
-          },
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (searchState.query.isNotEmpty)
@@ -174,308 +65,344 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               icon: const Icon(Icons.clear),
               onPressed: () {
                 _searchController.clear();
-                ref.read(searchProvider.notifier).clearSearch();
+                ref.read(searchNotifierProvider.notifier).clearSearch();
               },
             ),
         ],
       ),
       body: Column(
         children: [
-          // Search bar
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Ҷустуҷӯи оятҳо...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: searchState.query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(searchProvider.notifier).clearSearch();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Theme.of(context).cardColor,
-              ),
-              onChanged: (_) {},
-              onSubmitted: (query) {
-                ref.read(searchProvider.notifier).search(query);
-              },
-            ),
-          ),
-
+          // Search input with suggestions
+          _buildSearchInput(searchState),
+          
           // Filter chips
-          if (searchState.query.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildFilterChip('all', 'Ҳама', searchState.selectedFilter),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('arabic', 'Арабӣ', searchState.selectedFilter),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('translation', 'Тарҷума', searchState.selectedFilter),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('transliteration', 'Транслитератсия', searchState.selectedFilter),
-                  ],
-                ),
-              ),
-            ),
-
+          _buildFilterChips(searchState),
+          
           // Results
           Expanded(
-            child: _buildResults(searchState),
+            child: _buildResults(searchState, surahsAsync),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String value, String label, String selectedFilter) {
-    final isSelected = selectedFilter == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        ref.read(searchProvider.notifier).setFilter(value);
-      },
-      selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-      checkmarkColor: Theme.of(context).primaryColor,
+  Widget _buildSearchInput(SearchState searchState) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: 'Ҷустуҷӯ дар Қуръон...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: searchState.isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surface,
+            ),
+            onChanged: (value) {
+              // Use debounced search to avoid lag while typing
+              ref.read(searchNotifierProvider.notifier).search(value);
+            },
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) {
+              ref.read(searchNotifierProvider.notifier).search(value);
+            },
+          ),
+          
+          // Suggestions removed per request to reduce UI noise and work
+        ],
+      ),
     );
   }
 
-  Widget _buildResults(SearchState searchState) {
+  Widget _buildFilterChips(SearchState searchState) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildFilterChip(
+              'Ҳама',
+              'both',
+              searchState.selectedFilter,
+              Icons.search,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Арабӣ',
+              'arabic',
+              searchState.selectedFilter,
+              Icons.language,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Транслитератсия',
+              'transliteration',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Тоҷикӣ',
+              'tajik',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Тафсир',
+              'tafsir',
+              searchState.selectedFilter,
+              Icons.menu_book,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, String selectedValue, IconData icon) {
+    final isSelected = selectedValue == value;
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 4),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          ref.read(searchNotifierProvider.notifier).updateFilter(value);
+        }
+      },
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      selectedColor: Theme.of(context).colorScheme.primaryContainer,
+    );
+  }
+
+  Widget _buildResults(SearchState searchState, AsyncValue<List<dynamic>> surahsAsync) {
+    if (searchState.query.isEmpty) {
+      return _buildEmptyState();
+    }
+
     if (searchState.isLoading) {
-      return const Center(child: LoadingWidget());
+      return const Center(
+        child: LoadingWidget(height: 100),
+      );
     }
 
     if (searchState.error != null) {
       return Center(
         child: CustomErrorWidget(
+          title: 'Хатоги дар ҷустуҷӯ',
           message: searchState.error!,
-          onRetry: () => ref.read(searchProvider.notifier).search(searchState.query),
+          onRetry: () {
+            ref.read(searchNotifierProvider.notifier).search(searchState.query);
+          },
         ),
       );
     }
 
-    if (searchState.query.isEmpty) {
-      return _buildSearchSuggestions(searchState);
-    }
-
     if (searchState.results.isEmpty) {
-      return _buildNoResults(searchState.query);
-    }
-
-    return _buildSearchResults(searchState.results);
-  }
-
-  Widget _buildSearchSuggestions(SearchState searchState) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Ҷустуҷӯи оятҳо',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Оятеро бо калимаҳои арабӣ, тарҷума ё транслитератсия ҷустуҷӯ кунед',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          if (searchState.searchHistory.isNotEmpty) ...[
-            Text(
-              'Ҷустуҷӯҳои қаблӣ',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: searchState.searchHistory.map((query) {
-                return InputChip(
-                  label: Text(query),
-                  onPressed: () {
-                    _searchController.text = query;
-                    ref.read(searchProvider.notifier).search(query);
-                  },
-                  onDeleted: () {
-                    ref.read(searchProvider.notifier).removeFromHistory(query);
-                  },
-                );
-              }).toList(),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: () {
-                ref.read(searchProvider.notifier).clearHistory();
-              },
-              icon: const Icon(Icons.clear_all, size: 16),
-              label: const Text('Тоза кардани таърих'),
+            Text(
+              'Ҳеҷ натиҷае ёфт нашуд',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Ҷустуҷӯи дигарро санҷед',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
             ),
           ],
-        ],
-      ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Results count
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                '${searchState.results.length} натиҷа ёфт шуд',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Results list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 16),
+            itemCount: searchState.results.length,
+            itemBuilder: (context, index) {
+              final verse = searchState.results[index];
+              final surahName = surahsAsync.maybeWhen(
+                data: (surahs) {
+                  try {
+                    return surahs.firstWhere((s) => s.number == verse.surahId).nameTajik;
+                  } catch (e) {
+                    return 'Сураи ${verse.surahId}';
+                  }
+                },
+                orElse: () => 'Сураи ${verse.surahId}',
+              );
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Card(
+                  child: InkWell(
+                    onTap: () {
+                      context.go('/surah/${verse.surahId}/verse/${verse.verseNumber}');
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Surah and verse info
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${verse.surahId}:${verse.verseNumber}',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  surahName,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Arabic text
+                          Text(
+                            verse.arabicText,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontFamily: 'Amiri',
+                              height: 1.8,
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
+                          
+                          const SizedBox(height: 8),
+                          
+                          // Transliteration
+                          if (verse.transliteration?.isNotEmpty == true)
+                            Text(
+                              verse.transliteration!,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          
+                          const SizedBox(height: 8),
+                          
+                          // Tajik translation
+                          Text(
+                            verse.tajikText,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildNoResults(String query) {
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.search_off,
+            Icons.search,
             size: 64,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
-            'Оят ёфт нашуд',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+            'Ҷустуҷӯ дар Қуръон',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Ҷустуҷӯи "$query" ҳеҷ натиҷае надод',
+            'Дар ҳамаи забонҳо ҷустуҷӯ кунед',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: () {
-              _searchController.clear();
-              ref.read(searchProvider.notifier).clearSearch();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Ҷустуҷӯи нав'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchResults(List<VerseModel> results) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        final verse = results[index];
-        return SearchResultCard(
-          verse: verse,
-          onTap: () => _navigateToVerse(verse),
-        );
-      },
-    );
-  }
-
-  void _navigateToVerse(VerseModel verse) {
-    context.go('/surah/${verse.surahId}/verse/${verse.verseNumber}');
-  }
-}
-
-class SearchResultCard extends StatelessWidget {
-  final VerseModel verse;
-  final VoidCallback onTap;
-
-  const SearchResultCard({
-    super.key,
-    required this.verse,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Surah and verse reference
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Сураи ${verse.surahId}, Ояти ${verse.verseNumber}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Arabic text
-              Text(
-                verse.arabicText,
-                style: const TextStyle(
-                  fontSize: 18,
-                  height: 1.6,
-                ),
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              
-              const SizedBox(height: 8),
-              
-              // Translation
-              Text(
-                verse.tajikText,
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Quick search chips removed as requested
 }

@@ -16,8 +16,13 @@ dependencies:
   riverpod: ^2.4.9
   flutter_riverpod: ^2.4.9
 
+
+  url_launcher: ^6.3.0
+
+
   # Network
   dio: ^5.7.0
+  http: ^1.1.0
   connectivity_plus: ^7.0.0
 
   # UI
@@ -38,6 +43,8 @@ dependencies:
   intl: ^0.20.2
   equatable: ^2.0.5
   json_annotation: ^4.9.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
 
   # Navigation
   go_router: ^16.2.4

@@ -2,7 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../data/datasources/remote/api_service.dart';
-import '../../data/repositories/supabase_quran_repository.dart';
+import '../../data/repositories/local_quran_repository.dart';
+import '../../data/datasources/local/surah_local_datasource.dart';
+import '../../data/datasources/local/verse_local_datasource.dart';
+import '../../data/datasources/local/search_local_datasource.dart';
+import '../../data/datasources/local/bookmark_local_datasource.dart';
 import '../../data/datasources/remote/alquran_cloud_api.dart';
 import '../pages/surah/surah_controller.dart';
 import '../../domain/repositories/quran_repository.dart';
@@ -20,6 +24,14 @@ final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 final alquranCloudApiProvider = Provider<AlQuranCloudApi>((ref) => AlQuranCloudApi());
 
+final surahLocalDataSourceProvider = Provider<SurahLocalDataSource>((ref) => SurahLocalDataSource());
+
+final verseLocalDataSourceProvider = Provider<VerseLocalDataSource>((ref) => VerseLocalDataSource());
+
+final searchLocalDataSourceProvider = Provider<SearchLocalDataSource>((ref) => SearchLocalDataSource());
+
+final bookmarkLocalDataSourceProvider = Provider<BookmarkLocalDataSource>((ref) => BookmarkLocalDataSource());
+
 final surahControllerProvider = ChangeNotifierProvider.family<SurahController, int>((ref, surahNumber) {
   final api = ref.watch(apiServiceProvider);
   final aqc = ref.watch(alquranCloudApiProvider);
@@ -30,8 +42,11 @@ final surahControllerProvider = ChangeNotifierProvider.family<SurahController, i
 });
 
 final quranRepositoryProvider = Provider<QuranRepository>((ref) {
-  return SupabaseQuranRepository(
-    apiService: ref.watch(apiServiceProvider),
+  return LocalQuranRepository(
+    surahLocalDataSource: ref.watch(surahLocalDataSourceProvider),
+    verseLocalDataSource: ref.watch(verseLocalDataSourceProvider),
+    searchLocalDataSource: ref.watch(searchLocalDataSourceProvider),
+    bookmarkLocalDataSource: ref.watch(bookmarkLocalDataSourceProvider),
   );
 });
 
@@ -80,6 +95,7 @@ final bookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
 });
 
 // Connectivity status provider (true when online, false when offline)
+// Note: This is kept for other features that might need it, but surahs now use local data
 final connectivityStatusProvider = StreamProvider<bool>((ref) async* {
   final connectivity = Connectivity();
   // Emit initial status
@@ -118,11 +134,11 @@ class SearchNotifier extends StateNotifier<AsyncValue<List<VerseModel>>> {
   }
 }
 
-// Bookmark notifier (no user authentication needed)
-class BookmarkNotifier extends StateNotifier<AsyncValue<List<BookmarkModel>>> {
+// Legacy bookmark notifier - kept for backward compatibility
+class LegacyBookmarkNotifier extends StateNotifier<AsyncValue<List<BookmarkModel>>> {
   final BookmarkUseCase _bookmarkUseCase;
 
-  BookmarkNotifier(this._bookmarkUseCase) : super(const AsyncValue.loading()) {
+  LegacyBookmarkNotifier(this._bookmarkUseCase) : super(const AsyncValue.loading()) {
     _loadBookmarks();
   }
 
@@ -154,5 +170,5 @@ class BookmarkNotifier extends StateNotifier<AsyncValue<List<BookmarkModel>>> {
   }
 }
 
-// Bookmark notifier provider
-final bookmarkNotifierProvider = StateNotifierProvider<BookmarkNotifier, AsyncValue<List<BookmarkModel>>>((ref) => BookmarkNotifier(ref.watch(bookmarkUseCaseProvider)));
+// Legacy bookmark notifier provider
+final legacyBookmarkNotifierProvider = StateNotifierProvider<LegacyBookmarkNotifier, AsyncValue<List<BookmarkModel>>>((ref) => LegacyBookmarkNotifier(ref.watch(bookmarkUseCaseProvider)));

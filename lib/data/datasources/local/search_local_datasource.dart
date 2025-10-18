@@ -1,0 +1,283 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/verse_model.dart';
+
+class SearchLocalDataSource {
+  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _recentTermsKey = 'recent_search_terms';
+  
+  List<VerseModel>? _cachedVerses;
+  List<_VerseIndexEntry>? _index; // precomputed normalized index for fast search
+
+  static const int _maxResults = 200; // cap to avoid heavy UI rebuilds
+  
+  // Cache all verses for fast searching
+  Future<List<VerseModel>> _getAllVerses() async {
+    if (_cachedVerses != null) {
+      return _cachedVerses!;
+    }
+    
+    try {
+      final String response = await rootBundle.loadString(_versesJsonPath);
+      final Map<String, dynamic> data = json.decode(response);
+      
+      final List<VerseModel> allVerses = [];
+      
+      for (final surahEntry in data.entries) {
+        final surahNumber = int.tryParse(surahEntry.key);
+        if (surahNumber == null) continue;
+        
+        final surah = surahEntry.value as Map<String, dynamic>;
+        final versesList = surah['verses'] as List;
+        
+        for (var verseJson in versesList) {
+          final verse = VerseModel(
+            id: 0, // Not available in local data
+            surahId: surahNumber,
+            verseNumber: verseJson['verse_number'] as int,
+            arabicText: verseJson['arabic_text'] as String,
+            tajikText: verseJson['tajik_text'] as String? ?? '',
+            transliteration: verseJson['transliteration'] as String? ?? '',
+            farsi: null, // Not available in local data
+            russian: null, // Not available in local data
+            tafsir: verseJson['tafsir'] as String?,
+            uniqueKey: '${surahNumber}:${verseJson['verse_number']}',
+          );
+          allVerses.add(verse);
+        }
+      }
+      
+      _cachedVerses = allVerses;
+      // Build index lazily after verses load
+      _buildIndex(allVerses);
+      return allVerses;
+    } catch (e) {
+      throw Exception('Failed to load verses for search: $e');
+    }
+  }
+
+  void _buildIndex(List<VerseModel> verses) {
+    // Build normalized fields once to avoid regex/split on every keystroke
+    _index = verses.map((v) => _VerseIndexEntry(
+      verse: v,
+      arabic: _normalizeText(v.arabicText),
+      translit: _normalizeText(v.transliteration ?? ''),
+      tajik: _normalizeText(v.tajikText),
+      tafsir: _normalizeText(v.tafsir ?? ''),
+    )).toList(growable: false);
+  }
+
+  // Persist a searched term for recent history (most-recent first, unique, capped)
+  Future<void> saveSearchedTerm(String term, {int maxItems = 20}) async {
+    final normalized = term.trim();
+    if (normalized.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> existing = prefs.getStringList(_recentTermsKey) ?? <String>[];
+    // Remove any existing occurrence (case-insensitive compare)
+    existing.removeWhere((t) => t.toLowerCase() == normalized.toLowerCase());
+    // Insert at front
+    existing.insert(0, normalized);
+    // Cap size
+    if (existing.length > maxItems) {
+      existing.removeRange(maxItems, existing.length);
+    }
+    await prefs.setStringList(_recentTermsKey, existing);
+  }
+
+  // Retrieve recent search terms (without triggering heavy data loads)
+  Future<List<String>> getRecentSearchedTerms({int limit = 10}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> existing = prefs.getStringList(_recentTermsKey) ?? <String>[];
+    if (existing.length <= limit) return existing;
+    return existing.sublist(0, limit);
+  }
+  
+  // Normalize text for better matching
+  String _normalizeText(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\w\s\u0600-\u06FF]'), '') // Keep Arabic and alphanumeric
+        .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
+        .trim();
+  }
+  
+  // Check if query matches text (with fuzzy matching)
+  bool _matchesText(String query, String text) {
+    final normalizedQuery = _normalizeText(query);
+    final normalizedText = _normalizeText(text);
+    
+    if (normalizedText.contains(normalizedQuery)) {
+      return true;
+    }
+    
+    // Fuzzy matching for partial words
+    final queryWords = normalizedQuery.split(' ');
+    final textWords = normalizedText.split(' ');
+    
+    // Check if all query words are found in text (in any order)
+    for (final queryWord in queryWords) {
+      if (queryWord.length < 2) continue; // Skip very short words
+      
+      bool wordFound = false;
+      for (final textWord in textWords) {
+        if (textWord.contains(queryWord) || queryWord.contains(textWord)) {
+          wordFound = true;
+          break;
+        }
+      }
+      
+      if (!wordFound) {
+        return false;
+      }
+    }
+    
+    return queryWords.isNotEmpty;
+  }
+  
+  // Search verses with advanced matching
+  Future<List<VerseModel>> searchVerses(
+    String query, {
+    String language = 'both',
+    int? surahId,
+  }) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+    
+    if (query.trim().length < 2) {
+      return [];
+    }
+    
+    final allVerses = await _getAllVerses();
+    _index ?? _buildIndex(allVerses);
+    final List<VerseModel> results = [];
+    
+    final normalizedQuery = _normalizeText(query);
+
+    for (final entry in _index!) {
+      final verse = entry.verse;
+      // Filter by surah if specified
+      if (surahId != null && verse.surahId != surahId) {
+        continue;
+      }
+      
+      bool matches = false;
+      
+      // Search based on language preference
+      switch (language.toLowerCase()) {
+        case 'arabic':
+          matches = entry.arabic.contains(normalizedQuery);
+          break;
+        case 'transliteration':
+          matches = entry.translit.contains(normalizedQuery);
+          break;
+        case 'tajik':
+          matches = entry.tajik.contains(normalizedQuery);
+          break;
+        case 'tafsir':
+          // tafsir is large; only search when explicitly requested
+          matches = entry.tafsir.contains(normalizedQuery);
+          break;
+        case 'both':
+        default:
+          // Exclude tafsir from default 'both' to keep search light
+          matches = entry.arabic.contains(normalizedQuery) ||
+                    entry.translit.contains(normalizedQuery) ||
+                    entry.tajik.contains(normalizedQuery);
+          break;
+      }
+      
+      if (matches) {
+        results.add(verse);
+        if (results.length >= _maxResults) break; // cap results early
+      }
+    }
+    
+    // Sort results by relevance (exact matches first, then partial matches)
+    results.sort((a, b) {
+      final queryLower = query.toLowerCase();
+      
+      // Check for exact matches in different fields
+      final aExact = a.arabicText.toLowerCase().contains(queryLower) ||
+                     (a.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
+                     a.tajikText.toLowerCase().contains(queryLower) ||
+                     (a.tafsir?.toLowerCase().contains(queryLower) ?? false);
+      
+      final bExact = b.arabicText.toLowerCase().contains(queryLower) ||
+                     (b.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
+                     b.tajikText.toLowerCase().contains(queryLower) ||
+                     (b.tafsir?.toLowerCase().contains(queryLower) ?? false);
+      
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      
+      // If both are exact or both are partial, sort by surah and verse number
+      if (a.surahId != b.surahId) {
+        return a.surahId.compareTo(b.surahId);
+      }
+      return a.verseNumber.compareTo(b.verseNumber);
+    });
+    
+    return results;
+  }
+  
+  // Get search suggestions based on partial query
+  Future<List<String>> getSearchSuggestions(String query) async {
+    if (query.trim().length < 2) {
+      return [];
+    }
+    
+    final allVerses = await _getAllVerses();
+    _index ?? _buildIndex(allVerses);
+    final Set<String> suggestions = {};
+    final qNorm = _normalizeText(query);
+    
+    // Build suggestions only from transliteration and Tajik; skip tafsir/arabic
+    // Scan a limited number of verses for suggestions to keep fast
+    int scanned = 0;
+    for (final entry in _index!) {
+      // Stop after scanning a subset (e.g., 1500 entries)
+      if (scanned++ > 1500) break;
+      if (suggestions.length >= 20) break;
+
+      void takeWords(String normalizedSource, String originalSource) {
+        if (normalizedSource.isEmpty || originalSource.isEmpty) return;
+        final words = originalSource.split(RegExp(r'\s+'));
+        for (final word in words) {
+          if (suggestions.length >= 20) break;
+          final nw = _normalizeText(word);
+          if (nw.length >= 3 && nw.contains(qNorm)) {
+            suggestions.add(word.trim());
+          }
+        }
+      }
+
+      takeWords(entry.translit, entry.verse.transliteration ?? '');
+      takeWords(entry.tajik, entry.verse.tajikText);
+    }
+    
+    return suggestions.toList()..sort();
+  }
+  
+  // Clear cache (useful for memory management)
+  void clearCache() {
+    _cachedVerses = null;
+  }
+}
+
+class _VerseIndexEntry {
+  final VerseModel verse;
+  final String arabic;
+  final String translit;
+  final String tajik;
+  final String tafsir;
+
+  _VerseIndexEntry({
+    required this.verse,
+    required this.arabic,
+    required this.translit,
+    required this.tajik,
+    required this.tafsir,
+  });
+}

@@ -1,17 +1,129 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../data/models/dua_model.dart';
-import '../../../data/datasources/local/json_data_source.dart';
+import '../../../data/services/image_api_service.dart';
+import '../../../data/services/image_permission_service.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../widgets/image_permission_dialog.dart';
 
 // Providers
-final duasDataProvider = FutureProvider<List<DuaModel>>((ref) async {
-  final jsonDataSource = JsonDataSource();
-  return await jsonDataSource.getDuasData();
+final quranicDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
+  final String jsonString = await rootBundle.loadString('assets/data/quranic_duas.json');
+  final List<dynamic> jsonList = json.decode(jsonString);
+  return jsonList.map((json) => DuaModel.fromJson(json)).toList();
 });
+
+// Cached image list provider - fetches once and caches
+final duaImagesProvider = FutureProvider<List<String>>((ref) async {
+  final imageApiService = ImageApiService();
+  return await imageApiService.fetchImageUrls();
+});
+
+// Cached image list state - persists across tab switches
+final cachedImagesProvider = StateNotifierProvider<CachedImagesNotifier, CachedImagesState>((ref) => CachedImagesNotifier());
+
+class CachedImagesState {
+  final List<String> imageUrls;
+  final bool isLoading;
+  final String? error;
+  final bool hasPermission;
+  final bool permissionAsked;
+
+  CachedImagesState({
+    this.imageUrls = const [],
+    this.isLoading = false,
+    this.error,
+    this.hasPermission = false,
+    this.permissionAsked = false,
+  });
+
+  CachedImagesState copyWith({
+    List<String>? imageUrls,
+    bool? isLoading,
+    String? error,
+    bool? hasPermission,
+    bool? permissionAsked,
+  }) {
+    return CachedImagesState(
+      imageUrls: imageUrls ?? this.imageUrls,
+      isLoading: isLoading ?? this.isLoading,
+      error: error ?? this.error,
+      hasPermission: hasPermission ?? this.hasPermission,
+      permissionAsked: permissionAsked ?? this.permissionAsked,
+    );
+  }
+}
+
+class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
+  final ImagePermissionService _permissionService = ImagePermissionService();
+
+  CachedImagesNotifier() : super(CachedImagesState()) {
+    _initializePermission();
+  }
+
+  Future<void> _initializePermission() async {
+    final hasPermission = await _permissionService.hasImageDownloadPermission();
+    final permissionAsked = await _permissionService.hasAskedForPermission();
+    
+    state = state.copyWith(
+      hasPermission: hasPermission,
+      permissionAsked: permissionAsked,
+    );
+  }
+
+  Future<void> loadImages() async {
+    // If already loaded, don't reload
+    if (state.imageUrls.isNotEmpty) return;
+
+    // If no permission, don't load images
+    if (!state.hasPermission) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final imageApiService = ImageApiService();
+      final urls = await imageApiService.fetchImageUrls();
+      state = state.copyWith(
+        imageUrls: urls,
+        isLoading: false,
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> requestPermission() async {
+    state = state.copyWith(permissionAsked: true);
+    await _permissionService.setPermissionAsked(true);
+  }
+
+  Future<void> grantPermission() async {
+    await _permissionService.setImageDownloadPermission(true);
+    state = state.copyWith(hasPermission: true);
+    // Load images after permission is granted
+    await loadImages();
+  }
+
+  Future<void> denyPermission() async {
+    await _permissionService.setImageDownloadPermission(false);
+    state = state.copyWith(hasPermission: false);
+  }
+
+  void clearCache() {
+    state = CachedImagesState();
+    _initializePermission();
+  }
+}
 
 final duasSearchProvider = StateNotifierProvider<DuasSearchNotifier, DuasSearchState>((ref) => DuasSearchNotifier());
 
@@ -19,23 +131,35 @@ final duasSearchProvider = StateNotifierProvider<DuasSearchNotifier, DuasSearchS
 class DuasSearchState {
   final String query;
   final List<DuaModel> filteredDuas;
+  final List<String> filteredImages;
   final bool isSearching;
+  final bool isQuranicInitialized;
+  final bool isImagesInitialized;
 
   DuasSearchState({
     this.query = '',
     this.filteredDuas = const [],
+    this.filteredImages = const [],
     this.isSearching = false,
+    this.isQuranicInitialized = false,
+    this.isImagesInitialized = false,
   });
 
   DuasSearchState copyWith({
     String? query,
     List<DuaModel>? filteredDuas,
+    List<String>? filteredImages,
     bool? isSearching,
+    bool? isQuranicInitialized,
+    bool? isImagesInitialized,
   }) {
     return DuasSearchState(
       query: query ?? this.query,
       filteredDuas: filteredDuas ?? this.filteredDuas,
+      filteredImages: filteredImages ?? this.filteredImages,
       isSearching: isSearching ?? this.isSearching,
+      isQuranicInitialized: isQuranicInitialized ?? this.isQuranicInitialized,
+      isImagesInitialized: isImagesInitialized ?? this.isImagesInitialized,
     );
   }
 }
@@ -44,7 +168,25 @@ class DuasSearchState {
 class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
   DuasSearchNotifier() : super(DuasSearchState());
 
-  void search(String query, List<DuaModel> allDuas) {
+  void initializeQuranicDuas(List<DuaModel> allDuas) {
+    if (!state.isQuranicInitialized) {
+      state = state.copyWith(
+        filteredDuas: allDuas,
+        isQuranicInitialized: true,
+      );
+    }
+  }
+
+  void initializeImages(List<String> allImages) {
+    if (!state.isImagesInitialized) {
+      state = state.copyWith(
+        filteredImages: allImages,
+        isImagesInitialized: true,
+      );
+    }
+  }
+
+  void searchQuranicDuas(String query, List<DuaModel> allDuas) {
     if (query.isEmpty) {
       state = state.copyWith(
         query: query,
@@ -61,7 +203,7 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
       return dua.arabic.toLowerCase().contains(lowerQuery) ||
           dua.transliteration.toLowerCase().contains(lowerQuery) ||
           dua.tajik.toLowerCase().contains(lowerQuery) ||
-          (dua.reference?.toLowerCase().contains(lowerQuery) ?? false);
+          '${dua.surah}:${dua.verse}'.contains(lowerQuery);
     }).toList();
 
     state = state.copyWith(
@@ -71,12 +213,43 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
     );
   }
 
-  void clearSearch(List<DuaModel> allDuas) {
+  void searchImages(String query, List<String> allImages) {
+    if (query.isEmpty) {
+      state = state.copyWith(
+        query: query,
+        filteredImages: allImages,
+        isSearching: false,
+      );
+      return;
+    }
+
+    state = state.copyWith(isSearching: true);
+
+    final filtered = allImages.where((imageUrl) {
+      final lowerQuery = query.toLowerCase();
+      final title = _getImageTitle(imageUrl).toLowerCase();
+      return title.contains(lowerQuery) || imageUrl.toLowerCase().contains(lowerQuery);
+    }).toList();
+
+    state = state.copyWith(
+      query: query,
+      filteredImages: filtered,
+      isSearching: false,
+    );
+  }
+
+  void clearSearch(List<DuaModel> allDuas, List<String> allImages) {
     state = state.copyWith(
       query: '',
       filteredDuas: allDuas,
+      filteredImages: allImages,
       isSearching: false,
     );
+  }
+
+  String _getImageTitle(String imageUrl) {
+    final imageApiService = ImageApiService();
+    return imageApiService.getImageTitle(imageUrl);
   }
 }
 
@@ -90,113 +263,184 @@ class DuasPage extends ConsumerStatefulWidget {
 class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final duasDataAsync = ref.watch(duasDataProvider);
+    final quranicDuasAsync = ref.watch(quranicDuasProvider);
+    final duaImagesAsync = ref.watch(duaImagesProvider);
     final searchState = ref.watch(duasSearchProvider);
 
-    return duasDataAsync.when(
-      data: (allDuas) {
-        // Split duas into tabs
-        final quraniDuas = allDuas; // all duas for first tab
-        final otherDuas = allDuas.where((dua) => dua.reference != 'Qur\'an').toList(); // empty list for second tab
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Дуоҳо'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (GoRouter.of(context).canPop()) {
+              GoRouter.of(context).pop();
+            } else {
+              GoRouter.of(context).go('/');
+            }
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              // Clear cache and reset permissions
+              ref.read(cachedImagesProvider.notifier).clearCache();
+            },
+            tooltip: 'Тоза кардани кеш ва танзимот',
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              _searchFocusNode.requestFocus();
+            },
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Қуръонӣ'),
+            Tab(text: 'Дигар'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Qur'anic Duas Tab
+          _buildQuranicTab(quranicDuasAsync, searchState),
+          // Other Duas Tab (Images)
+          _buildOtherTab(duaImagesAsync, searchState),
+        ],
+      ),
+    );
+  }
 
-
-        final tabController = TabController(length: 2, vsync: this);
-
-        // Initialize search if empty
-        if (searchState.filteredDuas.isEmpty && searchState.query.isEmpty) {
+  Widget _buildQuranicTab(AsyncValue<List<DuaModel>> quranicDuasAsync, DuasSearchState searchState) {
+    return quranicDuasAsync.when(
+      data: (quranicDuas) {
+        // Initialize search only once
+        if (!searchState.isQuranicInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(duasSearchProvider.notifier).clearSearch(quraniDuas);
+            ref.read(duasSearchProvider.notifier).initializeQuranicDuas(quranicDuas);
           });
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Дуоҳо'),
-            centerTitle: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (GoRouter.of(context).canPop()) {
-                  GoRouter.of(context).pop();
-                } else {
-                  GoRouter.of(context).go('/'); // navigate to home if no page to pop
-                }
-              },
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  _searchFocusNode.requestFocus(); // focus your search field
+        return Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
+                  hintText: 'Ҷустуҷӯи дуоҳои Қуръонӣ...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, []);
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
+                ),
+                onChanged: (value) {
+                  ref.read(duasSearchProvider.notifier).searchQuranicDuas(value, quranicDuas);
                 },
               ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Tabs
-              TabBar(
-                controller: tabController,
-                tabs: const [
-                  Tab(text: 'Қуръонӣ'),
-                  Tab(text: 'Дигар'),
-                ],
-              ),
+            ),
 
-              // Search & Tab content
-              Expanded(
-                child: TabBarView(
-                  controller: tabController,
-                  children: [
-                    _buildTabContent(quraniDuas, searchState),
-                    _buildTabContent(otherDuas, searchState, isOtherTab: true),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            // Content
+            Expanded(
+              child: searchState.isSearching
+                  ? const Center(child: CircularProgressIndicator())
+                  : searchState.filteredDuas.isEmpty
+                      ? _buildEmptyState(true)
+                      : _buildQuranicDuasList(searchState.filteredDuas),
+            ),
+          ],
         );
       },
-      loading: () => const Scaffold(body: Center(child: LoadingWidget())),
-      error: (error, stack) => Scaffold(
-        body: Center(
-          child: CustomErrorWidget(
-            message: 'Хатогии боргирӣ: $error',
-            onRetry: () => ref.refresh(duasDataProvider),
-          ),
+      loading: () => const Center(child: LoadingWidget()),
+      error: (error, stack) => Center(
+        child: CustomErrorWidget(
+          message: 'Хатогии боргирӣ: $error',
+          onRetry: () => ref.refresh(quranicDuasProvider),
         ),
       ),
     );
   }
 
-  Widget _buildTabContent(List<DuaModel> duas, DuasSearchState searchState, {bool isOtherTab = false}) {
+  Widget _buildOtherTab(AsyncValue<List<String>> duaImagesAsync, DuasSearchState searchState) {
+    final cachedImagesState = ref.watch(cachedImagesProvider);
+    
+    // Show permission dialog if not asked yet
+    if (!cachedImagesState.permissionAsked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPermissionDialog();
+      });
+    }
+
+    // Load images if permission granted and not already loaded
+    if (cachedImagesState.hasPermission && 
+        cachedImagesState.imageUrls.isEmpty && 
+        !cachedImagesState.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(cachedImagesProvider.notifier).loadImages();
+      });
+    }
+
+    // Initialize search with cached images
+    if (cachedImagesState.imageUrls.isNotEmpty && !searchState.isImagesInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(duasSearchProvider.notifier).initializeImages(cachedImagesState.imageUrls);
+      });
+    }
+
     return Column(
       children: [
-        // Search field
+        // Search bar for images
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
             controller: _searchController,
             focusNode: _searchFocusNode,
             decoration: InputDecoration(
-              hintText: 'Ҷустуҷӯи дуо...',
+              hintText: 'Ҷустуҷӯи тасвирҳои дуо...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: searchState.query.isNotEmpty
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
-                        ref.read(duasSearchProvider.notifier).clearSearch(duas);
+                        ref.read(duasSearchProvider.notifier).clearSearch([], cachedImagesState.imageUrls);
                       },
                     )
                   : null,
@@ -206,70 +450,249 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
               filled: true,
               fillColor: Theme.of(context).cardColor,
             ),
-            onChanged: (query) {
-              ref.read(duasSearchProvider.notifier).search(query, duas);
+            onChanged: (value) {
+              ref.read(duasSearchProvider.notifier).searchImages(value, cachedImagesState.imageUrls);
             },
           ),
         ),
 
-        // Results count
-        if (searchState.query.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                Text(
-                  'Ҷавобҳо: ${searchState.filteredDuas.length}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    ref.read(duasSearchProvider.notifier).clearSearch(duas);
-                  },
-                  child: const Text('Тоза кардан'),
-                ),
-              ],
-            ),
-          ),
-
-        // Duas list
+        // Content
         Expanded(
-          child: searchState.isSearching
-              ? const Center(child: CircularProgressIndicator())
-              : searchState.filteredDuas.isEmpty
-                  ? _buildEmptyState(isOtherTab)
-                  : _buildDuasList(searchState.filteredDuas),
+          child: _buildContent(cachedImagesState, searchState),
         ),
       ],
     );
   }
 
-  Widget _buildEmptyState(bool isOtherTab) {
+  Widget _buildContent(CachedImagesState cachedImagesState, DuasSearchState searchState) {
+    // If no permission granted, show placeholder mode
+    if (!cachedImagesState.hasPermission) {
+      return _buildPlaceholderMode();
+    }
+
+    // If loading
+    if (cachedImagesState.isLoading) {
+      return const Center(child: LoadingWidget());
+    }
+
+    // If error
+    if (cachedImagesState.error != null) {
+      return Center(
+        child: CustomErrorWidget(
+          message: 'Хатогии боргирӣ: ${cachedImagesState.error}',
+          onRetry: () => ref.read(cachedImagesProvider.notifier).loadImages(),
+        ),
+      );
+    }
+
+    // If searching
+    if (searchState.isSearching) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // If no images found
+    if (searchState.filteredImages.isEmpty) {
+      return _buildEmptyState(false);
+    }
+
+    // Show image gallery
+    return _buildImageGallery(searchState.filteredImages);
+  }
+
+  Widget _buildPlaceholderMode() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.book,
-            size: 64,
+            Icons.image_outlined,
+            size: 80,
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
-            isOtherTab ? 'Ҳанӯз дуое нест' : 'Дуо ёфт нашуд',
+            'Тасвирҳо боргирӣ нашудаанд',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            isOtherTab
-                ? 'Дар ҳоли ҳозир дуое барои ин категория нест'
-                : 'Лутфан калимаҳои дигар кӯшиш кунед',
+            'Барои дидани тасвирҳо, иҷозаи боргирӣ диҳед',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _showPermissionDialog(),
+            icon: const Icon(Icons.download),
+            label: const Text('Иҷозаи боргирӣ диҳед'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ImagePermissionDialog(
+        onAccept: () {
+          Navigator.of(context).pop();
+          ref.read(cachedImagesProvider.notifier).grantPermission();
+        },
+        onDecline: () {
+          Navigator.of(context).pop();
+          ref.read(cachedImagesProvider.notifier).denyPermission();
+        },
+      ),
+    );
+    ref.read(cachedImagesProvider.notifier).requestPermission();
+  }
+
+  Widget _buildQuranicDuasList(List<DuaModel> duas) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      itemCount: duas.length,
+      itemBuilder: (context, index) {
+        final dua = duas[index];
+        return QuranicDuaCard(
+          dua: dua,
+          onTap: () => _navigateToVerse(dua),
+        );
+      },
+    );
+  }
+
+  Widget _buildImageGallery(List<String> imageNames) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: imageNames.length,
+      itemBuilder: (context, index) {
+        final imageName = imageNames[index];
+        return _buildImageCard(imageName);
+      },
+    );
+  }
+
+  Widget _buildImageCard(String imageUrl) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Cached network image with natural size
+            CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.contain, // Maintain aspect ratio
+              width: double.infinity, // Take full width
+              placeholder: (context, url) => Container(
+                height: 200, // Fixed height for loading state
+                color: Colors.grey[200],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Тасвир боргирӣ мешавад...',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 200, // Fixed height for error state
+                color: Colors.grey[300],
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.image_not_supported,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Тасвир боргирӣ нашуд',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Cache configuration
+              memCacheWidth: null, // Don't resize in memory
+              memCacheHeight: null, // Don't resize in memory
+              maxWidthDiskCache: 2048, // Max width for disk cache
+              maxHeightDiskCache: 2048, // Max height for disk cache
+            ),
+            // Title
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                _getImageTitle(imageUrl),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getImageTitle(String imageUrl) {
+    final imageApiService = ImageApiService();
+    return imageApiService.getImageTitle(imageUrl);
+  }
+
+  Widget _buildEmptyState(bool isQuranic) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isQuranic ? Icons.menu_book : Icons.image,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isQuranic ? 'Дуо ёфт нашуд' : 'Ҳанӯз тасвире нест',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isQuranic
+                ? 'Лутфан калимаҳои дигар кӯшиш кунед'
+                : 'Дар ҳоли ҳозир тасвире барои ин категория нест',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[500],
             ),
@@ -280,35 +703,17 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildDuasList(List<DuaModel> duas) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      itemCount: duas.length,
-      itemBuilder: (context, index) {
-        final dua = duas[index];
-        return DuaCard(
-          dua: dua,
-          onTap: () => _showDuaDetail(dua),
-        );
-      },
-    );
-  }
-
-  void _showDuaDetail(DuaModel dua) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DuaDetailSheet(dua: dua),
-    );
+  void _navigateToVerse(DuaModel dua) {
+    context.push('/surah/${dua.surah}/verse/${dua.verse}');
   }
 }
 
-class DuaCard extends StatelessWidget {
+// Custom card widget for Qur'anic duas
+class QuranicDuaCard extends StatelessWidget {
   final DuaModel dua;
   final VoidCallback? onTap;
 
-  const DuaCard({
+  const QuranicDuaCard({
     super.key,
     required this.dua,
     this.onTap,
@@ -318,28 +723,32 @@ class DuaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
-      elevation: 2,
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with reference and navigation icon
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      dua.reference ?? 'Reference not available',
+                      'Сура ${dua.surah}, Оят ${dua.verse}',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
@@ -352,163 +761,54 @@ class DuaCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                dua.arabic,
-                style: const TextStyle(fontSize: 20, height: 1.6),
-                textAlign: TextAlign.right,
+              const SizedBox(height: 16),
+              
+              // Arabic text (RTL)
+              Directionality(
                 textDirection: TextDirection.rtl,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                dua.transliteration,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
+                child: Text(
+                  dua.arabic,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    height: 1.8,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.right,
                 ),
-                textAlign: TextAlign.start,
               ),
-              const SizedBox(height: 8),
-              Text(
-                dua.tajik,
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.4,
+              const SizedBox(height: 12),
+              
+              // Transliteration (LTR)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  dua.transliteration,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.grey[700],
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.left,
                 ),
-                textAlign: TextAlign.start,
+              ),
+              const SizedBox(height: 12),
+              
+              // Tajik translation (LTR)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  dua.tajik,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class DuaDetailSheet extends StatelessWidget {
-  final DuaModel dua;
-
-  const DuaDetailSheet({
-    super.key,
-    required this.dua,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        dua.reference ?? 'Reference not available',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  dua.arabic,
-                  style: const TextStyle(fontSize: 24, height: 1.8),
-                  textAlign: TextAlign.center,
-                  textDirection: TextDirection.rtl,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  dua.transliteration,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[700],
-                    fontStyle: FontStyle.italic,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  dua.tajik,
-                  style: const TextStyle(fontSize: 18, height: 1.6, fontWeight: FontWeight.w500),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Дуо нусхабардорӣ шуд')),
-                          );
-                        },
-                        icon: const Icon(Icons.copy),
-                        label: const Text('Нусхабардорӣ'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Мубодила карда шуд')),
-                          );
-                        },
-                        icon: const Icon(Icons.share),
-                        label: const Text('Мубодила'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
       ),
     );
   }

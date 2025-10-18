@@ -102,7 +102,7 @@ void main() {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
-            home: BookmarksPage(),
+            home: BookmarksPage(userId: 'default_user'),
           ),
         ),
       );
@@ -312,7 +312,7 @@ void main() {
       );
 
       // Tap on theme setting
-      await tester.tap(find.text('Макон'));
+      await tester.tap(find.text('Намуди зоҳирӣ'));
       await tester.pumpAndSettle();
 
       // Verify theme options are shown
@@ -345,7 +345,7 @@ void main() {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
-            home: BookmarksPage(),
+            home: BookmarksPage(userId: 'default_user'),
           ),
         ),
       );

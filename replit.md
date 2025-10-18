@@ -95,6 +95,16 @@ flutter build web --release
 The app is configured for Replit deployment with autoscale settings for web hosting.
 
 ## Recent Changes
+- **Oct 18, 2025**: Mushaf Page Improvements
+  - Implemented authentic Mushaf-style layout with continuous inline verse flow
+  - Fixed text justification for proper right-left alignment
+  - Optimized page layout with FittedBox to fit all content without scrolling
+  - Fixed RTL page navigation (swipe right to advance, page appears from left)
+  - Corrected Basmala display (excluded Surah 1 and 9, centered first verse)
+  - Removed surah name repetition - appears only at surah start, not on every page
+  - Reduced horizontal padding (20px → 8px) for better text space utilization
+  - Simplified page header to show only Juz number (removed redundant surah name)
+
 - **Oct 16, 2025**: Initial Replit setup
   - Installed Flutter SDK from stable branch
   - Enabled Flutter web support

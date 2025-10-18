@@ -326,7 +326,7 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
                             tasbeeh.tajikTransliteration,
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.black87,
+                              color: const Color.fromARGB(221, 168, 167, 167),
                               fontWeight: FontWeight.w600,
                             ),
                             textAlign: TextAlign.center,
@@ -377,57 +377,69 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
             child: GestureDetector(
               onTap: _incrementCount,
               child: Center(
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.2),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      CustomPaint(
-                        size: const Size(200, 200),
-                        painter: ProgressCirclePainter(
-                          progress: settings.count / settings.targetCount,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              child: Text(
-                                '${settings.count}',
-                                key: ValueKey(settings.count),
-                                style: const TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              'аз ${settings.targetCount}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
+                child: Builder(
+                  builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final progressColor = isDark
+                        ? const Color.fromARGB(255, 59, 104, 69) // bright color for dark mode
+                        : Theme.of(context).primaryColor;
+
+                    return Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            progressColor.withOpacity(0.3),
+                            progressColor.withOpacity(0.5),
                           ],
                         ),
+                        border: Border.all(
+                          color: progressColor.withOpacity(0.6),
+                          width: 2,
+                        ),
                       ),
-                    ],
-                  ),
+                      child: Stack(
+                        children: [
+                          CustomPaint(
+                            size: const Size(200, 200),
+                            painter: ProgressCirclePainter(
+                              progress: settings.count / settings.targetCount,
+                              color: progressColor,
+                            ),
+                          ),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Text(
+                                    '${settings.count}',
+                                    key: ValueKey(settings.count),
+                                    style: const TextStyle(
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white, // ensure visible on dark
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'аз ${settings.targetCount}',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -476,7 +488,7 @@ Widget _buildCollectionTab(List<TasbeehModel> tasbeehs, TasbeehSettings settings
                         tasbeeh.tajikTransliteration,
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.bodySmall?.color, // same as translation
                           fontWeight: FontWeight.w600,
                           fontStyle: FontStyle.italic,
                         ),
@@ -496,16 +508,19 @@ Widget _buildCollectionTab(List<TasbeehModel> tasbeehs, TasbeehSettings settings
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            ref.read(tasbeehSettingsProvider.notifier)
-                                .updateCurrentTasbeehIndex(index);
-                            _tabController.animateTo(0);
-                            _pageController.animateToPage(
-                              index,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
+                            ref.read(tasbeehSettingsProvider.notifier).updateCurrentTasbeehIndex(index);
+                                
+                                // Switch to counter tab first
+                                _tabController.animateTo(0);
+                                
+                                // Wait until the next frame, THEN jump
+                                Future.delayed(const Duration(milliseconds: 150), () {
+                                  if (_pageController.hasClients) {
+                                    _pageController.jumpToPage(index);
+                                  }
+                                });
+                              },                   
+                              child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
                         ),
                       ),
                     ],
@@ -602,7 +617,7 @@ class CompletionDialog extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 currentTasbeeh.tajikTransliteration,
-                style: TextStyle(fontSize: 16, color: Colors.black87),
+                style: TextStyle(fontSize: 16, color: const Color.fromARGB(221, 37, 36, 36)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
@@ -658,7 +673,6 @@ class SettingsDialog extends ConsumerWidget {
               Text('Танзимот', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 16),
               SwitchListTile(
-                title: const Text('Ларзиш', style: TextStyle(fontSize: 16)),
                 subtitle: const Text('Ларзиши телефон ҳангоми зер кардан'),
                 value: settings.vibrationEnabled,
                 onChanged: (value) {
@@ -669,7 +683,7 @@ class SettingsDialog extends ConsumerWidget {
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Шумораи мақсад', style: TextStyle(fontSize: 16)),
+                child: Text('Ҳадаф', style: TextStyle(fontSize: 14)),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -689,7 +703,6 @@ class SettingsDialog extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               SwitchListTile(
-                title: const Text('Нигоҳдории таърих', style: TextStyle(fontSize: 16)),
                 subtitle: const Text('Нигоҳдории шумора ва танзимот'),
                 value: settings.saveHistory,
                 onChanged: (value) {
@@ -709,7 +722,7 @@ class SettingsDialog extends ConsumerWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error,
+                    backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.8),
                   ),
                   child: const Text('Тоза кардани ҳамаи маълумот', style: TextStyle(fontSize: 14)),
                 ),
@@ -717,7 +730,7 @@ class SettingsDialog extends ConsumerWidget {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Бас'),
+                child: const Text('Пӯшидан'),
               ),
             ],
           ),

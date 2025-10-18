@@ -3,53 +3,192 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/models/bookmark_model.dart';
+import '../../providers/bookmark_provider.dart';
+import '../../providers/quran_provider.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
-import '../../providers/quran_provider.dart';
-
 
 class BookmarksPage extends ConsumerWidget {
-  const BookmarksPage({super.key});
+  final String userId;
+  
+  const BookmarksPage({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bookmarkState = ref.watch(bookmarkNotifierProvider);
+    final bookmarkState = ref.watch(bookmarkNotifierProvider(userId));
+    final surahsAsync = ref.watch(surahsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Захираҳо'),
-        centerTitle: true,
+        title: const Text('Хатбаракҳо'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            try {
-              if (GoRouter.of(context).canPop()) {
-                GoRouter.of(context).pop();
-              } else {
-                GoRouter.of(context).go('/');
-              }
-            } catch (e) {
-              GoRouter.of(context).go('/');
-            }
-          },
+          onPressed: () => context.pop(),
         ),
         actions: [
-          if (bookmarkState.hasValue && bookmarkState.value!.isNotEmpty)
+          if (bookmarkState.bookmarks.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.delete_sweep),
+              icon: const Icon(Icons.clear_all),
               onPressed: () => _showClearAllDialog(context, ref),
+              tooltip: 'Clear all bookmarks',
             ),
         ],
       ),
-      body: bookmarkState.when(
-        data: (bookmarks) => bookmarks.isEmpty
-            ? _buildEmptyState(context)
-            : _buildBookmarksList(bookmarks, context, ref),
-        loading: () => const Center(child: LoadingWidget()),
-        error: (error, stackTrace) => Center(
-          child: CustomErrorWidget(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(bookmarkNotifierProvider),
+      body: _buildBody(context, ref, bookmarkState, surahsAsync),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    BookmarkState bookmarkState,
+    AsyncValue<List<dynamic>> surahsAsync,
+  ) {
+    if (bookmarkState.isLoading) {
+      return const Center(
+        child: LoadingWidget(height: 100),
+      );
+    }
+
+    if (bookmarkState.error != null) {
+      return Center(
+        child: CustomErrorWidget(
+          title: 'Хатоги дар хатбаракҳо',
+          message: bookmarkState.error!,
+          onRetry: () {
+            ref.read(bookmarkNotifierProvider(userId).notifier).refreshBookmarks();
+          },
+        ),
+      );
+    }
+
+    if (bookmarkState.bookmarks.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    return Column(
+      children: [
+        // Bookmark count
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.bookmark,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${bookmarkState.bookmarks.length} хатбарак',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Bookmarks list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 16),
+            itemCount: bookmarkState.bookmarks.length,
+            itemBuilder: (context, index) {
+              final bookmark = bookmarkState.bookmarks[index];
+              return _buildBookmarkItem(context, ref, bookmark, surahsAsync);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBookmarkItem(
+    BuildContext context,
+    WidgetRef ref,
+    BookmarkModel bookmark,
+    AsyncValue<List<dynamic>> surahsAsync,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Card(
+        child: InkWell(
+          onTap: () {
+            context.go('/surah/${bookmark.surahNumber}');
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Surah and verse info
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${bookmark.surahNumber}:${bookmark.verseNumber}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        bookmark.surahName,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _removeBookmark(context, ref, bookmark),
+                      icon: const Icon(Icons.bookmark, color: Colors.red),
+                      tooltip: 'Remove bookmark',
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Arabic text
+                Text(
+                  bookmark.arabicText,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontFamily: 'Amiri',
+                    height: 1.8,
+                  ),
+                  textDirection: TextDirection.rtl,
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Tajik translation
+                Text(
+                  bookmark.tajikText,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.4,
+                  ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Created date
+                Text(
+                  'Сохта шуд: ${_formatDate(bookmark.createdAt)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -64,231 +203,23 @@ class BookmarksPage extends ConsumerWidget {
           Icon(
             Icons.bookmark_border,
             size: 64,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
-            'Ҳеҷ захирае нест',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+            'Ҳеҷ хатбараке нест',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Оятеро захира кунед то дар ин ҷо нишон дода шавад',
+            'Оёти дӯстдоштаро хатбарак кунед',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => context.go('/'),
-            icon: const Icon(Icons.menu_book),
-            label: const Text('Қуръонро хонед'),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBookmarksList(List<BookmarkModel> bookmarks, BuildContext context, WidgetRef ref) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: bookmarks.length,
-      itemBuilder: (context, index) {
-        final bookmark = bookmarks[index];
-        return BookmarkCard(
-          bookmark: bookmark,
-          onTap: () => _navigateToVerse(bookmark, context),
-          onDelete: () => _deleteBookmark(bookmark, context, ref),
-        );
-      },
-    );
-  }
-
-  void _navigateToVerse(BookmarkModel bookmark, BuildContext context) {
-    context.go('/surah/${bookmark.surahNumber}/verse/${bookmark.verseNumber}');
-  }
-
-  void _deleteBookmark(BookmarkModel bookmark, BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ҳазф кардани захира'),
-        content: const Text('Оё шумо мехоҳед ин захираро ҳазф кунед?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бекор кардан'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ref.read(bookmarkNotifierProvider.notifier).removeBookmark(bookmark.id);
-                Navigator.of(context).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Захира ҳазф карда шуд')),
-                  );
-                }
-              } catch (e) {
-                Navigator.of(context).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Хатоги дар ҳазф кардан: $e')),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Ҳазф кардан'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showClearAllDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Тоза кардани ҳамаи захираҳо'),
-        content: const Text('Оё шумо мехоҳед ҳамаи захираҳоро тоза кунед? Ин амал баргаштан намешавад.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бекор кардан'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                final bookmarks = ref.read(bookmarkNotifierProvider).value ?? [];
-                for (final bookmark in bookmarks) {
-                  await ref.read(bookmarkNotifierProvider.notifier).removeBookmark(bookmark.id);
-                }
-                Navigator.of(context).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ҳамаи захираҳо тоза карда шуданд')),
-                  );
-                }
-              } catch (e) {
-                Navigator.of(context).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Хатоги дар тоза кардан: $e')),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Тоза кардан'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BookmarkCard extends StatelessWidget {
-  final BookmarkModel bookmark;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  const BookmarkCard({
-    super.key,
-    required this.bookmark,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with surah/verse info and delete button
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Сураи ${bookmark.surahNumber}, Ояти ${bookmark.verseNumber}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    color: Colors.grey[600],
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Arabic text
-              if (bookmark.arabicText.isNotEmpty)
-                Text(
-                  bookmark.arabicText,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    height: 1.6,
-                  ),
-                  textAlign: TextAlign.right,
-                  textDirection: TextDirection.rtl,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              
-              if (bookmark.arabicText.isNotEmpty) const SizedBox(height: 8),
-              
-              // Translation
-              if (bookmark.tajikText.isNotEmpty)
-                Text(
-                  bookmark.tajikText,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              
-              const SizedBox(height: 8),
-              
-              // Date added
-              Text(
-                'Илова шуда: ${_formatDate(bookmark.createdAt)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -305,6 +236,58 @@ class BookmarkCard extends StatelessWidget {
       return '${difference.inDays} рӯз пеш';
     } else {
       return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  Future<void> _removeBookmark(
+    BuildContext context,
+    WidgetRef ref,
+    BookmarkModel bookmark,
+  ) async {
+    final notifier = ref.read(bookmarkNotifierProvider(userId).notifier);
+    final success = await notifier.removeBookmark(bookmark.id);
+    
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Хатбарак хориҷ карда шуд'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showClearAllDialog(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Хориҷ кардани ҳамаи хатбаракҳо'),
+        content: const Text('Оё шумо мехоҳед ҳамаи хатбаракҳоро хориҷ кунед?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Бекор кардан'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Хориҷ кардан'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      final notifier = ref.read(bookmarkNotifierProvider(userId).notifier);
+      final success = await notifier.clearAllBookmarks();
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ҳамаи хатбаракҳо хориҷ карда шуданд'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 }

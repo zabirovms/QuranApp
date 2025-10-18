@@ -1,28 +1,15 @@
 import 'package:equatable/equatable.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'bookmark_model.g.dart';
-
-@JsonSerializable()
 class BookmarkModel extends Equatable {
   final int id;
-  @JsonKey(name: 'user_id')
   final String userId;
-  @JsonKey(name: 'verse_id')
   final int verseId;
-  @JsonKey(name: 'verse_key')
   final String verseKey;
-  @JsonKey(name: 'surah_number')
   final int surahNumber;
-  @JsonKey(name: 'verse_number')
   final int verseNumber;
-  @JsonKey(name: 'arabic_text')
   final String arabicText;
-  @JsonKey(name: 'tajik_text')
   final String tajikText;
-  @JsonKey(name: 'surah_name')
   final String surahName;
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
   const BookmarkModel({
@@ -38,10 +25,35 @@ class BookmarkModel extends Equatable {
     required this.createdAt,
   });
 
-  factory BookmarkModel.fromJson(Map<String, dynamic> json) =>
-      _$BookmarkModelFromJson(json);
+  factory BookmarkModel.fromJson(Map<String, dynamic> json) {
+    return BookmarkModel(
+      id: json['id'] as int,
+      userId: json['user_id'] as String,
+      verseId: json['verse_id'] as int,
+      verseKey: json['verse_key'] as String,
+      surahNumber: json['surah_number'] as int,
+      verseNumber: json['verse_number'] as int,
+      arabicText: json['arabic_text'] as String,
+      tajikText: json['tajik_text'] as String,
+      surahName: json['surah_name'] as String,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$BookmarkModelToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'verse_id': verseId,
+      'verse_key': verseKey,
+      'surah_number': surahNumber,
+      'verse_number': verseNumber,
+      'arabic_text': arabicText,
+      'tajik_text': tajikText,
+      'surah_name': surahName,
+      'created_at': createdAt.millisecondsSinceEpoch,
+    };
+  }
 
   BookmarkModel copyWith({
     int? id,

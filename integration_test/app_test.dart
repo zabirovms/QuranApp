@@ -248,7 +248,7 @@ Future<void> _testSettings(WidgetTester tester) async {
     }
     
     // Close dialog
-    await tester.tap(find.text('Бас'));
+    await tester.tap(find.text('Пӯшидан'));
     await tester.pumpAndSettle();
   }
 }

@@ -91,7 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/bookmarks',
         name: 'bookmarks',
-        builder: (context, state) => const BookmarksPage(),
+        builder: (context, state) => const BookmarksPage(userId: 'default_user'),
       ),
       
       // Settings

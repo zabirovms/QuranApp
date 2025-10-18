@@ -1326,7 +1326,7 @@ class SettingsDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Бас'),
+          child: const Text('Пӯшидан'),
         ),
       ],
     );
@@ -1356,7 +1356,7 @@ class StatsDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Бас'),
+          child: const Text('Пӯшидан'),
         ),
       ],
     );

@@ -10,7 +10,6 @@ import '../../widgets/quran/verse_item.dart';
 import '../../widgets/quran/audio_player_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
-import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 class SurahPage extends ConsumerStatefulWidget {
@@ -35,6 +34,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isSurahDescriptionExpanded = false;
   int? _openTafsirIndex; // ensures only one tafsir is open
+  int? _highlightedVerseIndex; // for highlighting specific verse
 
   @override
   void initState() {
@@ -50,6 +50,54 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         });
       } catch (_) {
         // Fallback to defaults if settings not ready
+      }
+    });
+
+    // Handle initial verse navigation
+    if (widget.initialVerseNumber != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToVerse(widget.initialVerseNumber!);
+      });
+    }
+  }
+
+  void _scrollToVerse(int verseNumber) async {
+    // Wait for verses to load
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+
+    final versesAsync = ref.read(versesProvider(widget.surahNumber));
+    versesAsync.whenData((verses) {
+      if (verses.isNotEmpty) {
+        // Find the verse index
+        final verseIndex = verses.indexWhere((v) => v.verseNumber == verseNumber);
+        if (verseIndex != -1) {
+          setState(() {
+            _highlightedVerseIndex = verseIndex;
+          });
+
+          // Calculate scroll position (approximate)
+          final itemHeight = 200.0; // Approximate height per verse
+          final targetOffset = (verseIndex * itemHeight) - 100; // Offset for better visibility
+          
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeInOut,
+            );
+          }
+
+          // Remove highlight after 3 seconds
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _highlightedVerseIndex = null;
+              });
+            }
+          });
+        }
       }
     });
   }
@@ -328,7 +376,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                             return verse.tajikText;
                         }
                       }(),
-                      isHighlighted: controller.state.currentAyahIndex == index,
+                      isHighlighted: controller.state.currentAyahIndex == index || _highlightedVerseIndex == index,
                       isTafsirOpen: _openTafsirIndex == index,
                       onToggleTafsir: () {
                         setState(() {

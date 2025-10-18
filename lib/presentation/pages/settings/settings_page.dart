@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart';
+
 
 // Settings providers
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((ref) => SettingsNotifier());
@@ -281,7 +284,7 @@ class SettingsPage extends ConsumerWidget {
   Widget _buildThemeSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.palette),
-      title: const Text('Макон'),
+      title: const Text('Намуди зоҳирӣ'),
       subtitle: Text(_getThemeName(settings.theme)),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: () => _showThemeDialog(context, ref),
@@ -385,7 +388,7 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Интихоби макон'),
+        title: const Text('Намуди зоҳирӣ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -452,7 +455,7 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бас'),
+            child: const Text('Пӯшидан'),
           ),
         ],
       ),
@@ -534,18 +537,153 @@ class SettingsPage extends ConsumerWidget {
 
 
   void _showAboutDialog(BuildContext context) {
-    showAboutDialog(
+    showDialog(
       context: context,
-      applicationName: 'Қуръон бо Тафсири Осонбаён',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(Icons.menu_book, size: 48),
-      children: [
-        const Text('Барномаи Қуръон бо тарҷумаи тоҷикӣ ва тафсири осонбаён.'),
-        const SizedBox(height: 16),
-        const Text('Таҳиягар: Донишҷӯи Донишгоҳи Технологии Тоҷикистон'),
-      ],
+      builder: (context) => AlertDialog(
+        title: const Text('Дар бораи барнома'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Қуръон бо Тафсири Осонбаён',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Ин барномаи мукаммали мобилӣ барои хондан ва фаҳмидани Қуръон бо тарҷумаи тоҷикӣ ва тафсири осонбаён мебошад. Барнома барои мусалмонони хоҳишманд тарҳрезӣ шудааст, то Қуръонро бо забони арабӣ ва тоҷикӣ хонанд ва омӯзанд.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                'Хусусиятҳо',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 8),
+
+              Text(
+                '📖 Хондани Қуръон',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Матоъи пурраи Қуръон дар шрифи Утмони'),
+              Text('• Тарҷумаи тоҷикӣ'),
+              Text('• Транслитератсия барои ёдгирии талаффуз'),
+              Text('• Таҳлили калима ба калима'),
+              Text('• Маълумоти сура ва оят'),
+              Text('• Навигацияи осон байни сураҳо ва оятҳо'),
+              Text('• Пайгирии пешрафт'),
+
+              SizedBox(height: 12),
+              Text(
+                '🔊 Аудио',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Қироати чандин қироаткунандагон'),
+              Text('• Қироати пурраи сураҳо'),
+              Text('• Қироати оятҳо як ба як'),
+              Text('• Плеери пасзамина'),
+              Text('• Назорати аудио: бозӣ, таваққуф, ҷустуҷӯ'),
+
+              SizedBox(height: 12),
+              Text(
+                '🔍 Ҷустуҷӯ ва ёфтан',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Ҷустуҷӯи пешрафта дар матни арабӣ, тарҷума ва транслитератсия'),
+              Text('• Ҳифзи таърихи ҷустуҷӯ'),
+              Text('• Филтрҳои оқилона'),
+              Text('• Дастрасии зуд'),
+
+              SizedBox(height: 12),
+              Text(
+                '📚 Абзорҳои исломӣ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Тасбеҳ: 10 зикр бо тарҷумаи тоҷикӣ, ҳисобгари интерактивӣ, ҳисоби пешрафт'),
+              Text('• Бозиҳои ёдгирии калимаҳои Қуръонӣ: 100 калимаи аз ҳама зиёд истифодашаванда, 5 усули бози, 3 дараҷаи душворӣ'),
+              Text('• Дӯаҳо: коллексияи пурраи дӯаҳои Қуръонӣ бо тарҷума'),
+
+              SizedBox(height: 12),
+              Text(
+                '💾 Нишонҳо ва танзимот',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Ҳифзи оятҳои дӯстдошта'),
+              Text('• Назорати нишонҳо'),
+              Text('• Таърихи хондан'),
+              Text('• Танзимоти шахсӣ'),
+
+              SizedBox(height: 12),
+              Text(
+                '⚙️ Танзимот ва фармоишӣ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Мавзӯъ: равшан, торик, системавӣ'),
+              Text('• Андозаи матн'),
+              Text('• Забон ва тарҷума'),
+              Text('• Танзимоти аудио'),
+              Text('• Дастрасӣ бе интернет'),
+
+              SizedBox(height: 12),
+              Text(
+                'Манбаъҳои маълумот',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Матни арабӣ: Uthmani script'),
+              Text('• Тарҷумаи тоҷикӣ: дохили барнома'),
+              Text('• Транслитератсия: арабӣ ба румӣ'),
+              Text('• Аудио: AlQuran Cloud API, CDN, қироаткунандагони гуногун'),
+              Text('• Маъlumotҳои омӯзишӣ: калимаҳои Қуръонӣ, тасбеҳҳо, дӯаҳо'),
+              Text('• Хизматрасониҳои маҳаллӣ ва Supabase барои нишонҳо ва таърихи ҷустуҷӯ'),
+
+              SizedBox(height: 12),
+              Text(
+                'Махфият ва ҳифзи маълумот',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Маълумоти минималӣ ва маҳаллӣ'),
+              Text('• Ҳеҷ маълумоти шахсӣ ҷамъ намешавад'),
+              Text('• Истифодаи номаълум ва бехатар'),
+
+              SizedBox(height: 12),
+              Text(
+                'Намоиши версия ва мутобиқат',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('• Версияи ҷорӣ: 1.0.0+1'),
+              Text('• Android 5.0+ ва iOS 11+'),
+              Text('• Сақфаи тақрибан 100MB'),
+              Text('• Интернет барои аудио ва ҳамоҳангсозӣ'),
+
+              SizedBox(height: 12),
+              Text(
+                'Ҳамчун дастгирӣ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('Барнома барои истифода бе интернет мувофиқ аст ва барои таҷрибаи хуби хондан ва аудио оптимизатсия шудааст.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Пӯшидан'),
+          ),
+        ],
+      ),
     );
   }
+
 
   void _showHelpDialog(BuildContext context) {
     showDialog(
@@ -568,27 +706,146 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бас'),
+            child: const Text('Пӯшидан'),
           ),
         ],
       ),
     );
   }
 
-  void _showPrivacyDialog(BuildContext context) {
+    void _showPrivacyDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Сиёсати махфият'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Барномаи мо маълумоти шахсии шуморо ҳифз мекунад. Ҳамаи маълумот дар дастгоҳи шумо захира мешаванд ва ба серверҳои беруна ирсол намешаванд.',
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Санаи эътибор:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text('17 октябри 2025'),
+              SizedBox(height: 12),
+
+              Text(
+                '1. Муқаддима',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Барномаи QuranApp (“мо”) маълумоти шуморо ҳимоя мекунад ва ин сиёсат нишон медиҳад, ки чӣ гуна маълумоти шумо истифода ва ҳифз мешавад.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '2. Маълумоте, ки мо ҷамъоварӣ намекунем',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Мо ҳеҷ маълумоти шахсии шумо, аз қабили ном, суроғаи почта, рақам ва ё макони ҷуғрофиро ҷамъ намекунем.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '3. Маълумоте, ки ба таври худкор ҷамъоварӣ карда мешавад',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Барнома метавонад маълумоти ғайри шахсӣ, ба монанди: версияи барнома, намуди дастгоҳ, забони барнома, ва статистикаи истифода (шумораи кушодани сураҳо) ҷамъ кунад. Ин маълумот барои беҳтар кардани барнома истифода мешавад.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '4. Чӣ гуна мо онро истифода мекунем',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Мо маълумоти ҷамъшударо танҳо барои беҳтар кардани барнома ва ислоҳи хатогиҳо истифода мекунем ва ҳеҷ гоҳ онро бо каси сеюм мубодила намекунем.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '5. Захираи маълумот',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Маълумоти шумо, аз қабили нишонаҳо, шумораи такрор ва танзимот дар дастгоҳи шумо маҳфуз мемонад ва ҳеҷ гоҳ ба серверҳои беруна ирсол намешавад.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '6. Хизматрасониҳои тарафи сеюм',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Барнома метавонад хидматрасониҳои эътимодноки тарафи сеюмро барои ҳисобҳои оморӣ ва ҳалли хатогиҳо истифода барад. Ин хизматрасониҳо маълумоти шахсии шуморо ҷамъ намекунанд.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '7. Ҳуқуқҳои шумо',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Шумо метавонед маълумоти маҳаллӣ дар барнома ва кэши барномаро тоза кунед ва барномаро аз дастгоҳи худ нест кунед, ки ҳамаи маълумоти маҳаллӣ нест мешаванд.',
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '8. Навсозии сиёсат',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              RichText(
+                text: TextSpan(
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  children: [
+                    TextSpan(
+                      text: 'Мо метавонем ин сиёсатро давра ба давра навсозӣ кунем. Ҳама навсозиҳо дар вебсайти мо нашр карда мешаванд: ',
+                    ),
+                    TextSpan(
+                      text: 'www.quran.tj/privacy',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final url = Uri.parse('https://www.quran.tj/privacy');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
+                        },
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                '9. Тамос бо мо',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Агар савол ё нигароние дошта бошед, бо мо тавассути почта тамос гиред: info@quran.tj',
+              ),
+            ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Бас'),
+            child: const Text('Пӯшидан'),
           ),
         ],
       ),

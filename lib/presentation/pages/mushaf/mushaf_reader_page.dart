@@ -27,7 +27,7 @@ class _MushafReaderPageState extends ConsumerState<MushafReaderPage> {
     super.initState();
     _currentPage = widget.initialPage;
     _pageController = PageController(
-      initialPage: 604 - _currentPage,
+      initialPage: _currentPage - 1,
       viewportFraction: 1.0,
     );
   }
@@ -46,7 +46,7 @@ class _MushafReaderPageState extends ConsumerState<MushafReaderPage> {
 
   void _goToPage(int page) {
     if (page >= 1 && page <= 604) {
-      _pageController.jumpToPage(604 - page);
+      _pageController.jumpToPage(page - 1);
       setState(() {
         _currentPage = page;
       });
@@ -71,11 +71,11 @@ class _MushafReaderPageState extends ConsumerState<MushafReaderPage> {
                   itemCount: 604,
                   onPageChanged: (index) {
                     setState(() {
-                      _currentPage = 604 - index;
+                      _currentPage = index + 1;
                     });
                   },
                   itemBuilder: (context, index) {
-                    final pageNumber = 604 - index;
+                    final pageNumber = index + 1;
                     return MushafPageView(
                       pageNumber: pageNumber,
                     );

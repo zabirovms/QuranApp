@@ -26,8 +26,8 @@ class MushafPageView extends ConsumerWidget {
             width: 2,
           ),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Column(
@@ -54,9 +54,9 @@ class MushafPageView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPageHeader(page) {
+  Widget _buildPageHeader(MushafPage page) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -75,17 +75,6 @@ class MushafPageView extends ConsumerWidget {
             textDirection: TextDirection.rtl,
           ),
         ),
-        if (page.verses.isNotEmpty)
-          Text(
-            'سُورَةُ ${page.verses.first.surahName}',
-            style: const TextStyle(
-              fontFamily: 'Amiri',
-              fontSize: 16,
-              color: Color(0xFF2C1810),
-              fontWeight: FontWeight.bold,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
       ],
     );
   }
@@ -108,6 +97,7 @@ class MushafPageView extends ConsumerWidget {
     final widgets = <Widget>[];
     int currentSurahNumber = -1;
     final List<InlineSpan> currentParagraphSpans = [];
+    bool isFirstVerseOfSurah = false;
 
     void flushParagraph() {
       if (currentParagraphSpans.isNotEmpty) {
@@ -116,7 +106,7 @@ class MushafPageView extends ConsumerWidget {
             textDirection: TextDirection.rtl,
             child: Text.rich(
               TextSpan(children: List.from(currentParagraphSpans)),
-              textAlign: TextAlign.justify,
+              textAlign: isFirstVerseOfSurah ? TextAlign.center : TextAlign.justify,
               style: const TextStyle(
                 fontFamily: 'Amiri',
                 fontSize: 20,
@@ -128,13 +118,14 @@ class MushafPageView extends ConsumerWidget {
           ),
         );
         currentParagraphSpans.clear();
+        isFirstVerseOfSurah = false;
       }
     }
 
     for (int i = 0; i < page.verses.length; i++) {
       final verse = page.verses[i];
 
-      if (verse.surahNumber != currentSurahNumber) {
+      if (verse.numberInSurah == 1) {
         flushParagraph();
 
         if (widgets.isNotEmpty) {
@@ -144,32 +135,46 @@ class MushafPageView extends ConsumerWidget {
         widgets.add(_buildSurahHeader(verse.surahName, verse.surahNumber));
         widgets.add(const SizedBox(height: 8));
         currentSurahNumber = verse.surahNumber;
-      }
 
-      if (verse.numberInSurah == 1 && verse.surahNumber != 1 && verse.surahNumber != 9) {
+        
+        isFirstVerseOfSurah = true;
         currentParagraphSpans.add(
-          const TextSpan(
-            text: 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ ',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          TextSpan(
+            text: '${verse.arabicText} ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         );
-      }
-
-      currentParagraphSpans.add(
-        TextSpan(text: '${verse.arabicText} '),
-      );
-
-      currentParagraphSpans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: _buildVerseNumber(verse.numberInSurah),
+        
+        currentParagraphSpans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: _buildVerseNumber(verse.numberInSurah),
+            ),
           ),
-        ),
-      );
+        );
+        currentParagraphSpans.add(const TextSpan(text: ' '));
+        
+        flushParagraph();
+      } else {
 
-      currentParagraphSpans.add(const TextSpan(text: ' '));
+        currentParagraphSpans.add(
+          TextSpan(text: '${verse.arabicText} '),
+        );
+
+        currentParagraphSpans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: _buildVerseNumber(verse.numberInSurah),
+            ),
+          ),
+        );
+
+        currentParagraphSpans.add(const TextSpan(text: ' '));
+      }
     }
 
     flushParagraph();

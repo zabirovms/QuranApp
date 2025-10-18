@@ -104,6 +104,13 @@ The app is configured for Replit deployment with autoscale settings for web host
   - Removed surah name repetition - appears only at surah start, not on every page
   - Reduced horizontal padding (20px → 8px) for better text space utilization
   - Simplified page header to show only Juz number (removed redundant surah name)
+  - **Theme Integration**: Updated Mushaf page to match app's design system
+    - Changed from beige/gold theme to app's green color scheme
+    - Using AppTheme constants: backgroundColor, surfaceColor, primaryColor, arabicTextColor
+    - Made page/juz indicators subtle (light gray text, no colored backgrounds)
+    - Green gradient surah headers matching app's primary/secondary colors
+    - Arabic text remains the main visual focus
+    - Fully integrated design - no longer feels like a separate mini-app
 
 - **Oct 16, 2025**: Initial Replit setup
   - Installed Flutter SDK from stable branch

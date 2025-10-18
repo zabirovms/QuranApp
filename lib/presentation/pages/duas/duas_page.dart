@@ -34,6 +34,8 @@ class CachedImagesState {
   final String? error;
   final bool hasPermission;
   final bool permissionAsked;
+  final bool isNetworkError;
+  final bool hasAttemptedLoad;
 
   CachedImagesState({
     this.imageUrls = const [],
@@ -41,6 +43,8 @@ class CachedImagesState {
     this.error,
     this.hasPermission = false,
     this.permissionAsked = false,
+    this.isNetworkError = false,
+    this.hasAttemptedLoad = false,
   });
 
   CachedImagesState copyWith({
@@ -49,6 +53,8 @@ class CachedImagesState {
     String? error,
     bool? hasPermission,
     bool? permissionAsked,
+    bool? isNetworkError,
+    bool? hasAttemptedLoad,
   }) {
     return CachedImagesState(
       imageUrls: imageUrls ?? this.imageUrls,
@@ -56,6 +62,8 @@ class CachedImagesState {
       error: error ?? this.error,
       hasPermission: hasPermission ?? this.hasPermission,
       permissionAsked: permissionAsked ?? this.permissionAsked,
+      isNetworkError: isNetworkError ?? this.isNetworkError,
+      hasAttemptedLoad: hasAttemptedLoad ?? this.hasAttemptedLoad,
     );
   }
 }
@@ -84,7 +92,14 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
     // If no permission, don't load images
     if (!state.hasPermission) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    // If already attempted and failed with network error, don't retry automatically
+    if (state.hasAttemptedLoad && state.isNetworkError) return;
+
+    state = state.copyWith(
+      isLoading: true, 
+      error: null,
+      hasAttemptedLoad: true,
+    );
 
     try {
       final imageApiService = ImageApiService();
@@ -93,11 +108,23 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
         imageUrls: urls,
         isLoading: false,
         error: null,
+        isNetworkError: false,
+      );
+    } on ImageApiException catch (e) {
+      final isNetworkError = e.message.contains('Network is unreachable') || 
+                            e.message.contains('internet connection') ||
+                            e.message.contains('SocketException');
+      
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        isNetworkError: isNetworkError,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: 'Хатогии номаълум: $e',
+        isNetworkError: false,
       );
     }
   }
@@ -117,6 +144,16 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
   Future<void> denyPermission() async {
     await _permissionService.setImageDownloadPermission(false);
     state = state.copyWith(hasPermission: false);
+  }
+
+  Future<void> retryLoadImages() async {
+    // Reset the attempt flag to allow retry
+    state = state.copyWith(
+      hasAttemptedLoad: false,
+      isNetworkError: false,
+      error: null,
+    );
+    await loadImages();
   }
 
   void clearCache() {
@@ -477,12 +514,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
 
     // If error
     if (cachedImagesState.error != null) {
-      return Center(
-        child: CustomErrorWidget(
-          message: 'Хатогии боргирӣ: ${cachedImagesState.error}',
-          onRetry: () => ref.read(cachedImagesProvider.notifier).loadImages(),
-        ),
-      );
+      return _buildNetworkErrorState(cachedImagesState.error!);
     }
 
     // If searching
@@ -501,40 +533,74 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
 
   Widget _buildPlaceholderMode() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.image_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Тасвирҳо боргирӣ нашудаанд',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_outlined,
+              size: 80,
+              color: Colors.grey[400],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Барои дидани тасвирҳо, иҷозаи боргирӣ диҳед',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
+            const SizedBox(height: 16),
+            Text(
+              'Тасвирҳо боргирӣ нашудаанд',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.grey[600],
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _showPermissionDialog(),
-            icon: const Icon(Icons.download),
-            label: const Text('Иҷозаи боргирӣ диҳед'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
+            const SizedBox(height: 8),
+            Text(
+              'Барои дидани тасвирҳо, иҷозаи боргирӣ диҳед',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _showPermissionDialog(),
+              icon: const Icon(Icons.download),
+              label: const Text('Иҷозаи боргирӣ диҳед'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.grey[600],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Дар ҳолати офлайн, танҳо номҳои тасвирҳо намоиш дода мешаванд',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -555,6 +621,107 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
       ),
     );
     ref.read(cachedImagesProvider.notifier).requestPermission();
+  }
+
+  Widget _buildNetworkErrorState(String error) {
+    final isNetworkError = error.contains('Network is unreachable') || 
+                          error.contains('internet connection') ||
+                          error.contains('SocketException');
+    
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isNetworkError ? Icons.wifi_off : Icons.error_outline,
+              size: 80,
+              color: isNetworkError ? Colors.orange[400] : Colors.red[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isNetworkError ? 'Интернет пайваст нест' : 'Хатогии боргирӣ',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: isNetworkError ? Colors.orange[600] : Colors.red[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isNetworkError 
+                ? 'Лутфан пайвасти интернетро тафтиш кунед ва дубора кӯшиш кунед'
+                : error,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(cachedImagesProvider.notifier).retryLoadImages();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Дубора кӯшиш'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref.read(cachedImagesProvider.notifier).denyPermission();
+                  },
+                  icon: const Icon(Icons.offline_bolt),
+                  label: const Text('Офлайн'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            if (isNetworkError) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.blue[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Дар ҳолати офлайн, танҳо тасвирҳои қаблан боргирӣшуда намоиш дода мешаванд',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildQuranicDuasList(List<DuaModel> duas) {
@@ -743,14 +910,29 @@ class QuranicDuaCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Сура ${dua.surah}, Оят ${dua.verse}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).primaryColor,
+                      border: Border.all(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                        width: 1,
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.format_list_numbered,
+                          size: 14,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${dua.surah}:${dua.verse}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const Spacer(),

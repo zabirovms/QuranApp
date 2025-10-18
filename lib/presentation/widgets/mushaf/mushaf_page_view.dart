@@ -4,6 +4,7 @@ import '../../providers/mushaf_provider.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../data/models/mushaf_models.dart';
+import '../../../core/theme/app_theme.dart';
 
 class MushafPageView extends ConsumerWidget {
   final int pageNumber;
@@ -20,11 +21,7 @@ class MushafPageView extends ConsumerWidget {
     return pageAsync.when(
       data: (page) => Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F1E8),
-          border: Border.all(
-            color: const Color(0xFFD4AF37),
-            width: 2,
-          ),
+          color: AppTheme.surfaceColor,
         ),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
@@ -58,22 +55,15 @@ class MushafPageView extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37),
-            borderRadius: BorderRadius.circular(12),
+        Text(
+          'جُزۡءُ ${_toArabicNumerals(page.juz)}',
+          style: const TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 12,
+            color: AppTheme.textHintColor,
+            fontWeight: FontWeight.normal,
           ),
-          child: Text(
-            'جُزۡءُ ${_toArabicNumerals(page.juz)}',
-            style: const TextStyle(
-              fontFamily: 'Amiri',
-              fontSize: 14,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
+          textDirection: TextDirection.rtl,
         ),
       ],
     );
@@ -110,7 +100,7 @@ class MushafPageView extends ConsumerWidget {
               style: const TextStyle(
                 fontFamily: 'Amiri',
                 fontSize: 20,
-                color: Color(0xFF2C1810),
+                color: AppTheme.arabicTextColor,
                 height: 1.8,
                 letterSpacing: 0.2,
               ),
@@ -136,7 +126,6 @@ class MushafPageView extends ConsumerWidget {
         widgets.add(const SizedBox(height: 8));
         currentSurahNumber = verse.surahNumber;
 
-        
         isFirstVerseOfSurah = true;
         currentParagraphSpans.add(
           TextSpan(
@@ -158,7 +147,6 @@ class MushafPageView extends ConsumerWidget {
         
         flushParagraph();
       } else {
-
         currentParagraphSpans.add(
           TextSpan(text: '${verse.arabicText} '),
         );
@@ -185,20 +173,20 @@ class MushafPageView extends ConsumerWidget {
   Widget _buildSurahHeader(String surahName, int surahNumber) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            Color(0xFFD4AF37),
-            Color(0xFFE8C547),
-            Color(0xFFD4AF37),
+            AppTheme.primaryColor,
+            AppTheme.secondaryColor,
+            AppTheme.primaryColor,
           ],
         ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
+            color: AppTheme.primaryColor.withOpacity(0.2),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -213,7 +201,7 @@ class MushafPageView extends ConsumerWidget {
             style: const TextStyle(
               fontFamily: 'Amiri',
               fontSize: 18,
-              color: Color(0xFF2C1810),
+              color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
             textDirection: TextDirection.rtl,
@@ -228,7 +216,7 @@ class MushafPageView extends ConsumerWidget {
   Widget _buildOrnament() {
     return const Icon(
       Icons.auto_awesome,
-      color: Color(0xFF2C1810),
+      color: Colors.white,
       size: 14,
     );
   }
@@ -239,7 +227,7 @@ class MushafPageView extends ConsumerWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: const Color(0xFFD4AF37),
+          color: AppTheme.primaryColor,
           width: 1.2,
         ),
       ),
@@ -248,7 +236,7 @@ class MushafPageView extends ConsumerWidget {
         style: const TextStyle(
           fontFamily: 'Amiri',
           fontSize: 12,
-          color: Color(0xFFD4AF37),
+          color: AppTheme.primaryColor,
           fontWeight: FontWeight.bold,
         ),
         textDirection: TextDirection.rtl,
@@ -258,20 +246,13 @@ class MushafPageView extends ConsumerWidget {
 
   Widget _buildPageFooter(page) {
     return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFD4AF37).withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          _toArabicNumerals(pageNumber),
-          style: const TextStyle(
-            fontFamily: 'Amiri',
-            fontSize: 16,
-            color: Color(0xFF2C1810),
-            fontWeight: FontWeight.bold,
-          ),
+      child: Text(
+        _toArabicNumerals(pageNumber),
+        style: const TextStyle(
+          fontFamily: 'Amiri',
+          fontSize: 14,
+          color: AppTheme.textHintColor,
+          fontWeight: FontWeight.normal,
         ),
       ),
     );

@@ -4,6 +4,7 @@ import '../../providers/mushaf_provider.dart';
 import '../../widgets/mushaf/mushaf_page_view.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../../core/theme/app_theme.dart';
 
 class MushafReaderPage extends ConsumerStatefulWidget {
   final int initialPage;
@@ -58,7 +59,7 @@ class _MushafReaderPageState extends ConsumerState<MushafReaderPage> {
     final mushafDataAsync = ref.watch(mushafDataProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F1E8),
+      backgroundColor: AppTheme.backgroundColor,
       body: mushafDataAsync.when(
         data: (data) => SafeArea(
           child: GestureDetector(

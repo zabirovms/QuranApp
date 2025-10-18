@@ -1,5 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+
+class ImageApiException implements Exception {
+  final String message;
+  ImageApiException(this.message);
+  
+  @override
+  String toString() => message;
+}
 
 class ImageApiService {
   static const String _baseUrl = 'https://storage.googleapis.com/storage/v1/b/quran-tajik/o?prefix=pictures/';
@@ -32,10 +41,16 @@ class ImageApiService {
         
         return imageUrls;
       } else {
-        throw Exception('Failed to load images: ${response.statusCode}');
+        throw ImageApiException('Failed to load images: HTTP ${response.statusCode}');
       }
+    } on SocketException {
+      throw ImageApiException('Network is unreachable. Please check your internet connection.');
+    } on HttpException catch (e) {
+      throw ImageApiException('HTTP error: ${e.message}');
+    } on FormatException {
+      throw ImageApiException('Invalid response format from server.');
     } catch (e) {
-      throw Exception('Error fetching images: $e');
+      throw ImageApiException('Unexpected error: $e');
     }
   }
   

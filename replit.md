@@ -95,6 +95,27 @@ flutter build web --release
 The app is configured for Replit deployment with autoscale settings for web hosting.
 
 ## Recent Changes
+- **Oct 19, 2025**: Paginated Surah Screen Implementation
+  - Converted Surah screen from vertical scrolling to horizontal page-based navigation
+  - Implemented page grouping by Mushaf page numbers (1-604) using JSON "page" field
+  - Added continuous page navigation matching Mushaf structure
+  - Each page displays:
+    - Mushaf page number and Juz number header
+    - Verses grouped by page with vertical scrolling for translations/tafsir
+    - All existing features: translations, tafsir, transliteration, word-by-word mode
+  - Technical implementation:
+    - Created `PaginatedSurahRepository` for page-based verse grouping
+    - Created `PaginatedSurahProvider` for state management
+    - Created `SurahTranslationPageView` widget for reusable page display
+    - Fixed critical indexing bug: uses `verseNumber - 1` for surah-wide indexing
+  - Preserved all existing features:
+    - Audio playback with reciter selection
+    - Bookmarks functionality
+    - Search and navigation
+    - Settings (translation language, transliteration, word-by-word)
+    - Surah information and description
+  - Modular design enables future integration of Mushaf and Surah modes into a unified screen
+
 - **Oct 18, 2025**: Mushaf Page Improvements
   - Implemented authentic Mushaf-style layout with continuous inline verse flow
   - Fixed text justification for proper right-left alignment

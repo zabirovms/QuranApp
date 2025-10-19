@@ -114,7 +114,7 @@ class BookmarksPage extends ConsumerWidget {
       child: Card(
         child: InkWell(
           onTap: () {
-            context.go('/surah/${bookmark.surahNumber}');
+            context.go('/quran/${bookmark.surahNumber}/verse/${bookmark.verseNumber}');
           },
           child: Padding(
             padding: const EdgeInsets.all(16),

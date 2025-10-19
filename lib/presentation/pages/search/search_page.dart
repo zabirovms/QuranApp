@@ -292,7 +292,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 child: Card(
                   child: InkWell(
                     onTap: () {
-                      context.go('/surah/${verse.surahId}/verse/${verse.verseNumber}');
+                      context.go('/quran/${verse.surahId}/verse/${verse.verseNumber}');
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(16),

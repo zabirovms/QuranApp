@@ -871,7 +871,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
   }
 
   void _navigateToVerse(DuaModel dua) {
-    context.push('/surah/${dua.surah}/verse/${dua.verse}');
+    context.push('/quran/${dua.surah}/verse/${dua.verse}');
   }
 }
 

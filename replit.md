@@ -103,6 +103,30 @@ flutter build web --release
 The app is configured for Replit deployment with autoscale settings for web hosting.
 
 ## Recent Changes
+- **Oct 19, 2025**: Unified Quran Reader Implementation
+  - **Major Feature**: Created unified screen combining Mushaf and Translation modes
+  - **Toggle Functionality**: Users can seamlessly switch between Mushaf (Arabic pages) and Translation (with tafsir, transliteration) modes
+  - **Key Benefits**:
+    - Single screen for all Quran reading needs
+    - Default mode: Mushaf (Arabic Mushaf pages)
+    - Page synchronization: Same page number preserved when switching modes
+    - Consistent navigation: Same page logic (1-604) for both modes
+  - **Implementation Details**:
+    - Created `UnifiedQuranReaderPage` in `lib/presentation/pages/unified_reader/`
+    - Added new routes: `/quran/:surahNumber`, `/quran/:surahNumber/verse/:verseNumber`, `/quran/page/:page`
+    - Updated all navigation throughout the app (HomePage, SearchPage, DuasPage, BookmarksPage)
+    - Preserved legacy routes (`/surah/...`) for backward compatibility
+  - **User Experience**:
+    - Click surah from home → Opens unified reader in Mushaf mode at surah's first page
+    - Toggle button in app bar or settings to switch modes
+    - Visual badge shows current mode (Мусҳаф or Тарҷума)
+    - All features work in both modes: bookmarks, audio, search, etc.
+  - **Technical Architecture**:
+    - Reuses existing components: `MushafPageView`, `GlobalQuranPageView`, `AudioPlayerWidget`
+    - Single `PageController` shared between modes for smooth transitions
+    - Modular design enables future enhancements
+  - Full documentation: See `UNIFIED_READER_IMPLEMENTATION.md`
+
 - **Oct 19, 2025**: Global Paginated Surah Screen Implementation
   - **Architecture Change**: Converted from per-surah pagination to global continuous pagination (1-604)
   - Implemented continuous Quran flow matching Mushaf screen pagination logic

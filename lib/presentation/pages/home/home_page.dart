@@ -107,7 +107,7 @@ class _SurahsTab extends ConsumerWidget {
                     final surah = surahs[index];
                     return SurahListItem(
                       surah: surah,
-                      onTap: () => context.go('/surah/${surah.number}'),
+                      onTap: () => context.go('/quran/${surah.number}'),
                     );
                   },
                 );
@@ -136,11 +136,10 @@ class _MushafTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Start immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final loc = GoRouter.of(context).routerDelegate.currentConfiguration.fullPath;
-      if (loc != '/mushaf') {
-        context.go('/mushaf');
+      if (loc != '/quran/page/1') {
+        context.go('/quran/page/1');
       }
     });
     return const SizedBox.shrink();

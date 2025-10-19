@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../presentation/pages/home/home_page.dart';
 import '../presentation/pages/surah/surah_page.dart';
-// import '../presentation/pages/surah/verse_page.dart'; // Not needed
 import '../presentation/pages/tasbeeh/tasbeeh_page.dart';
 import '../presentation/pages/learn_words/learn_words_page.dart';
 import '../presentation/pages/duas/duas_page.dart';
@@ -13,6 +12,7 @@ import '../presentation/pages/search/search_page.dart';
 import '../presentation/pages/bookmarks/bookmarks_page.dart';
 import '../presentation/pages/splash/splash_page.dart';
 import '../presentation/pages/mushaf/mushaf_reader_page.dart';
+import '../presentation/pages/unified_reader/unified_quran_reader_page.dart';
 
 // Router configuration
 final routerProvider = Provider<GoRouter>((ref) {
@@ -33,7 +33,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomePage(),
       ),
       
-      // Surah Page
+      // Unified Quran Reader (Mushaf + Translation)
+      GoRoute(
+        path: '/quran/:surahNumber',
+        name: 'unified-reader',
+        builder: (context, state) {
+          final surahNumber = int.parse(state.pathParameters['surahNumber']!);
+          return UnifiedQuranReaderPage(surahNumber: surahNumber);
+        },
+      ),
+      
+      // Unified Quran Reader with specific verse
+      GoRoute(
+        path: '/quran/:surahNumber/verse/:verseNumber',
+        name: 'unified-reader-verse',
+        builder: (context, state) {
+          final surahNumber = int.parse(state.pathParameters['surahNumber']!);
+          final verseNumber = int.parse(state.pathParameters['verseNumber']!);
+          return UnifiedQuranReaderPage(
+            surahNumber: surahNumber,
+            initialVerseNumber: verseNumber,
+          );
+        },
+      ),
+      
+      // Unified Quran Reader by page
+      GoRoute(
+        path: '/quran/page/:page',
+        name: 'unified-reader-page',
+        builder: (context, state) {
+          final page = int.parse(state.pathParameters['page']!);
+          return UnifiedQuranReaderPage(initialPage: page);
+        },
+      ),
+      
+      // Surah Page (Legacy - kept for backward compatibility)
       GoRoute(
         path: '/surah/:surahNumber',
         name: 'surah',
@@ -43,7 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       
-      // Verse Page (with specific verse)
+      // Verse Page (Legacy - with specific verse)
       GoRoute(
         path: '/surah/:surahNumber/verse/:verseNumber',
         name: 'verse',

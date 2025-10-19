@@ -35,12 +35,12 @@ class UnifiedQuranReaderPage extends ConsumerStatefulWidget {
 }
 
 class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage> 
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   ReaderMode _currentMode = ReaderMode.mushaf;
   bool _showTransliteration = false;
   bool _isWordByWordMode = false;
   bool _showAudioPlayer = false;
-  bool _showControls = true;
+  bool _showControls = false;
   bool _showQuickActions = false;
   String _translationLang = 'tajik';
   String _audioEdition = 'ar.alafasy';
@@ -50,6 +50,8 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   bool _isLoading = true;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
+  late AnimationController _controlsAnimationController;
+  late Animation<double> _controlsAnimation;
 
   @override
   void initState() {
@@ -61,6 +63,15 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     );
     _fabAnimation = CurvedAnimation(
       parent: _fabAnimationController,
+      curve: Curves.easeInOut,
+    );
+    
+    _controlsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _controlsAnimation = CurvedAnimation(
+      parent: _controlsAnimationController,
       curve: Curves.easeInOut,
     );
     
@@ -146,6 +157,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
       _pageController.dispose();
     }
     _fabAnimationController.dispose();
+    _controlsAnimationController.dispose();
     super.dispose();
   }
 
@@ -160,6 +172,15 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   void _toggleControls() {
     setState(() {
       _showControls = !_showControls;
+      if (_showControls) {
+        _controlsAnimationController.forward();
+      } else {
+        _controlsAnimationController.reverse();
+        if (_showQuickActions) {
+          _showQuickActions = false;
+          _fabAnimationController.reverse();
+        }
+      }
     });
   }
 
@@ -201,10 +222,9 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
 
   Widget _buildMushafMode() {
     final mushafDataAsync = ref.watch(mushafDataProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackgroundColor : const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       body: mushafDataAsync.when(
         data: (data) => SafeArea(
@@ -227,21 +247,43 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 ),
               ),
               
-              if (_showControls)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildMushafHeader(),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  ignoring: !_showControls,
+                  child: FadeTransition(
+                    opacity: _controlsAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, -1),
+                        end: Offset.zero,
+                      ).animate(_controlsAnimation),
+                      child: _buildUnifiedHeader(),
+                    ),
+                  ),
                 ),
+              ),
               
-              if (_showControls)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildMushafFooter(),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  ignoring: !_showControls,
+                  child: FadeTransition(
+                    opacity: _controlsAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 1),
+                        end: Offset.zero,
+                      ).animate(_controlsAnimation),
+                      child: _buildPageIndicator(),
+                    ),
+                  ),
                 ),
+              ),
             ],
           ),
         ),
@@ -263,54 +305,97 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildTranslationHeader(surahInfoAsync),
-            
-            if (_showAudioPlayer && widget.surahNumber != null)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+            Column(
+              children: [
+                if (_showAudioPlayer && widget.surahNumber != null)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: AudioPlayerWidget(
+                      surahNumber: widget.surahNumber!,
+                      isCompact: true,
+                      onClose: () {
+                        setState(() {
+                          _showAudioPlayer = false;
+                        });
+                      },
+                    ),
+                  ),
+                
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _toggleControls,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: 604,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPageNumber = index + 1;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final pageNumber = index + 1;
+                        return GlobalQuranPageView(
+                          pageNumber: pageNumber,
+                          focusedSurahNumber: widget.surahNumber,
+                          showTransliteration: _showTransliteration,
+                          isWordByWordMode: _isWordByWordMode,
+                          translationLang: _translationLang,
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                child: AudioPlayerWidget(
-                  surahNumber: widget.surahNumber!,
-                  isCompact: true,
-                  onClose: () {
-                    setState(() {
-                      _showAudioPlayer = false;
-                    });
-                  },
+              ],
+            ),
+            
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: !_showControls,
+                child: FadeTransition(
+                  opacity: _controlsAnimation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, -1),
+                      end: Offset.zero,
+                    ).animate(_controlsAnimation),
+                    child: _buildUnifiedHeader(),
+                  ),
                 ),
               ),
+            ),
             
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: 604,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPageNumber = index + 1;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  final pageNumber = index + 1;
-                  return GlobalQuranPageView(
-                    pageNumber: pageNumber,
-                    focusedSurahNumber: widget.surahNumber,
-                    showTransliteration: _showTransliteration,
-                    isWordByWordMode: _isWordByWordMode,
-                    translationLang: _translationLang,
-                  );
-                },
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: IgnorePointer(
+                ignoring: !_showControls,
+                child: FadeTransition(
+                  opacity: _controlsAnimation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 1),
+                      end: Offset.zero,
+                    ).animate(_controlsAnimation),
+                    child: _buildPageIndicator(),
+                  ),
+                ),
               ),
             ),
           ],
@@ -320,29 +405,27 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     );
   }
 
-  Widget _buildMushafHeader() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildUnifiedHeader() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            (isDark ? Colors.black : Colors.white).withOpacity(0.95),
-            (isDark ? Colors.black : Colors.white).withOpacity(0.7),
-            (isDark ? Colors.black : Colors.white).withOpacity(0.0),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
           ],
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: Icon(
               Icons.arrow_back,
-              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+              color: Theme.of(context).iconTheme.color,
             ),
             onPressed: () {
               try {
@@ -358,30 +441,43 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           ),
           
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                width: 1.5,
-              ),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.auto_stories,
-                  size: 18,
-                  color: AppTheme.primaryColor,
+                  _currentMode == ReaderMode.mushaf 
+                      ? Icons.auto_stories 
+                      : Icons.translate,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Мусҳаф',
+                  _currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума',
                   style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkPrimaryColor : AppTheme.primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 1,
+                  height: 16,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Саҳифа $_currentPageNumber',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
               ],
@@ -390,165 +486,78 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           
           IconButton(
             icon: Icon(
-              Icons.translate,
-              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+              Icons.bookmark_border,
+              color: Theme.of(context).iconTheme.color,
             ),
-            onPressed: _toggleMode,
-            tooltip: 'Ҳолати тарҷума',
+            onPressed: () {
+              context.push('/bookmarks');
+            },
+            tooltip: 'Захираҳо',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMushafFooter() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildPageIndicator() {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
           colors: [
-            (isDark ? Colors.black : Colors.white).withOpacity(0.95),
-            (isDark ? Colors.black : Colors.white).withOpacity(0.7),
-            (isDark ? Colors.black : Colors.white).withOpacity(0.0),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
+            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
           ],
         ),
       ),
-      padding: const EdgeInsets.all(12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'Саҳифа $_currentPageNumber аз 604',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          IconButton.filled(
+            icon: const Icon(Icons.navigate_before, size: 20),
+            onPressed: _currentPageNumber > 1 
+                ? () => _goToPage(_currentPageNumber - 1) 
+                : null,
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              foregroundColor: Theme.of(context).colorScheme.primary,
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.navigate_before,
-                  color: isDark ? Colors.white : AppTheme.textPrimaryColor,
-                ),
-                onPressed: _currentPageNumber < 604 ? () => _goToPage(_currentPageNumber + 1) : null,
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.navigate_next,
-                  color: isDark ? Colors.white : AppTheme.textPrimaryColor,
-                ),
-                onPressed: _currentPageNumber > 1 ? () => _goToPage(_currentPageNumber - 1) : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTranslationHeader(AsyncValue<dynamic>? surahInfoAsync) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    try {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.go('/');
-                      }
-                    } catch (e) {
-                      context.go('/');
-                    }
-                  },
-                ),
-                
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (surahInfoAsync != null)
-                        surahInfoAsync.when(
-                          data: (surah) => Text(
-                            surah?.nameTajik ?? 'Қуръон',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          loading: () => const Text('Қуръон'),
-                          error: (_, __) => const Text('Қуръон'),
-                        )
-                      else
-                        Text(
-                          'Қуръон',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.secondaryColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.translate,
-                                  size: 14,
-                                  color: AppTheme.secondaryColor,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Саҳифаи $_currentPageNumber',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.secondaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                IconButton(
-                  icon: const Icon(Icons.bookmark_border),
-                  onPressed: () {
-                    context.push('/bookmarks');
-                  },
-                  tooltip: 'Захираҳо',
+          const SizedBox(width: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).shadowColor.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
+            ),
+            child: Text(
+              '$_currentPageNumber / 604',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          IconButton.filled(
+            icon: const Icon(Icons.navigate_next, size: 20),
+            onPressed: _currentPageNumber < 604 
+                ? () => _goToPage(_currentPageNumber + 1) 
+                : null,
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              foregroundColor: Theme.of(context).colorScheme.primary,
             ),
           ),
         ],
@@ -557,81 +566,121 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   }
 
   Widget _buildFloatingActionButton() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (_showQuickActions) ...[
-          ScaleTransition(
-            scale: _fabAnimation,
-            child: FloatingActionButton.small(
-              heroTag: 'mode_toggle',
-              onPressed: _toggleMode,
-              backgroundColor: AppTheme.primaryColor,
-              child: Icon(
-                _currentMode == ReaderMode.mushaf 
-                    ? Icons.translate 
-                    : Icons.auto_stories,
-                color: Colors.white,
+    return IgnorePointer(
+      ignoring: !_showControls,
+      child: FadeTransition(
+        opacity: _controlsAnimation,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).shadowColor.withOpacity(0.15),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
-              tooltip: _currentMode == ReaderMode.mushaf 
-                  ? 'Ҳолати тарҷума' 
-                  : 'Ҳолати Мусҳаф',
-            ),
+            ],
           ),
-          const SizedBox(height: 12),
-          
-          if (_currentMode == ReaderMode.translation) ...[
-            ScaleTransition(
-              scale: _fabAnimation,
-              child: FloatingActionButton.small(
-                heroTag: 'audio',
-                onPressed: () {
-                  setState(() {
-                    _showAudioPlayer = !_showAudioPlayer;
-                  });
-                },
-                backgroundColor: AppTheme.secondaryColor,
-                child: Icon(
-                  _showAudioPlayer ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            if (_showQuickActions) ...[
+              ScaleTransition(
+                scale: _fabAnimation,
+                child: _buildActionButton(
+                  icon: _currentMode == ReaderMode.mushaf 
+                      ? Icons.translate 
+                      : Icons.auto_stories,
+                  tooltip: _currentMode == ReaderMode.mushaf 
+                      ? 'Ҳолати тарҷума' 
+                      : 'Ҳолати Мусҳаф',
+                  onPressed: _toggleMode,
                 ),
-                tooltip: 'Садо',
+              ),
+              const SizedBox(height: 8),
+              
+              if (_currentMode == ReaderMode.translation) ...[
+                ScaleTransition(
+                  scale: _fabAnimation,
+                  child: _buildActionButton(
+                    icon: _showAudioPlayer ? Icons.pause_circle : Icons.play_circle,
+                    tooltip: 'Садо',
+                    onPressed: () {
+                      setState(() {
+                        _showAudioPlayer = !_showAudioPlayer;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              
+              ScaleTransition(
+                scale: _fabAnimation,
+                child: _buildActionButton(
+                  icon: Icons.settings,
+                  tooltip: 'Танзимот',
+                  onPressed: () => _showSettingsBottomSheet(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: Theme.of(context).dividerColor.withOpacity(0.1),
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _toggleQuickActions,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: AnimatedRotation(
+                    turns: _showQuickActions ? 0.125 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.menu_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
           ],
-          
-          ScaleTransition(
-            scale: _fabAnimation,
-            child: FloatingActionButton.small(
-              heroTag: 'settings',
-              onPressed: () => _showSettingsBottomSheet(context),
-              backgroundColor: AppTheme.accentColor,
-              child: const Icon(
-                Icons.settings,
-                color: Colors.white,
-              ),
-              tooltip: 'Танзимот',
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        
-        FloatingActionButton(
-          heroTag: 'main_fab',
-          onPressed: _toggleQuickActions,
-          backgroundColor: AppTheme.primaryColor,
-          child: AnimatedRotation(
-            turns: _showQuickActions ? 0.125 : 0,
-            duration: const Duration(milliseconds: 200),
-            child: const Icon(
-              Icons.menu,
-              color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 22,
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -662,12 +711,12 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.settings,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -689,10 +738,10 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
               
               Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.05),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   ),
                 ),
                 child: ListTile(
@@ -700,13 +749,13 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                     _currentMode == ReaderMode.mushaf 
                         ? Icons.auto_stories 
                         : Icons.translate,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   title: const Text('Ҳолати намоиш'),
                   subtitle: Text(_currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума'),
                   trailing: Switch(
                     value: _currentMode == ReaderMode.translation,
-                    activeColor: AppTheme.primaryColor,
+                    activeColor: Theme.of(context).colorScheme.primary,
                     onChanged: (value) {
                       setModalState(() {
                         _currentMode = value ? ReaderMode.translation : ReaderMode.mushaf;
@@ -725,7 +774,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 const SizedBox(height: 8),
                 
                 ListTile(
-                  leading: Icon(Icons.language, color: AppTheme.secondaryColor),
+                  leading: Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Забони тарҷума'),
                   subtitle: Text(_getTranslationLanguageName(_translationLang)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -735,11 +784,11 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 ),
                 
                 SwitchListTile(
-                  secondary: Icon(Icons.text_fields, color: AppTheme.accentColor),
+                  secondary: Icon(Icons.text_fields, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Транслитератсия'),
                   subtitle: const Text('Нусхаи лотинӣ нишон дода шавад'),
                   value: _showTransliteration,
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: Theme.of(context).colorScheme.primary,
                   onChanged: (value) {
                     setModalState(() => _showTransliteration = value);
                     setState(() => _showTransliteration = value);
@@ -752,11 +801,11 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 ),
                 
                 SwitchListTile(
-                  secondary: Icon(Icons.compare_arrows, color: AppTheme.accentColor),
+                  secondary: Icon(Icons.compare_arrows, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Калима ба калима'),
                   subtitle: const Text('Тарҷумаи ҳар калима'),
                   value: _isWordByWordMode,
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: Theme.of(context).colorScheme.primary,
                   onChanged: (value) {
                     setModalState(() => _isWordByWordMode = value);
                     setState(() => _isWordByWordMode = value);
@@ -773,7 +822,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 const SizedBox(height: 8),
                 
                 ListTile(
-                  leading: Icon(Icons.record_voice_over, color: AppTheme.primaryColor),
+                  leading: Icon(Icons.record_voice_over, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Қорӣ'),
                   subtitle: Text(_getQariName(_audioEdition)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -825,7 +874,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.language, color: AppTheme.primaryColor),
+            Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
             const Text('Интихоби забон'),
           ],
@@ -867,12 +916,12 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: isSelected 
-              ? AppTheme.primaryColor.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected 
-                ? AppTheme.primaryColor 
+                ? Theme.of(context).colorScheme.primary 
                 : Colors.transparent,
             width: 2,
           ),
@@ -881,14 +930,14 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           children: [
             Icon(
               isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isSelected ? AppTheme.primaryColor : Colors.grey,
+              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
             ),
             const SizedBox(width: 16),
             Text(
               name,
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppTheme.primaryColor : null,
+                color: isSelected ? Theme.of(context).colorScheme.primary : null,
               ),
             ),
           ],
@@ -903,7 +952,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.record_voice_over, color: AppTheme.primaryColor),
+            Icon(Icons.record_voice_over, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
             const Text('Интихоби қорӣ'),
           ],
@@ -946,12 +995,12 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: isSelected 
-              ? AppTheme.primaryColor.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected 
-                ? AppTheme.primaryColor 
+                ? Theme.of(context).colorScheme.primary 
                 : Colors.transparent,
             width: 2,
           ),
@@ -960,7 +1009,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           children: [
             Icon(
               isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isSelected ? AppTheme.primaryColor : Colors.grey,
+              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -968,7 +1017,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                 name,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? AppTheme.primaryColor : null,
+                  color: isSelected ? Theme.of(context).colorScheme.primary : null,
                 ),
               ),
             ),

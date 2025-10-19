@@ -1,13 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/quran_provider.dart';
-import '../../providers/paginated_surah_provider.dart';
+import '../../providers/global_quran_page_provider.dart';
 import '../../../data/services/audio_service.dart';
 import '../../../data/services/settings_service.dart';
-import '../../../data/models/bookmark_model.dart';
-import '../../widgets/surah/surah_translation_page_view.dart';
+import '../../widgets/quran/global_quran_page_view.dart';
 import '../../widgets/quran/audio_player_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
@@ -32,15 +32,14 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   bool _isWordByWordMode = false;
   bool _showAudioPlayer = false;
   String _translationLang = 'tajik';
-  bool _isSurahDescriptionExpanded = false;
   late PageController _pageController;
-  int _currentPageIndex = 0;
-  int _currentMushafPage = 1;
+  int _currentPageNumber = 1;
+  int _initialPageNumber = 1;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
     
     Future(() async {
       try {
@@ -53,13 +52,21 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         });
       } catch (_) {
       }
-    });
 
-    if (widget.initialVerseNumber != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToVerse(widget.initialVerseNumber!);
+      final firstPage = await ref.read(surahFirstPageProvider(widget.surahNumber).future);
+      setState(() {
+        _initialPageNumber = firstPage;
+        _currentPageNumber = firstPage;
+        _pageController = PageController(initialPage: 604 - firstPage);
+        _isLoading = false;
       });
-    }
+
+      if (widget.initialVerseNumber != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToVerse(widget.initialVerseNumber!);
+        });
+      }
+    });
   }
 
   void _scrollToVerse(int verseNumber) async {
@@ -67,38 +74,55 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     
     if (!mounted) return;
 
-    final verseParams = VerseParams(widget.surahNumber, verseNumber);
-    final pageNumberAsync = ref.read(pageNumberForVerseProvider(verseParams));
-    
-    pageNumberAsync.whenData((mushafPageNumber) async {
-      final paginatedData = await ref.read(paginatedSurahDataProvider(widget.surahNumber).future);
-      final pageIndex = paginatedData.pages.indexWhere((p) => p.pageNumber == mushafPageNumber);
-      
-      if (pageIndex != -1 && _pageController.hasClients) {
-        _pageController.jumpToPage(pageIndex);
-        setState(() {
-          _currentPageIndex = pageIndex;
-          _currentMushafPage = mushafPageNumber;
-        });
+    try {
+      final mushafJsonString = await rootBundle.loadString('assets/data/alquran_cloud_complete_quran.json');
+      final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
+      final dataSection = mushafData['data'] as Map<String, dynamic>;
+      final surahsList = dataSection['surahs'] as List<dynamic>;
+
+      if (widget.surahNumber < 1 || widget.surahNumber > surahsList.length) {
+        return;
       }
-    });
+
+      final surahData = surahsList[widget.surahNumber - 1] as Map<String, dynamic>;
+      final ayahsList = surahData['ayahs'] as List<dynamic>;
+
+      for (final ayahJson in ayahsList) {
+        final ayahData = ayahJson as Map<String, dynamic>;
+        final ayahVerseNumber = ayahData['numberInSurah'] as int;
+        
+        if (ayahVerseNumber == verseNumber) {
+          final versePage = ayahData['page'] as int;
+          
+          if (_pageController.hasClients) {
+            final pageIndex = 604 - versePage;
+            _pageController.jumpToPage(pageIndex);
+            setState(() {
+              _currentPageNumber = versePage;
+            });
+          }
+          break;
+        }
+      }
+    } catch (e) {
+    }
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    if (!_isLoading) {
+      _pageController.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final surahAsync = ref.watch(surahProvider(widget.surahNumber));
-    final paginatedDataAsync = ref.watch(paginatedSurahDataProvider(widget.surahNumber));
-    final controller = ref.watch(surahControllerProvider(widget.surahNumber));
+    final surahInfoAsync = ref.watch(surahInfoProvider(widget.surahNumber));
 
     return Scaffold(
       appBar: AppBar(
-        title: surahAsync.when(
+        title: surahInfoAsync.when(
           data: (surah) => Text(surah?.nameTajik ?? 'Сураи ${widget.surahNumber}'),
           loading: () => Text('Сураи ${widget.surahNumber}'),
           error: (_, __) => Text('Сураи ${widget.surahNumber}'),
@@ -131,266 +155,108 @@ class _SurahPageState extends ConsumerState<SurahPage> {
               _showDisplaySettings(context);
             },
           ),
+          surahInfoAsync.maybeWhen(
+            data: (surah) => PopupMenuButton<String>(
+              icon: const Icon(Icons.record_voice_over),
+              tooltip: 'Қорӣ',
+              onSelected: (edition) {
+                Future(() async {
+                  final settings = SettingsService();
+                  await settings.init();
+                  await settings.setAudioEdition(edition);
+                });
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'ar.alafasy', child: Text('Мишарӣ Алъафасӣ')),
+                PopupMenuItem(value: 'ar.husary', child: Text('Маъмуди Халил Ҳусарӣ')),
+                PopupMenuItem(value: 'ar.abdulbasit', child: Text('Абдул Босит')),
+                PopupMenuItem(value: 'ar.minshawi', child: Text('Миншовӣ')),
+              ],
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          if (_showAudioPlayer)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: AudioPlayerWidget(
-                surahNumber: widget.surahNumber,
-                isCompact: true,
-                onClose: () {
-                  setState(() {
-                    _showAudioPlayer = false;
-                  });
-                },
-              ),
-            ),
-
-          surahAsync.when(
-            data: (surah) {
-              if (surah == null) return const SizedBox.shrink();
-
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      surah.nameArabic,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textDirection: TextDirection.rtl,
+      body: _isLoading
+          ? const Center(child: LoadingWidget())
+          : Column(
+              children: [
+                if (_showAudioPlayer)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: AudioPlayerWidget(
+                      surahNumber: widget.surahNumber,
+                      isCompact: true,
+                      onClose: () {
+                        setState(() {
+                          _showAudioPlayer = false;
+                        });
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      surah.nameTajik,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      surah.nameEnglish,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Chip(
-                          label: Text('${surah.versesCount} оят'),
-                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        ),
-                        const SizedBox(width: 8),
-                        Chip(
-                          label: Text(surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ'),
-                          backgroundColor: surah.revelationType == 'Meccan' 
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.blue.withOpacity(0.1),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.record_voice_over),
-                          tooltip: 'Қорӣ',
-                          onSelected: (edition) {
-                            ref.read(surahControllerProvider(widget.surahNumber)).changeAudioEdition(
-                              surahNumber: widget.surahNumber,
-                              audioEdition: edition,
-                            );
-                            Future(() async {
-                              final settings = SettingsService();
-                              await settings.init();
-                              await settings.setAudioEdition(edition);
-                            });
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'ar.alafasy', child: Text('Мишарӣ Алъафасӣ')),
-                            PopupMenuItem(value: 'ar.husary', child: Text('Маъмуди Халил Ҳусарӣ')),
-                            PopupMenuItem(value: 'ar.abdulbasit', child: Text('Абдул Босит')),
-                            PopupMenuItem(value: 'ar.minshawi', child: Text('Миншовӣ')),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.audiotrack),
-                          tooltip: 'Плеери садо',
-                          onPressed: () {
-                            setState(() {
-                              _showAudioPlayer = !_showAudioPlayer;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.share),
-                          tooltip: 'Мубодила',
-                          onPressed: () async {
-                            await Share.share('Reading ${surah.nameEnglish} (${surah.number})');
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if ((surah.description ?? '').trim().isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _isSurahDescriptionExpanded = !_isSurahDescriptionExpanded;
-                                });
-                              },
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.info_outline),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Маълумот',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(_isSurahDescriptionExpanded ? Icons.expand_less : Icons.expand_more),
-                                ],
-                              ),
-                            ),
-                            if (_isSurahDescriptionExpanded)
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  setState(() {
-                                    _isSurahDescriptionExpanded = false;
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      surah.description!.trim(),
-                                      textAlign: TextAlign.start,
-                                      style: Theme.of(context).textTheme.bodyMedium,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+                  ),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Саҳифаи $_currentPageNumber аз 604',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
-                  ],
-                ),
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: LoadingWidget(height: 120),
-            ),
-            error: (error, stackTrace) => const SizedBox.shrink(),
-          ),
-
-          Expanded(
-            child: paginatedDataAsync.when(
-              data: (paginatedData) {
-                if (paginatedData.pages.isEmpty) {
-                  return const Center(
-                    child: Text('Ҳеҷ оятҳое ёфт нашуд'),
-                  );
-                }
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Row(
                         children: [
-                          Text(
-                            'Саҳифаи $_currentMushafPage аз 604',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.audiotrack),
+                            tooltip: 'Плеери садо',
+                            onPressed: () {
+                              setState(() {
+                                _showAudioPlayer = !_showAudioPlayer;
+                              });
+                            },
                           ),
-                          Text(
-                            'Саҳифаи ${_currentPageIndex + 1} аз ${paginatedData.totalPages} дар сура',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          surahInfoAsync.maybeWhen(
+                            data: (surah) => IconButton(
+                              icon: const Icon(Icons.share),
+                              tooltip: 'Мубодила',
+                              onPressed: () async {
+                                await Share.share('Reading ${surah?.nameEnglish ?? ''} (${widget.surahNumber})');
+                              },
                             ),
+                            orElse: () => const SizedBox.shrink(),
                           ),
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        reverse: true,
-                        itemCount: paginatedData.pages.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPageIndex = index;
-                            _currentMushafPage = paginatedData.pages[index].pageNumber;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          final page = paginatedData.pages[index];
-                          return SurahTranslationPageView(
-                            surahNumber: widget.surahNumber,
-                            pageNumber: page.pageNumber,
-                            showTransliteration: _showTransliteration,
-                            isWordByWordMode: _isWordByWordMode,
-                            translationLang: _translationLang,
-                            surahName: surahAsync.maybeWhen(
-                              data: (s) => s?.nameTajik ?? '',
-                              orElse: () => '',
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(
-                child: LoadingListWidget(
-                  itemCount: 10,
-                  itemHeight: 200,
+                    ],
+                  ),
                 ),
-              ),
-              error: (error, stackTrace) => Center(
-                child: CustomErrorWidget(
-                  title: 'Хатоги дар боргирӣ',
-                  message: 'Саҳифаҳоро наметавонем боргирӣ кунем. Лутфан пас аз чанд лаҳза такрор кӯшиш кунед.',
-                  onRetry: () {
-                    ref.invalidate(paginatedSurahDataProvider(widget.surahNumber));
-                  },
+
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    reverse: true,
+                    itemCount: 604,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentPageNumber = 604 - index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final pageNumber = 604 - index;
+                      return GlobalQuranPageView(
+                        pageNumber: pageNumber,
+                        focusedSurahNumber: widget.surahNumber,
+                        showTransliteration: _showTransliteration,
+                        isWordByWordMode: _isWordByWordMode,
+                        translationLang: _translationLang,
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

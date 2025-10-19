@@ -1,0 +1,187 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import '../models/verse_model.dart';
+import '../models/surah_model.dart';
+
+class GlobalQuranPageRepository {
+  static const String _mushafJsonPath = 'assets/data/alquran_cloud_complete_quran.json';
+  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  
+  final Map<int, QuranPage> _pageCache = {};
+  final Map<int, int> _surahFirstPageCache = {};
+  List<SurahModel>? _allSurahs;
+
+  Future<QuranPage> getPage(int pageNumber) async {
+    if (_pageCache.containsKey(pageNumber)) {
+      return _pageCache[pageNumber]!;
+    }
+
+    final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
+    final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
+    final dataSection = mushafData['data'] as Map<String, dynamic>;
+    final surahsList = dataSection['surahs'] as List<dynamic>;
+
+    final versesJsonString = await rootBundle.loadString(_versesJsonPath);
+    final versesData = json.decode(versesJsonString) as Map<String, dynamic>;
+
+    final verses = <VerseModel>[];
+    final surahsOnPage = <int>{};
+    int juz = 1;
+
+    for (final surahJson in surahsList) {
+      final surahData = surahJson as Map<String, dynamic>;
+      final surahNumber = surahData['number'] as int;
+      final ayahsList = surahData['ayahs'] as List<dynamic>;
+
+      final surahKey = surahNumber.toString();
+      final verseTranslations = versesData.containsKey(surahKey)
+          ? (versesData[surahKey] as Map<String, dynamic>)['verses'] as List
+          : [];
+
+      for (final ayahJson in ayahsList) {
+        final ayahData = ayahJson as Map<String, dynamic>;
+        final ayahPage = ayahData['page'] as int;
+
+        if (ayahPage == pageNumber) {
+          final verseNumber = ayahData['numberInSurah'] as int;
+          
+          final translationData = verseTranslations.firstWhere(
+            (v) => v['verse_number'] == verseNumber,
+            orElse: () => null,
+          );
+
+          final verse = VerseModel(
+            id: ayahData['number'] as int,
+            surahId: surahNumber,
+            verseNumber: verseNumber,
+            arabicText: (ayahData['text'] as String).trim(),
+            tajikText: translationData?['tajik_text'] as String? ?? '',
+            transliteration: translationData?['transliteration'] as String?,
+            tafsir: translationData?['tafsir'] as String?,
+            page: ayahPage,
+            juz: ayahData['juz'] as int,
+            uniqueKey: '$surahNumber:$verseNumber',
+          );
+
+          verses.add(verse);
+          surahsOnPage.add(surahNumber);
+          juz = ayahData['juz'] as int;
+        }
+      }
+    }
+
+    verses.sort((a, b) {
+      final surahCompare = a.surahId.compareTo(b.surahId);
+      if (surahCompare != 0) return surahCompare;
+      return a.verseNumber.compareTo(b.verseNumber);
+    });
+
+    final page = QuranPage(
+      pageNumber: pageNumber,
+      verses: verses,
+      surahsOnPage: surahsOnPage.toList()..sort(),
+      juz: juz,
+    );
+
+    _pageCache[pageNumber] = page;
+    return page;
+  }
+
+  Future<int> getFirstPageOfSurah(int surahNumber) async {
+    if (_surahFirstPageCache.containsKey(surahNumber)) {
+      return _surahFirstPageCache[surahNumber]!;
+    }
+
+    final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
+    final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
+    final dataSection = mushafData['data'] as Map<String, dynamic>;
+    final surahsList = dataSection['surahs'] as List<dynamic>;
+
+    if (surahNumber < 1 || surahNumber > surahsList.length) {
+      return 1;
+    }
+
+    final surahData = surahsList[surahNumber - 1] as Map<String, dynamic>;
+    final ayahsList = surahData['ayahs'] as List<dynamic>;
+
+    if (ayahsList.isEmpty) {
+      return 1;
+    }
+
+    final firstAyah = ayahsList[0] as Map<String, dynamic>;
+    final firstPage = firstAyah['page'] as int;
+
+    _surahFirstPageCache[surahNumber] = firstPage;
+    return firstPage;
+  }
+
+  Future<SurahModel?> getSurahInfo(int surahNumber) async {
+    if (_allSurahs == null) {
+      await _loadAllSurahs();
+    }
+
+    if (surahNumber < 1 || surahNumber > _allSurahs!.length) {
+      return null;
+    }
+
+    return _allSurahs![surahNumber - 1];
+  }
+
+  Future<void> _loadAllSurahs() async {
+    final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
+    final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
+    final dataSection = mushafData['data'] as Map<String, dynamic>;
+    final surahsList = dataSection['surahs'] as List<dynamic>;
+
+    _allSurahs = surahsList.map((surahJson) {
+      final surahData = surahJson as Map<String, dynamic>;
+      final ayahsList = surahData['ayahs'] as List<dynamic>;
+      
+      return SurahModel(
+        number: surahData['number'] as int,
+        nameArabic: surahData['name'] as String,
+        nameTajik: surahData['name_tajik'] as String,
+        nameEnglish: surahData['name'] as String,
+        revelationType: surahData['revelationType'] as String,
+        versesCount: ayahsList.length,
+        description: surahData['description'] as String?,
+      );
+    }).toList();
+  }
+
+  int get totalPages => 604;
+
+  void clearCache() {
+    _pageCache.clear();
+    _surahFirstPageCache.clear();
+    _allSurahs = null;
+  }
+}
+
+class QuranPage {
+  final int pageNumber;
+  final List<VerseModel> verses;
+  final List<int> surahsOnPage;
+  final int juz;
+
+  const QuranPage({
+    required this.pageNumber,
+    required this.verses,
+    required this.surahsOnPage,
+    required this.juz,
+  });
+
+  bool get hasVerses => verses.isNotEmpty;
+  
+  bool get hasMultipleSurahs => surahsOnPage.length > 1;
+  
+  List<int> get surahStartIndices {
+    final indices = <int>[];
+    for (var i = 0; i < verses.length; i++) {
+      if (verses[i].verseNumber == 1) {
+        indices.add(i);
+      }
+    }
+    return indices;
+  }
+}

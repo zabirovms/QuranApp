@@ -5,7 +5,7 @@ This is a comprehensive Flutter application for reading the Quran with Tajik tra
 
 **Original Purpose**: Mobile Quran app (Android/iOS) with advanced features  
 **Current State**: Running as a Flutter web application on Replit  
-**Last Updated**: October 16, 2025
+**Last Updated**: October 19, 2025
 
 ## Project Architecture
 
@@ -88,33 +88,51 @@ flutter build web --release
 
 ## Data Sources
 - **Remote API**: AlQuran Cloud API for audio and additional content
-- **Local JSON**: Pre-loaded data for duas, tasbeehs, and word learning
+- **Local JSON**: 
+  - `alquran_cloud_complete_quran.json` - Complete Quran with page/juz metadata
+  - `surah_verses.json` - Tajik translations, transliteration, and tafsir
+  - Pre-loaded data for duas, tasbeehs, and word learning
 - **SQLite/Hive**: Local storage for bookmarks and user preferences
+
+### Translation Availability
+- **Tajik**: Full translation available in local data
+- **Farsi/Russian**: Not available in local JSON; UI falls back to Tajik translation
+- Future enhancement: Could fetch additional translations from AlQuran Cloud API
 
 ## Deployment
 The app is configured for Replit deployment with autoscale settings for web hosting.
 
 ## Recent Changes
-- **Oct 19, 2025**: Paginated Surah Screen Implementation
-  - Converted Surah screen from vertical scrolling to horizontal page-based navigation
-  - Implemented page grouping by Mushaf page numbers (1-604) using JSON "page" field
-  - Added continuous page navigation matching Mushaf structure
-  - Each page displays:
-    - Mushaf page number and Juz number header
-    - Verses grouped by page with vertical scrolling for translations/tafsir
-    - All existing features: translations, tafsir, transliteration, word-by-word mode
-  - Technical implementation:
-    - Created `PaginatedSurahRepository` for page-based verse grouping
-    - Created `PaginatedSurahProvider` for state management
-    - Created `SurahTranslationPageView` widget for reusable page display
-    - Fixed critical indexing bug: uses `verseNumber - 1` for surah-wide indexing
-  - Preserved all existing features:
+- **Oct 19, 2025**: Global Paginated Surah Screen Implementation
+  - **Architecture Change**: Converted from per-surah pagination to global continuous pagination (1-604)
+  - Implemented continuous Quran flow matching Mushaf screen pagination logic
+  - **Key Features**:
+    - Global page navigation across all 114 surahs (pages 1-604)
+    - Surah headers appear inline when a new surah starts on a page
+    - Multiple surahs can appear on the same page naturally
+    - Horizontal PageView for page navigation (swipe left/right)
+    - Vertical scrolling within each page for translations/tafsir/features
+  - **Technical Implementation**:
+    - Created `GlobalQuranPageRepository` for loading any page 1-604 across all surahs
+    - Created `GlobalQuranPageProvider` (page provider + surah first-page finder)
+    - Created `GlobalQuranPageView` widget for reusable page display with inline headers
+    - Updated `SurahPage` to use global pagination and jump to surah's first page
+    - Fixed verse indexing to use surah-wide indices (`verseNumber - 1`)
+    - Implemented `_scrollToVerse` for deep-link/bookmark navigation
+  - **Data Architecture**:
+    - Combines `alquran_cloud_complete_quran.json` (page/juz metadata) with `surah_verses.json` (translations)
+    - Verses sorted by surah number then verse number within each page
+    - Only Tajik translation available in local data (Farsi/Russian fallback to Tajik)
+  - **Preserved Features**:
     - Audio playback with reciter selection
-    - Bookmarks functionality
-    - Search and navigation
-    - Settings (translation language, transliteration, word-by-word)
+    - Bookmarks and search functionality
+    - Translation language toggle, transliteration, word-by-word mode
     - Surah information and description
-  - Modular design enables future integration of Mushaf and Surah modes into a unified screen
+  - **Navigation**:
+    - Opens surah at its first page when selected from surah list
+    - Deep links and bookmarks jump to specific verse's page
+    - Page counter shows "Page X of 604" with current Juz
+  - **Future Potential**: Modular design enables merging Mushaf and Surah modes into unified screen
 
 - **Oct 18, 2025**: Mushaf Page Improvements
   - Implemented authentic Mushaf-style layout with continuous inline verse flow

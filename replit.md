@@ -103,6 +103,40 @@ flutter build web --release
 The app is configured for Replit deployment with autoscale settings for web hosting.
 
 ## Recent Changes
+- **Oct 19, 2025**: Unified Quran Reader - UI/UX Enhancements
+  - **Major Visual Redesign**: Enhanced unified reader with modern, polished interface
+  - **Floating Action Menu**:
+    - Expandable FAB with quick actions (mode toggle, audio, settings)
+    - Smooth scale animations for menu items
+    - Rotating menu icon (200ms easeInOut)
+    - Clean, uncluttered interface
+  - **Enhanced Headers**:
+    - Mushaf mode: Semi-transparent gradient overlay, tap to show/hide
+    - Translation mode: Clean header with surah name and page badge
+    - Visual mode indicators with icons
+    - Dark/light mode adaptive
+  - **Modern Settings Bottom Sheet**:
+    - Rounded top corners (24px)
+    - Icon-based sections with color coding
+    - Highlighted mode toggle container
+    - Clear visual hierarchy
+  - **Custom Selection Dialogs**:
+    - Card-based language/qari selectors
+    - Check circle icons for selection
+    - Green border highlighting
+    - Smooth tap/hover feedback
+  - **Theme Integration**:
+    - Full dark mode support
+    - Consistent app theme colors
+    - Proper contrast in all modes
+    - Theme-aware icons and gradients
+  - **Layout & Polish**:
+    - Consistent spacing (8, 12, 16, 24px)
+    - Smooth animations throughout
+    - Professional visual hierarchy
+    - Better readability and aesthetics
+  - Full documentation: See `UI_ENHANCEMENTS.md` and `UI_UX_SUMMARY.md`
+
 - **Oct 19, 2025**: Unified Quran Reader Implementation
   - **Major Feature**: Created unified screen combining Mushaf and Translation modes
   - **Toggle Functionality**: Users can seamlessly switch between Mushaf (Arabic pages) and Translation (with tafsir, transliteration) modes

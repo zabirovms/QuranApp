@@ -34,21 +34,35 @@ class UnifiedQuranReaderPage extends ConsumerStatefulWidget {
   ConsumerState<UnifiedQuranReaderPage> createState() => _UnifiedQuranReaderPageState();
 }
 
-class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage> {
+class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage> 
+    with SingleTickerProviderStateMixin {
   ReaderMode _currentMode = ReaderMode.mushaf;
   bool _showTransliteration = false;
   bool _isWordByWordMode = false;
   bool _showAudioPlayer = false;
   bool _showControls = true;
+  bool _showQuickActions = false;
   String _translationLang = 'tajik';
+  String _audioEdition = 'ar.alafasy';
   late PageController _pageController;
   int _currentPageNumber = 1;
   int _initialPageNumber = 1;
   bool _isLoading = true;
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabAnimation;
 
   @override
   void initState() {
     super.initState();
+    
+    _fabAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _fabAnimation = CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.easeInOut,
+    );
     
     Future(() async {
       try {
@@ -58,6 +72,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           _showTransliteration = s.getShowTransliteration();
           _isWordByWordMode = s.getWordByWordMode();
           _translationLang = s.getTranslationLanguage();
+          _audioEdition = s.getAudioEdition();
         });
       } catch (_) {
       }
@@ -130,6 +145,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     if (!_isLoading) {
       _pageController.dispose();
     }
+    _fabAnimationController.dispose();
     super.dispose();
   }
 
@@ -147,6 +163,17 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     });
   }
 
+  void _toggleQuickActions() {
+    setState(() {
+      _showQuickActions = !_showQuickActions;
+    });
+    if (_showQuickActions) {
+      _fabAnimationController.forward();
+    } else {
+      _fabAnimationController.reverse();
+    }
+  }
+
   void _goToPage(int page) {
     if (page >= 1 && page <= 604) {
       _pageController.jumpToPage(page - 1);
@@ -159,8 +186,9 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: LoadingWidget()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: LoadingWidget()),
       );
     }
 
@@ -173,16 +201,18 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
 
   Widget _buildMushafMode() {
     final mushafDataAsync = ref.watch(mushafDataProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: isDark ? AppTheme.darkBackgroundColor : const Color(0xFFF5F5F5),
+      extendBodyBehindAppBar: true,
       body: mushafDataAsync.when(
         data: (data) => SafeArea(
-          child: GestureDetector(
-            onTap: _toggleControls,
-            child: Stack(
-              children: [
-                PageView.builder(
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: _toggleControls,
+                child: PageView.builder(
                   controller: _pageController,
                   itemCount: 604,
                   onPageChanged: (index) {
@@ -192,27 +222,27 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                   },
                   itemBuilder: (context, index) {
                     final pageNumber = index + 1;
-                    return MushafPageView(
-                      pageNumber: pageNumber,
-                    );
+                    return MushafPageView(pageNumber: pageNumber);
                   },
                 ),
-                if (_showControls) ...[
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: _buildMushafTopBar(),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: _buildMushafBottomBar(),
-                  ),
-                ],
-              ],
-            ),
+              ),
+              
+              if (_showControls)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildMushafHeader(),
+                ),
+              
+              if (_showControls)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildMushafFooter(),
+                ),
+            ],
           ),
         ),
         loading: () => const LoadingWidget(),
@@ -221,6 +251,7 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
           onRetry: () => ref.refresh(mushafDataProvider),
         ),
       ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -230,215 +261,89 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: surahInfoAsync?.when(
-          data: (surah) => Text(surah?.nameTajik ?? 'Қуръон'),
-          loading: () => const Text('Қуръон'),
-          error: (_, __) => const Text('Қуръон'),
-        ) ?? const Text('Қуръон'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            try {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            } catch (e) {
-              context.go('/');
-            }
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark),
-            onPressed: () {
-              context.push('/bookmarks');
-            },
-            tooltip: 'Захираҳо',
-          ),
-          IconButton(
-            icon: Icon(
-              _currentMode == ReaderMode.mushaf 
-                  ? Icons.translate 
-                  : Icons.auto_stories
-            ),
-            onPressed: _toggleMode,
-            tooltip: _currentMode == ReaderMode.mushaf 
-                ? 'Ҳолати тарҷума' 
-                : 'Ҳолати Мусҳаф',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              _showDisplaySettings(context);
-            },
-          ),
-          if (widget.surahNumber != null)
-            surahInfoAsync?.maybeWhen(
-              data: (surah) => PopupMenuButton<String>(
-                icon: const Icon(Icons.record_voice_over),
-                tooltip: 'Қорӣ',
-                onSelected: (edition) {
-                  Future(() async {
-                    final settings = SettingsService();
-                    await settings.init();
-                    await settings.setAudioEdition(edition);
-                  });
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'ar.alafasy', child: Text('Мишарӣ Алъафасӣ')),
-                  PopupMenuItem(value: 'ar.husary', child: Text('Маъмуди Халил Ҳусарӣ')),
-                  PopupMenuItem(value: 'ar.abdulbasit', child: Text('Абдул Босит')),
-                  PopupMenuItem(value: 'ar.minshawi', child: Text('Миншовӣ')),
-                ],
-              ),
-              orElse: () => const SizedBox.shrink(),
-            ) ?? const SizedBox.shrink(),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_showAudioPlayer && widget.surahNumber != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: AudioPlayerWidget(
-                surahNumber: widget.surahNumber!,
-                isCompact: true,
-                onClose: () {
-                  setState(() {
-                    _showAudioPlayer = false;
-                  });
-                },
-              ),
-            ),
-          
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Саҳифаи $_currentPageNumber аз 604',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _currentMode == ReaderMode.mushaf 
-                            ? AppTheme.primaryColor.withOpacity(0.1)
-                            : AppTheme.secondaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _currentMode == ReaderMode.mushaf 
-                              ? AppTheme.primaryColor 
-                              : AppTheme.secondaryColor,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _currentMode == ReaderMode.mushaf 
-                                ? Icons.auto_stories 
-                                : Icons.translate,
-                            size: 16,
-                            color: _currentMode == ReaderMode.mushaf 
-                                ? AppTheme.primaryColor 
-                                : AppTheme.secondaryColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _currentMode == ReaderMode.mushaf 
-                                  ? AppTheme.primaryColor 
-                                  : AppTheme.secondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTranslationHeader(surahInfoAsync),
+            
+            if (_showAudioPlayer && widget.surahNumber != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(width: 8),
-                    if (widget.surahNumber != null)
-                      IconButton(
-                        icon: const Icon(Icons.audiotrack),
-                        tooltip: 'Плеери садо',
-                        onPressed: () {
-                          setState(() {
-                            _showAudioPlayer = !_showAudioPlayer;
-                          });
-                        },
-                      ),
-                    if (widget.surahNumber != null)
-                      surahInfoAsync?.maybeWhen(
-                        data: (surah) => IconButton(
-                          icon: const Icon(Icons.share),
-                          tooltip: 'Мубодила',
-                          onPressed: () async {
-                            await Share.share('Reading ${surah?.nameEnglish ?? ''} (${widget.surahNumber})');
-                          },
-                        ),
-                        orElse: () => const SizedBox.shrink(),
-                      ) ?? const SizedBox.shrink(),
                   ],
                 ),
-              ],
+                child: AudioPlayerWidget(
+                  surahNumber: widget.surahNumber!,
+                  isCompact: true,
+                  onClose: () {
+                    setState(() {
+                      _showAudioPlayer = false;
+                    });
+                  },
+                ),
+              ),
+            
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: 604,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPageNumber = index + 1;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final pageNumber = index + 1;
+                  return GlobalQuranPageView(
+                    pageNumber: pageNumber,
+                    focusedSurahNumber: widget.surahNumber,
+                    showTransliteration: _showTransliteration,
+                    isWordByWordMode: _isWordByWordMode,
+                    translationLang: _translationLang,
+                  );
+                },
+              ),
             ),
-          ),
-
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: 604,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageNumber = index + 1;
-                });
-              },
-              itemBuilder: (context, index) {
-                final pageNumber = index + 1;
-                return GlobalQuranPageView(
-                  pageNumber: pageNumber,
-                  focusedSurahNumber: widget.surahNumber,
-                  showTransliteration: _showTransliteration,
-                  isWordByWordMode: _isWordByWordMode,
-                  translationLang: _translationLang,
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  Widget _buildMushafTopBar() {
+  Widget _buildMushafHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.5),
-            Colors.transparent,
+            (isDark ? Colors.black : Colors.white).withOpacity(0.95),
+            (isDark ? Colors.black : Colors.white).withOpacity(0.7),
+            (isDark ? Colors.black : Colors.white).withOpacity(0.0),
           ],
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+            ),
             onPressed: () {
               try {
                 if (context.canPop()) {
@@ -451,16 +356,43 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
               }
             },
           ),
-          Text(
-            'Мусҳаф',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppTheme.primaryColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_stories,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Мусҳаф',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppTheme.darkPrimaryColor : AppTheme.primaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
+          
           IconButton(
-            icon: const Icon(Icons.translate, color: Colors.white),
+            icon: Icon(
+              Icons.translate,
+              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+            ),
             onPressed: _toggleMode,
             tooltip: 'Ҳолати тарҷума',
           ),
@@ -469,37 +401,47 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     );
   }
 
-  Widget _buildMushafBottomBar() {
+  Widget _buildMushafFooter() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
           colors: [
-            Colors.black.withOpacity(0.5),
-            Colors.transparent,
+            (isDark ? Colors.black : Colors.white).withOpacity(0.95),
+            (isDark ? Colors.black : Colors.white).withOpacity(0.7),
+            (isDark ? Colors.black : Colors.white).withOpacity(0.0),
           ],
         ),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             'Саҳифа $_currentPageNumber аз 604',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
+            style: TextStyle(
+              color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.navigate_before, color: Colors.white),
+                icon: Icon(
+                  Icons.navigate_before,
+                  color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+                ),
                 onPressed: _currentPageNumber < 604 ? () => _goToPage(_currentPageNumber + 1) : null,
               ),
               IconButton(
-                icon: const Icon(Icons.navigate_next, color: Colors.white),
+                icon: Icon(
+                  Icons.navigate_next,
+                  color: isDark ? Colors.white : AppTheme.textPrimaryColor,
+                ),
                 onPressed: _currentPageNumber > 1 ? () => _goToPage(_currentPageNumber - 1) : null,
               ),
             ],
@@ -509,30 +451,262 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     );
   }
 
-  void _showDisplaySettings(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTranslationHeader(AsyncValue<dynamic>? surahInfoAsync) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
               children: [
-                Text(
-                  'Танзимоти намоиш',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    try {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    } catch (e) {
+                      context.go('/');
+                    }
+                  },
+                ),
+                
+                Expanded(
+                  child: Column(
+                    children: [
+                      if (surahInfoAsync != null)
+                        surahInfoAsync.when(
+                          data: (surah) => Text(
+                            surah?.nameTajik ?? 'Қуръон',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          loading: () => const Text('Қуръон'),
+                          error: (_, __) => const Text('Қуръон'),
+                        )
+                      else
+                        Text(
+                          'Қуръон',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondaryColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.translate,
+                                  size: 14,
+                                  color: AppTheme.secondaryColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Саҳифаи $_currentPageNumber',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.secondaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
                 
-                ListTile(
+                IconButton(
+                  icon: const Icon(Icons.bookmark_border),
+                  onPressed: () {
+                    context.push('/bookmarks');
+                  },
+                  tooltip: 'Захираҳо',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (_showQuickActions) ...[
+          ScaleTransition(
+            scale: _fabAnimation,
+            child: FloatingActionButton.small(
+              heroTag: 'mode_toggle',
+              onPressed: _toggleMode,
+              backgroundColor: AppTheme.primaryColor,
+              child: Icon(
+                _currentMode == ReaderMode.mushaf 
+                    ? Icons.translate 
+                    : Icons.auto_stories,
+                color: Colors.white,
+              ),
+              tooltip: _currentMode == ReaderMode.mushaf 
+                  ? 'Ҳолати тарҷума' 
+                  : 'Ҳолати Мусҳаф',
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          if (_currentMode == ReaderMode.translation) ...[
+            ScaleTransition(
+              scale: _fabAnimation,
+              child: FloatingActionButton.small(
+                heroTag: 'audio',
+                onPressed: () {
+                  setState(() {
+                    _showAudioPlayer = !_showAudioPlayer;
+                  });
+                },
+                backgroundColor: AppTheme.secondaryColor,
+                child: Icon(
+                  _showAudioPlayer ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                ),
+                tooltip: 'Садо',
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          
+          ScaleTransition(
+            scale: _fabAnimation,
+            child: FloatingActionButton.small(
+              heroTag: 'settings',
+              onPressed: () => _showSettingsBottomSheet(context),
+              backgroundColor: AppTheme.accentColor,
+              child: const Icon(
+                Icons.settings,
+                color: Colors.white,
+              ),
+              tooltip: 'Танзимот',
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        
+        FloatingActionButton(
+          heroTag: 'main_fab',
+          onPressed: _toggleQuickActions,
+          backgroundColor: AppTheme.primaryColor,
+          child: AnimatedRotation(
+            turns: _showQuickActions ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(
+              Icons.menu,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSettingsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildSettingsBottomSheet(),
+    );
+  }
+
+  Widget _buildSettingsBottomSheet() {
+    return StatefulBuilder(
+      builder: (context, setModalState) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.settings,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Танзимоти намоиш',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                  ),
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    _currentMode == ReaderMode.mushaf 
+                        ? Icons.auto_stories 
+                        : Icons.translate,
+                    color: AppTheme.primaryColor,
+                  ),
                   title: const Text('Ҳолати намоиш'),
                   subtitle: Text(_currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума'),
                   trailing: Switch(
                     value: _currentMode == ReaderMode.translation,
+                    activeColor: AppTheme.primaryColor,
                     onChanged: (value) {
                       setModalState(() {
                         _currentMode = value ? ReaderMode.translation : ReaderMode.mushaf;
@@ -543,72 +717,77 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                     },
                   ),
                 ),
+              ),
+              
+              if (_currentMode == ReaderMode.translation) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
                 
-                if (_currentMode == ReaderMode.translation) ...[
-                  const Divider(),
-                  
-                  ListTile(
-                    title: const Text('Забони тарҷума'),
-                    subtitle: Text(_getTranslationLanguageName(_translationLang)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      _showTranslationLanguageDialog(context, setModalState);
-                    },
-                  ),
-                  
-                  SwitchListTile(
-                    title: const Text('Намоиши транслитератсия'),
-                    subtitle: const Text('Транслитератсияи арабӣ нишон дода шавад'),
-                    value: _showTransliteration,
-                    onChanged: (value) {
-                      setModalState(() {
-                        _showTransliteration = value;
-                      });
-                      setState(() {
-                        _showTransliteration = value;
-                      });
-                      Future(() async {
-                        final s = SettingsService();
-                        await s.init();
-                        await s.setShowTransliteration(value);
-                      });
-                    },
-                  ),
-                  
-                  SwitchListTile(
-                    title: const Text('Ҳолати калима ба калима'),
-                    subtitle: const Text('Тарҷума калима ба калима нишон дода шавад'),
-                    value: _isWordByWordMode,
-                    onChanged: (value) {
-                      setModalState(() {
-                        _isWordByWordMode = value;
-                      });
-                      setState(() {
-                        _isWordByWordMode = value;
-                      });
-                      Future(() async {
-                        final s = SettingsService();
-                        await s.init();
-                        await s.setWordByWordMode(value);
-                      });
-                    },
-                  ),
-                ],
+                ListTile(
+                  leading: Icon(Icons.language, color: AppTheme.secondaryColor),
+                  title: const Text('Забони тарҷума'),
+                  subtitle: Text(_getTranslationLanguageName(_translationLang)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    _showTranslationLanguageDialog(context, setModalState);
+                  },
+                ),
                 
-                const SizedBox(height: 24),
+                SwitchListTile(
+                  secondary: Icon(Icons.text_fields, color: AppTheme.accentColor),
+                  title: const Text('Транслитератсия'),
+                  subtitle: const Text('Нусхаи лотинӣ нишон дода шавад'),
+                  value: _showTransliteration,
+                  activeColor: AppTheme.primaryColor,
+                  onChanged: (value) {
+                    setModalState(() => _showTransliteration = value);
+                    setState(() => _showTransliteration = value);
+                    Future(() async {
+                      final s = SettingsService();
+                      await s.init();
+                      await s.setShowTransliteration(value);
+                    });
+                  },
+                ),
                 
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Тайёр'),
-                  ),
+                SwitchListTile(
+                  secondary: Icon(Icons.compare_arrows, color: AppTheme.accentColor),
+                  title: const Text('Калима ба калима'),
+                  subtitle: const Text('Тарҷумаи ҳар калима'),
+                  value: _isWordByWordMode,
+                  activeColor: AppTheme.primaryColor,
+                  onChanged: (value) {
+                    setModalState(() => _isWordByWordMode = value);
+                    setState(() => _isWordByWordMode = value);
+                    Future(() async {
+                      final s = SettingsService();
+                      await s.init();
+                      await s.setWordByWordMode(value);
+                    });
+                  },
+                ),
+                
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
+                
+                ListTile(
+                  leading: Icon(Icons.record_voice_over, color: AppTheme.primaryColor),
+                  title: const Text('Қорӣ'),
+                  subtitle: Text(_getQariName(_audioEdition)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    _showQariSelectionDialog(context, setModalState);
+                  },
                 ),
               ],
-            ),
-          );
-        },
-      ),
+              
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -625,76 +804,173 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     }
   }
 
+  String _getQariName(String edition) {
+    switch (edition) {
+      case 'ar.alafasy':
+        return 'Мишарӣ Алъафасӣ';
+      case 'ar.husary':
+        return 'Маъмуди Халил Ҳусарӣ';
+      case 'ar.abdulbasit':
+        return 'Абдул Босит';
+      case 'ar.minshawi':
+        return 'Миншовӣ';
+      default:
+        return 'Мишарӣ Алъафасӣ';
+    }
+  }
+
   void _showTranslationLanguageDialog(BuildContext context, StateSetter setModalState) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Интихоби забони тарҷума'),
+        title: Row(
+          children: [
+            Icon(Icons.language, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
+            const Text('Интихоби забон'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<String>(
-              title: const Text('Тоҷикӣ'),
-              value: 'tajik',
-              groupValue: _translationLang,
-              onChanged: (value) {
-                if (value != null) {
-                  setModalState(() {
-                    _translationLang = value;
-                  });
-                  setState(() {
-                    _translationLang = value;
-                  });
-                  Future(() async {
-                    final s = SettingsService();
-                    await s.init();
-                    await s.setTranslationLanguage(value);
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
+            _buildLanguageOption(context, 'Тоҷикӣ', 'tajik', setModalState),
+            _buildLanguageOption(context, 'Форсӣ', 'farsi', setModalState),
+            _buildLanguageOption(context, 'Русӣ', 'russian', setModalState),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption(
+    BuildContext context,
+    String name,
+    String value,
+    StateSetter setModalState,
+  ) {
+    final isSelected = _translationLang == value;
+    
+    return InkWell(
+      onTap: () {
+        setModalState(() => _translationLang = value);
+        setState(() => _translationLang = value);
+        Future(() async {
+          final s = SettingsService();
+          await s.init();
+          await s.setTranslationLanguage(value);
+        });
+        Navigator.of(context).pop();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppTheme.primaryColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected 
+                ? AppTheme.primaryColor 
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isSelected ? AppTheme.primaryColor : Colors.grey,
             ),
-            RadioListTile<String>(
-              title: const Text('Форсӣ'),
-              value: 'farsi',
-              groupValue: _translationLang,
-              onChanged: (value) {
-                if (value != null) {
-                  setModalState(() {
-                    _translationLang = value;
-                  });
-                  setState(() {
-                    _translationLang = value;
-                  });
-                  Future(() async {
-                    final s = SettingsService();
-                    await s.init();
-                    await s.setTranslationLanguage(value);
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
+            const SizedBox(width: 16),
+            Text(
+              name,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? AppTheme.primaryColor : null,
+              ),
             ),
-            RadioListTile<String>(
-              title: const Text('Русӣ'),
-              value: 'russian',
-              groupValue: _translationLang,
-              onChanged: (value) {
-                if (value != null) {
-                  setModalState(() {
-                    _translationLang = value;
-                  });
-                  setState(() {
-                    _translationLang = value;
-                  });
-                  Future(() async {
-                    final s = SettingsService();
-                    await s.init();
-                    await s.setTranslationLanguage(value);
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showQariSelectionDialog(BuildContext context, StateSetter setModalState) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.record_voice_over, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
+            const Text('Интихоби қорӣ'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildQariOption(context, 'Мишарӣ Алъафасӣ', 'ar.alafasy', setModalState),
+            _buildQariOption(context, 'Маъмуди Халил Ҳусарӣ', 'ar.husary', setModalState),
+            _buildQariOption(context, 'Абдул Босит', 'ar.abdulbasit', setModalState),
+            _buildQariOption(context, 'Миншовӣ', 'ar.minshawi', setModalState),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQariOption(
+    BuildContext context,
+    String name,
+    String edition,
+    StateSetter setModalState,
+  ) {
+    final isSelected = _audioEdition == edition;
+    
+    return InkWell(
+      onTap: () {
+        setModalState(() => _audioEdition = edition);
+        setState(() => _audioEdition = edition);
+        Future(() async {
+          final s = SettingsService();
+          await s.init();
+          await s.setAudioEdition(edition);
+        });
+        Navigator.of(context).pop();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppTheme.primaryColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected 
+                ? AppTheme.primaryColor 
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isSelected ? AppTheme.primaryColor : Colors.grey,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? AppTheme.primaryColor : null,
+                ),
+              ),
             ),
           ],
         ),

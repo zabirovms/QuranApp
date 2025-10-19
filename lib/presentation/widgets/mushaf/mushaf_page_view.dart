@@ -18,28 +18,28 @@ class MushafPageView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pageAsync = ref.watch(mushafPageProvider(pageNumber));
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalMargin = screenWidth > 600 ? 80.0 : 48.0;
 
     return pageAsync.when(
       data: (page) => Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(context).scaffoldBackgroundColor,
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              children: [
-                _buildPageHeader(context, page),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: _buildPageContent(context, page, constraints),
-                ),
-                const SizedBox(height: 8),
-                _buildPageFooter(context, page),
-              ],
-            );
-          },
+        margin: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Column(
+          children: [
+            _buildPageHeader(context, page),
+            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: _buildPageContent(context, page),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildPageFooter(context, page),
+          ],
         ),
       ),
       loading: () => const Center(child: LoadingWidget()),
@@ -74,17 +74,10 @@ class MushafPageView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPageContent(BuildContext context, MushafPage page, BoxConstraints constraints) {
-    return FittedBox(
-      fit: BoxFit.contain,
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        width: constraints.maxWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: _buildContentWidgets(page, context),
-        ),
-      ),
+  Widget _buildPageContent(BuildContext context, MushafPage page) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: _buildContentWidgets(page, context),
     );
   }
 
@@ -105,12 +98,12 @@ class MushafPageView extends ConsumerWidget {
               textAlign: isFirstVerseOfSurah ? TextAlign.center : TextAlign.justify,
               style: TextStyle(
                 fontFamily: 'Amiri',
-                fontSize: 20,
+                fontSize: 24,
                 color: isDark 
                     ? AppTheme.arabicTextColorDark 
                     : AppTheme.arabicTextColor,
-                height: 1.8,
-                letterSpacing: 0.2,
+                height: 2.2,
+                letterSpacing: 0.3,
               ),
             ),
           ),
@@ -179,79 +172,44 @@ class MushafPageView extends ConsumerWidget {
   }
 
   Widget _buildSurahHeader(BuildContext context, String surahName, int surahNumber) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppTheme.primaryColor,
-            AppTheme.secondaryColor,
-            AppTheme.primaryColor,
-          ],
+        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          surahName,
+          style: TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 22,
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+          textDirection: TextDirection.rtl,
         ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildOrnament(),
-          const SizedBox(width: 12),
-          Text(
-            surahName,
-            style: const TextStyle(
-              fontFamily: 'Amiri',
-              fontSize: 18,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
-          const SizedBox(width: 12),
-          _buildOrnament(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrnament() {
-    return const Icon(
-      Icons.auto_awesome,
-      color: Colors.white,
-      size: 14,
     );
   }
 
   Widget _buildVerseNumber(BuildContext context, int number) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? AppTheme.darkPrimaryColor : AppTheme.primaryColor;
+    final color = Theme.of(context).colorScheme.primary.withOpacity(0.6);
     
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: color,
-          width: 1.2,
-        ),
+    return Text(
+      '﴿${_toArabicNumerals(number)}﴾',
+      style: TextStyle(
+        fontFamily: 'Amiri',
+        fontSize: 20,
+        color: color,
+        fontWeight: FontWeight.normal,
       ),
-      child: Text(
-        _toArabicNumerals(number),
-        style: TextStyle(
-          fontFamily: 'Amiri',
-          fontSize: 12,
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
-        textDirection: TextDirection.rtl,
-      ),
+      textDirection: TextDirection.rtl,
     );
   }
 

@@ -40,7 +40,6 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   bool _showTransliteration = false;
   bool _isWordByWordMode = false;
   bool _showAudioPlayer = false;
-  bool _showControls = false;
   bool _showQuickActions = false;
   String _translationLang = 'tajik';
   String _audioEdition = 'ar.alafasy';
@@ -59,16 +58,17 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     
     _fabAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 250),
     );
     _fabAnimation = CurvedAnimation(
       parent: _fabAnimationController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutCubic,
     );
     
     _controlsAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
+      value: 1.0,
     );
     _controlsAnimation = CurvedAnimation(
       parent: _controlsAnimationController,
@@ -169,20 +169,6 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     });
   }
 
-  void _toggleControls() {
-    setState(() {
-      _showControls = !_showControls;
-      if (_showControls) {
-        _controlsAnimationController.forward();
-      } else {
-        _controlsAnimationController.reverse();
-        if (_showQuickActions) {
-          _showQuickActions = false;
-          _fabAnimationController.reverse();
-        }
-      }
-    });
-  }
 
   void _toggleQuickActions() {
     setState(() {
@@ -230,59 +216,32 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
         data: (data) => SafeArea(
           child: Stack(
             children: [
-              GestureDetector(
-                onTap: _toggleControls,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: 604,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPageNumber = index + 1;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final pageNumber = index + 1;
-                    return MushafPageView(pageNumber: pageNumber);
-                  },
-                ),
+              PageView.builder(
+                controller: _pageController,
+                itemCount: 604,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPageNumber = index + 1;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final pageNumber = index + 1;
+                  return MushafPageView(pageNumber: pageNumber);
+                },
               ),
               
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: FadeTransition(
-                    opacity: _controlsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, -1),
-                        end: Offset.zero,
-                      ).animate(_controlsAnimation),
-                      child: _buildUnifiedHeader(),
-                    ),
-                  ),
-                ),
+                child: _buildUnifiedHeader(),
               ),
               
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: FadeTransition(
-                    opacity: _controlsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(_controlsAnimation),
-                      child: _buildPageIndicator(),
-                    ),
-                  ),
-                ),
+                child: _buildPageIndicator(),
               ),
             ],
           ),
@@ -335,27 +294,24 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
                   ),
                 
                 Expanded(
-                  child: GestureDetector(
-                    onTap: _toggleControls,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: 604,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPageNumber = index + 1;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final pageNumber = index + 1;
-                        return GlobalQuranPageView(
-                          pageNumber: pageNumber,
-                          focusedSurahNumber: widget.surahNumber,
-                          showTransliteration: _showTransliteration,
-                          isWordByWordMode: _isWordByWordMode,
-                          translationLang: _translationLang,
-                        );
-                      },
-                    ),
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: 604,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentPageNumber = index + 1;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final pageNumber = index + 1;
+                      return GlobalQuranPageView(
+                        pageNumber: pageNumber,
+                        focusedSurahNumber: widget.surahNumber,
+                        showTransliteration: _showTransliteration,
+                        isWordByWordMode: _isWordByWordMode,
+                        translationLang: _translationLang,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -365,33 +321,19 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
               top: 0,
               left: 0,
               right: 0,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: FadeTransition(
-                  opacity: _controlsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -1),
-                      end: Offset.zero,
-                    ).animate(_controlsAnimation),
-                    child: _buildUnifiedHeader(),
-                  ),
-                ),
-              ),
+              child: _buildUnifiedHeader(),
             ),
             
             Positioned(
               bottom: 16,
               left: 16,
               right: 16,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: FadeTransition(
-                  opacity: _controlsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
+              child: FadeTransition(
+                opacity: _controlsAnimation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.5),
+                    end: Offset.zero,
                     ).animate(_controlsAnimation),
                     child: _buildPageIndicator(),
                   ),
@@ -408,24 +350,23 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   Widget _buildUnifiedHeader() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
-          ],
+        color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.75),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.08),
+            width: 1,
+          ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: Icon(
-              Icons.arrow_back,
-              color: Theme.of(context).iconTheme.color,
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             onPressed: () {
               try {
@@ -440,59 +381,24 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
             },
           ),
           
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _currentMode == ReaderMode.mushaf 
-                      ? Icons.auto_stories 
-                      : Icons.translate,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 1,
-                  height: 16,
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Саҳифа $_currentPageNumber',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                  ),
-                ),
-              ],
+          Text(
+            '${_currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума'}  •  $_currentPageNumber / 604',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              letterSpacing: 0.3,
             ),
           ),
           
           IconButton(
             icon: Icon(
-              Icons.bookmark_border,
-              color: Theme.of(context).iconTheme.color,
+              Icons.settings_outlined,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
-            onPressed: () {
-              context.push('/bookmarks');
-            },
-            tooltip: 'Захираҳо',
+            onPressed: () => _showSettingsSheet(),
+            tooltip: 'Танзимот',
           ),
         ],
       ),
@@ -501,63 +407,61 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
 
   Widget _buildPageIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
-          ],
+        color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.75),
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.08),
+            width: 1,
+          ),
         ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.filled(
-            icon: const Icon(Icons.navigate_before, size: 20),
+          IconButton(
+            icon: Icon(
+              Icons.chevron_right,
+              size: 28,
+              color: _currentPageNumber > 1
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+            ),
             onPressed: _currentPageNumber > 1 
                 ? () => _goToPage(_currentPageNumber - 1) 
                 : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              foregroundColor: Theme.of(context).colorScheme.primary,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
-          const SizedBox(width: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).shadowColor.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              '$_currentPageNumber / 604',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
+          const SizedBox(width: 32),
+          Text(
+            '$_currentPageNumber',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
-          const SizedBox(width: 16),
-          IconButton.filled(
-            icon: const Icon(Icons.navigate_next, size: 20),
+          const SizedBox(width: 32),
+          IconButton(
+            icon: Icon(
+              Icons.chevron_left,
+              size: 28,
+              color: _currentPageNumber < 604
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+            ),
             onPressed: _currentPageNumber < 604 
                 ? () => _goToPage(_currentPageNumber + 1) 
                 : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              foregroundColor: Theme.of(context).colorScheme.primary,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
         ],
@@ -566,23 +470,16 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   }
 
   Widget _buildFloatingActionButton() {
-    return IgnorePointer(
-      ignoring: !_showControls,
-      child: FadeTransition(
-        opacity: _controlsAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

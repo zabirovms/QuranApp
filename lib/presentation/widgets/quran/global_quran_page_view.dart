@@ -56,30 +56,6 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Саҳифаи ${quranPage.pageNumber}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ҷузъи ${quranPage.juz}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               SliverPadding(
                 padding: const EdgeInsets.only(bottom: 16),
                 sliver: SliverList(
@@ -120,6 +96,8 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
 
   Widget _buildSurahHeader(int surahNumber) {
     final surahInfoAsync = ref.watch(surahInfoProvider(surahNumber));
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalMargin = screenWidth > 600 ? 32.0 : 20.0;
 
     return surahInfoAsync.when(
       data: (surah) {
@@ -127,42 +105,56 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+          margin: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: 24),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             children: [
               Text(
                 surah.nameArabic,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Amiri',
+                  letterSpacing: 1.0,
                 ),
                 textDirection: TextDirection.rtl,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 surah.nameTajik,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Chip(
-                    label: Text('${surah.versesCount} оят'),
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Text(
+                    '${surah.versesCount} оят',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Chip(
-                    label: Text(surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ'),
-                    backgroundColor: surah.revelationType == 'Meccan' 
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.blue.withOpacity(0.1),
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                 ],
               ),

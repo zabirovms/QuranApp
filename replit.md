@@ -1,13 +1,12 @@
 # Tajik Quran App - Flutter Web Edition
 
-## Project Overview
-This is a comprehensive Flutter application for reading the Quran with Tajik translation. The app has been configured to run as a web application in the Replit environment.
+## Overview
+This project is a comprehensive Flutter application designed for reading the Quran with Tajik translation. Originally conceived as a mobile app, it has been adapted to run as a web application within the Replit environment. The app aims to provide a rich Quran reading experience with features like audio playback, Islamic tools (Tasbeeh, Duas, word learning), search, bookmarks, and extensive customization. The long-term ambition is to deliver a robust and user-friendly Quran platform across multiple devices.
 
-**Original Purpose**: Mobile Quran app (Android/iOS) with advanced features  
-**Current State**: Running as a Flutter web application on Replit  
-**Last Updated**: October 19, 2025
+## User Preferences
+- None specified yet
 
-## Project Architecture
+## System Architecture
 
 ### Technology Stack
 - **Framework**: Flutter 3.22+ (Dart 3.5+)
@@ -19,267 +18,46 @@ This is a comprehensive Flutter application for reading the Quran with Tajik tra
 - **UI**: Material Design with custom theming
 
 ### Clean Architecture Layers
-```
-lib/
-├── app/              # App configuration and routing
-├── core/             # Core services (theme, performance, utilities)
-├── data/             # Data layer (models, repositories, API services)
-├── domain/           # Business logic (use cases, repository interfaces)
-├── presentation/     # UI layer (pages, widgets, providers)
-└── shared/           # Shared widgets and utilities
-```
+The project adheres to Clean Architecture principles with the following layer separation:
+- `app/`: Application configuration and routing.
+- `core/`: Core services including theme management, performance optimization, and utilities.
+- `data/`: Data layer, managing models, repositories, and API interactions.
+- `domain/`: Business logic, defining use cases and repository interfaces.
+- `presentation/`: User Interface layer, comprising pages, widgets, and Riverpod providers.
+- `shared/`: Reusable widgets and common utilities.
 
-## Features
-- Complete Quran reading with Tajik translation
-- Audio playback with multiple reciters (AlQuran Cloud API)
-- Islamic tools:
-  - Tasbeeh counter
-  - Word learning module
-  - Quranic Duas
-- Search and bookmarks functionality
-- Comprehensive settings and theme customization
-- Offline support with local data storage
+### UI/UX Decisions
+The application emphasizes a modern, polished interface with full dark mode support and consistent theming. Key UI/UX decisions include:
+- **Unified Quran Reader**: A single screen combines Mushaf (Arabic pages) and Translation modes with seamless toggling and page synchronization.
+- **Distraction-Free Reading**: Controls are hidden by default, appearing on tap, for an immersive reading experience.
+- **Elegant FAB Redesign**: A minimal, theme-aware Floating Action Button provides expandable quick actions (mode toggle, audio, settings) with smooth animations.
+- **Improved Page Navigation**: Features a centered page indicator with clear navigation buttons and smooth transitions.
+- **Theming**: All UI components are integrated with `Theme.of(context)` for proper light/dark mode support and consistent color schemes.
 
-## Development Setup
+### Feature Specifications
+- Complete Quran reading with Tajik translation.
+- Audio playback with multiple reciters (via AlQuran Cloud API).
+- Integrated Islamic tools: Tasbeeh counter, word learning module, and Quranic Duas.
+- Search and bookmarks functionality.
+- Comprehensive settings and theme customization.
+- Offline support (limited on web due to platform constraints).
+- Global continuous pagination (1-604 pages) across all surahs, with inline surah headers.
+- Authentic Mushaf-style layout with proper text justification and RTL navigation.
 
-### Environment
-- **Platform**: Replit (NixOS Linux)
-- **Flutter SDK Location**: `/home/runner/flutter/`
-- **Server Port**: 5000 (configured for Replit)
-- **Host**: 0.0.0.0 (allows all hosts for Replit proxy)
+### System Design Choices
+- **Replit Environment**: Configured to run as a web application on Replit, listening on port 5000.
+- **Web Compatibility**: Adaptations made for web deployment, such as removing `dart:io` dependencies and disabling mobile-specific features where necessary.
+- **Data Handling**: Combines remote API data with local JSON assets for Quran content and translations.
 
-### Running the App
-The app runs automatically via the configured workflow:
-- **Workflow Name**: Flutter Web Server
-- **Command**: `./run_flutter_web.sh`
-- **Access**: Opens in webview on port 5000
+## External Dependencies
 
-### Manual Commands
-```bash
-# Add Flutter to PATH
-export PATH="/home/runner/flutter/bin:$PATH"
-
-# Get dependencies
-flutter pub get
-
-# Run web server
-flutter run -d web-server --web-port=5000 --web-hostname=0.0.0.0
-
-# Build for production
-flutter build web --release
-```
-
-## Configuration Files
-
-### Key Files
-- `pubspec.yaml` - Flutter dependencies and assets
-- `run_flutter_web.sh` - Web server startup script
-- `setup_flutter.sh` - Initial Flutter web setup script
-- `web/index.html` - Web app entry point
-- `lib/main.dart` - Application entry point
-
-### Dependencies
-- State management: provider, riverpod, flutter_riverpod
-- Network: dio, connectivity_plus
-- UI: flutter_screenutil, cached_network_image, shimmer, lottie
-- Audio: just_audio, audio_service
-- Storage: shared_preferences, hive_flutter
-- Navigation: go_router
-
-## Data Sources
-- **Remote API**: AlQuran Cloud API for audio and additional content
-- **Local JSON**: 
-  - `alquran_cloud_complete_quran.json` - Complete Quran with page/juz metadata
-  - `surah_verses.json` - Tajik translations, transliteration, and tafsir
-  - Pre-loaded data for duas, tasbeehs, and word learning
-- **SQLite/Hive**: Local storage for bookmarks and user preferences
-
-### Translation Availability
-- **Tajik**: Full translation available in local data
-- **Farsi/Russian**: Not available in local JSON; UI falls back to Tajik translation
-- Future enhancement: Could fetch additional translations from AlQuran Cloud API
-
-## Deployment
-The app is configured for Replit deployment with autoscale settings for web hosting.
-
-## Recent Changes
-- **Oct 19, 2025**: Unified Quran Reader - UI/UX Enhancements
-  - **Major Visual Redesign**: Enhanced unified reader with modern, polished interface
-  - **Floating Action Menu**:
-    - Expandable FAB with quick actions (mode toggle, audio, settings)
-    - Smooth scale animations for menu items
-    - Rotating menu icon (200ms easeInOut)
-    - Clean, uncluttered interface
-  - **Enhanced Headers**:
-    - Mushaf mode: Semi-transparent gradient overlay, tap to show/hide
-    - Translation mode: Clean header with surah name and page badge
-    - Visual mode indicators with icons
-    - Dark/light mode adaptive
-  - **Modern Settings Bottom Sheet**:
-    - Rounded top corners (24px)
-    - Icon-based sections with color coding
-    - Highlighted mode toggle container
-    - Clear visual hierarchy
-  - **Custom Selection Dialogs**:
-    - Card-based language/qari selectors
-    - Check circle icons for selection
-    - Green border highlighting
-    - Smooth tap/hover feedback
-  - **Theme Integration**:
-    - Full dark mode support
-    - Consistent app theme colors
-    - Proper contrast in all modes
-    - Theme-aware icons and gradients
-  - **Layout & Polish**:
-    - Consistent spacing (8, 12, 16, 24px)
-    - Smooth animations throughout
-    - Professional visual hierarchy
-    - Better readability and aesthetics
-  - Full documentation: See `UI_ENHANCEMENTS.md` and `UI_UX_SUMMARY.md`
-
-- **Oct 19, 2025**: Unified Quran Reader Implementation
-  - **Major Feature**: Created unified screen combining Mushaf and Translation modes
-  - **Toggle Functionality**: Users can seamlessly switch between Mushaf (Arabic pages) and Translation (with tafsir, transliteration) modes
-  - **Key Benefits**:
-    - Single screen for all Quran reading needs
-    - Default mode: Mushaf (Arabic Mushaf pages)
-    - Page synchronization: Same page number preserved when switching modes
-    - Consistent navigation: Same page logic (1-604) for both modes
-  - **Implementation Details**:
-    - Created `UnifiedQuranReaderPage` in `lib/presentation/pages/unified_reader/`
-    - Added new routes: `/quran/:surahNumber`, `/quran/:surahNumber/verse/:verseNumber`, `/quran/page/:page`
-    - Updated all navigation throughout the app (HomePage, SearchPage, DuasPage, BookmarksPage)
-    - Preserved legacy routes (`/surah/...`) for backward compatibility
-  - **User Experience**:
-    - Click surah from home → Opens unified reader in Mushaf mode at surah's first page
-    - Toggle button in app bar or settings to switch modes
-    - Visual badge shows current mode (Мусҳаф or Тарҷума)
-    - All features work in both modes: bookmarks, audio, search, etc.
-  - **Technical Architecture**:
-    - Reuses existing components: `MushafPageView`, `GlobalQuranPageView`, `AudioPlayerWidget`
-    - Single `PageController` shared between modes for smooth transitions
-    - Modular design enables future enhancements
-  - Full documentation: See `UNIFIED_READER_IMPLEMENTATION.md`
-
-- **Oct 19, 2025**: Global Paginated Surah Screen Implementation
-  - **Architecture Change**: Converted from per-surah pagination to global continuous pagination (1-604)
-  - Implemented continuous Quran flow matching Mushaf screen pagination logic
-  - **Key Features**:
-    - Global page navigation across all 114 surahs (pages 1-604)
-    - Surah headers appear inline when a new surah starts on a page
-    - Multiple surahs can appear on the same page naturally
-    - Horizontal PageView for page navigation (swipe left/right)
-    - Vertical scrolling within each page for translations/tafsir/features
-  - **Technical Implementation**:
-    - Created `GlobalQuranPageRepository` for loading any page 1-604 across all surahs
-    - Created `GlobalQuranPageProvider` (page provider + surah first-page finder)
-    - Created `GlobalQuranPageView` widget for reusable page display with inline headers
-    - Updated `SurahPage` to use global pagination and jump to surah's first page
-    - Fixed verse indexing to use surah-wide indices (`verseNumber - 1`)
-    - Implemented `_scrollToVerse` for deep-link/bookmark navigation
-  - **Data Architecture**:
-    - Combines `alquran_cloud_complete_quran.json` (page/juz metadata) with `surah_verses.json` (translations)
-    - Verses sorted by surah number then verse number within each page
-    - Only Tajik translation available in local data (Farsi/Russian fallback to Tajik)
-  - **Preserved Features**:
-    - Audio playback with reciter selection
-    - Bookmarks and search functionality
-    - Translation language toggle, transliteration, word-by-word mode
-    - Surah information and description
-  - **Navigation**:
-    - Opens surah at its first page when selected from surah list
-    - Deep links and bookmarks jump to specific verse's page
-    - Page counter shows "Page X of 604" with current Juz
-  - **Future Potential**: Modular design enables merging Mushaf and Surah modes into unified screen
-
-- **Oct 18, 2025**: Mushaf Page Improvements
-  - Implemented authentic Mushaf-style layout with continuous inline verse flow
-  - Fixed text justification for proper right-left alignment
-  - Optimized page layout with FittedBox to fit all content without scrolling
-  - Fixed RTL page navigation (swipe right to advance, page appears from left)
-  - Corrected Basmala display (excluded Surah 1 and 9, centered first verse)
-  - Removed surah name repetition - appears only at surah start, not on every page
-  - Reduced horizontal padding (20px → 8px) for better text space utilization
-  - Simplified page header to show only Juz number (removed redundant surah name)
-  - **Theme Integration**: Updated Mushaf page to match app's design system
-    - Changed from beige/gold theme to app's green color scheme
-    - Using AppTheme constants: backgroundColor, surfaceColor, primaryColor, arabicTextColor
-    - Made page/juz indicators subtle (light gray text, no colored backgrounds)
-    - Green gradient surah headers matching app's primary/secondary colors
-    - Arabic text remains the main visual focus
-    - Fully integrated design - no longer feels like a separate mini-app
-
-- **Oct 16, 2025**: Initial Replit setup
-  - Installed Flutter SDK from stable branch
-  - Enabled Flutter web support
-  - Created web directory with necessary files
-  - Configured web server to run on port 5000 with 0.0.0.0 binding
-  - Set up workflow for automatic web server startup
-  - Updated .gitignore for Replit environment
-  - Fixed web compatibility issues:
-    - Removed dart:io dependencies in performance_optimizer.dart
-    - Added web-safe conditionals for File/Directory operations in audio_service.dart
-    - Disabled AudioService on web (not supported)
-    - Initialized Hive properly in main.dart
-    - Created web stub files for mobile-only APIs
-  - Configured deployment for autoscale with Flutter web build
-
-## User Preferences
-- None specified yet
-
-## Known Issues and Limitations
-
-### Critical Web Compatibility Issues
-- **UI Rendering**: The app loads successfully on port 5000 but shows a blank screen in the browser. The Flutter framework loads all 846 scripts correctly, but the UI doesn't render.
-- **Potential Causes**: 
-  - Deep integration with mobile-specific packages that don't have full web support
-  - Possible initialization errors that aren't being surfaced in browser console
-  - Some Riverpod providers or data services may not be initializing correctly on web
-
-### Package Limitations
-- Some packages have newer versions available but are incompatible with current dependency constraints
-- AudioService package is disabled on web (background audio not supported in browsers)
-- File system operations (downloading audio, caching) are disabled on web
-- Path provider functionality is limited on web
-
-### Performance Considerations
-- Web performance may vary based on browser and device capabilities
-- No offline storage capability on web (Hive works but with browser storage limits)
-- Memory monitoring features disabled on web
-
-## Troubleshooting
-
-### If the app doesn't load:
-1. Check that Flutter Web Server workflow is running
-2. Verify port 5000 is accessible
-3. Try hard refresh in browser (Ctrl+Shift+R or Cmd+Shift+R)
-4. Check browser console for JavaScript errors
-
-### For development:
-```bash
-# Hot reload (if workflow is running)
-# Press 'r' in the terminal where flutter run is active
-
-# Hot restart
-# Press 'R' in the terminal
-
-# Stop and restart workflow
-# Use Replit workflows panel
-```
-
-## Notes
-- **Important**: This is primarily a mobile app (Android/iOS) that has been adapted for web. The web version has significant limitations and may not be fully functional.
-- The backend server runs correctly and serves the app, but UI rendering on web needs additional work
-- For full functionality, this app should be run as a mobile application using Flutter's mobile build targets
-- The app uses clean architecture principles with proper separation of concerns
-- Audio playback uses the AlQuran Cloud API for recitations
-- Local data includes Quranic duas, tasbeehs, and top 100 words for learning
-
-## Recommendations for Full Web Support
-To make this app fully functional on web, the following changes would be needed:
-1. Replace mobile-specific packages with web-compatible alternatives
-2. Implement web-specific storage solutions (IndexedDB via Hive)
-3. Add error boundaries and better error handling for web platform
-4. Test and fix all Riverpod providers for web compatibility
-5. Implement progressive web app (PWA) features for offline support
-6. Consider using Flutter's `kIsWeb` flag throughout to provide platform-specific implementations
+- **AlQuran Cloud API**: Used for fetching audio recitations and potentially other content.
+- **Local JSON Files**:
+    - `alquran_cloud_complete_quran.json`: Contains complete Quran data with page and juz metadata.
+    - `surah_verses.json`: Stores Tajik translations, transliterations, and tafsir.
+    - Pre-loaded data for duas, tasbeehs, and word learning modules.
+- **Hive**: Used for local data storage, particularly for bookmarks and user preferences.
+- **SharedPreferences**: Utilized for lightweight key-value pair storage.
+- **just_audio**: For robust audio playback capabilities.
+- **Dio**: HTTP client for network requests.
+- **GoRouter**: For declarative routing and navigation within the application.

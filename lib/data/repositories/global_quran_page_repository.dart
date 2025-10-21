@@ -5,7 +5,7 @@ import '../models/surah_model.dart';
 
 class GlobalQuranPageRepository {
   static const String _mushafJsonPath = 'assets/data/alquran_cloud_complete_quran.json';
-  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
   
   final Map<int, QuranPage> _pageCache = {};
   final Map<int, int> _surahFirstPageCache = {};
@@ -19,53 +19,55 @@ class GlobalQuranPageRepository {
     final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
     final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
     final dataSection = mushafData['data'] as Map<String, dynamic>;
-    final surahsList = dataSection['surahs'] as List<dynamic>;
+    final mushafSurahsList = dataSection['surahs'] as List<dynamic>;
 
-    final versesJsonString = await rootBundle.loadString(_versesJsonPath);
+    final versesJsonString = await rootBundle.loadString(_translationsJsonPath);
     final versesData = json.decode(versesJsonString) as Map<String, dynamic>;
+    final translationsData = versesData['data'] as Map<String, dynamic>;
+    final translationSurahsList = translationsData['surahs'] as List<dynamic>;
 
     final verses = <VerseModel>[];
     final surahsOnPage = <int>{};
     int juz = 1;
 
-    for (final surahJson in surahsList) {
-      final surahData = surahJson as Map<String, dynamic>;
-      final surahNumber = surahData['number'] as int;
-      final ayahsList = surahData['ayahs'] as List<dynamic>;
+    for (final translationSurahJson in translationSurahsList) {
+      final translationSurahData = translationSurahJson as Map<String, dynamic>;
+      final surahNumber = translationSurahData['number'] as int;
+      final translationAyahsList = translationSurahData['ayahs'] as List<dynamic>;
 
-      final surahKey = surahNumber.toString();
-      final verseTranslations = versesData.containsKey(surahKey)
-          ? (versesData[surahKey] as Map<String, dynamic>)['verses'] as List
-          : [];
-
-      for (final ayahJson in ayahsList) {
-        final ayahData = ayahJson as Map<String, dynamic>;
-        final ayahPage = ayahData['page'] as int;
+      for (final translationAyahJson in translationAyahsList) {
+        final translationAyahData = translationAyahJson as Map<String, dynamic>;
+        final verseNumber = translationAyahData['number'] as int;
+        
+        // Find the corresponding verse in the mushaf data
+        final mushafSurahData = mushafSurahsList.firstWhere(
+          (s) => (s as Map<String, dynamic>)['number'] == surahNumber,
+        ) as Map<String, dynamic>;
+        final mushafAyahs = mushafSurahData['ayahs'] as List<dynamic>;
+        
+        final mushafAyah = mushafAyahs.firstWhere(
+          (a) => (a as Map<String, dynamic>)['numberInSurah'] == verseNumber,
+        ) as Map<String, dynamic>;
+        
+        final ayahPage = mushafAyah['page'] as int;
 
         if (ayahPage == pageNumber) {
-          final verseNumber = ayahData['numberInSurah'] as int;
-          
-          final translationData = verseTranslations.firstWhere(
-            (v) => v['verse_number'] == verseNumber,
-            orElse: () => null,
-          );
-
           final verse = VerseModel(
-            id: ayahData['number'] as int,
+            id: mushafAyah['number'] as int,
             surahId: surahNumber,
             verseNumber: verseNumber,
-            arabicText: (ayahData['text'] as String).trim(),
-            tajikText: translationData?['tajik_text'] as String? ?? '',
-            transliteration: translationData?['transliteration'] as String?,
-            tafsir: translationData?['tafsir'] as String?,
+            arabicText: (mushafAyah['text'] as String).trim(),
+            tajikText: translationAyahData['tajik_text'] as String? ?? '',
+            transliteration: translationAyahData['transliteration'] as String?,
+            tafsir: translationAyahData['tafsir'] as String?,
             page: ayahPage,
-            juz: ayahData['juz'] as int,
+            juz: mushafAyah['juz'] as int,
             uniqueKey: '$surahNumber:$verseNumber',
           );
 
           verses.add(verse);
           surahsOnPage.add(surahNumber);
-          juz = ayahData['juz'] as int;
+          juz = mushafAyah['juz'] as int;
         }
       }
     }
@@ -95,13 +97,13 @@ class GlobalQuranPageRepository {
     final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
     final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
     final dataSection = mushafData['data'] as Map<String, dynamic>;
-    final surahsList = dataSection['surahs'] as List<dynamic>;
+    final mushafSurahsList = dataSection['surahs'] as List<dynamic>;
 
-    if (surahNumber < 1 || surahNumber > surahsList.length) {
+    if (surahNumber < 1 || surahNumber > mushafSurahsList.length) {
       return 1;
     }
 
-    final surahData = surahsList[surahNumber - 1] as Map<String, dynamic>;
+    final surahData = mushafSurahsList[surahNumber - 1] as Map<String, dynamic>;
     final ayahsList = surahData['ayahs'] as List<dynamic>;
 
     if (ayahsList.isEmpty) {
@@ -131,13 +133,14 @@ class GlobalQuranPageRepository {
     final mushafJsonString = await rootBundle.loadString(_mushafJsonPath);
     final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
     final dataSection = mushafData['data'] as Map<String, dynamic>;
-    final surahsList = dataSection['surahs'] as List<dynamic>;
+    final mushafSurahsList = dataSection['surahs'] as List<dynamic>;
 
-    _allSurahs = surahsList.map((surahJson) {
+    _allSurahs = mushafSurahsList.map((surahJson) {
       final surahData = surahJson as Map<String, dynamic>;
       final ayahsList = surahData['ayahs'] as List<dynamic>;
       
       return SurahModel(
+        id: surahData['number'] as int,          // <-- required
         number: surahData['number'] as int,
         nameArabic: surahData['name'] as String,
         nameTajik: surahData['name_tajik'] as String,

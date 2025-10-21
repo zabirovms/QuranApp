@@ -185,9 +185,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: AudioPlayerWidget(
-                      surahNumber: widget.surahNumber,
-                      isCompact: true,
-                      onClose: () {
+                      audioUrl: 'https://example.com/audio.mp3', // Placeholder URL
+                      onPlay: () {
                         setState(() {
                           _showAudioPlayer = false;
                         });

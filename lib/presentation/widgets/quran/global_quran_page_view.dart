@@ -5,9 +5,9 @@ import '../../providers/quran_provider.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../data/models/bookmark_model.dart';
+import '../../../data/models/verse_model.dart';
 import '../../../data/services/audio_service.dart';
 import '../quran/verse_item.dart';
-import '../../pages/surah/surah_controller.dart';
 
 class GlobalQuranPageView extends ConsumerStatefulWidget {
   final int pageNumber;
@@ -56,30 +56,6 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Саҳифаи ${quranPage.pageNumber}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ҷузъи ${quranPage.juz}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               SliverPadding(
                 padding: const EdgeInsets.only(bottom: 16),
                 sliver: SliverList(
@@ -129,10 +105,6 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Column(
             children: [
               Text(
@@ -155,17 +127,41 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
                 children: [
                   Chip(
                     label: Text('${surah.versesCount} оят'),
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   ),
                   const SizedBox(width: 8),
                   Chip(
                     label: Text(surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ'),
                     backgroundColor: surah.revelationType == 'Meccan' 
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.blue.withOpacity(0.1),
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.blue.withValues(alpha: 0.1),
                   ),
                 ],
               ),
+              if (surah.description != null && surah.description!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ExpansionTile(
+                  title: Text(
+                    'Тавсифи Сура',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        surah.description!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          height: 1.6,
+                        ),
+                        textAlign: TextAlign.justify,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         );
@@ -175,7 +171,7 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
     );
   }
 
-  Widget _buildVerseItem(verse) {
+  Widget _buildVerseItem(VerseModel verse) {
     final surahNumber = verse.surahId;
     final controller = ref.watch(surahControllerProvider(surahNumber));
     final surahInfoAsync = ref.watch(surahInfoProvider(surahNumber));
@@ -183,9 +179,9 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
     final surahWideIndex = verse.verseNumber - 1;
     final tafsirKey = '${verse.surahId}:${verse.verseNumber}';
     
-    final arabicText = (surahWideIndex >= 0 && surahWideIndex < controller.state.arabic.length)
-        ? controller.state.arabic[surahWideIndex].text
-        : verse.arabicText;
+    // Always use the Arabic text from the verse model (from mushaf data) 
+    // to ensure proper RTL formatting and alignment
+    final arabicText = verse.arabicText;
 
     final wbw = controller.state.wordByWord[verse.uniqueKey]
         ?.map((w) => {'arabic': w.arabic, 'meaning': w.farsi ?? ''})
@@ -207,7 +203,7 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
             return verse.tajikText;
         }
       }(),
-      isHighlighted: controller.state.currentAyahIndex == surahWideIndex,
+      isHighlighted: verse.verseNumber != 1 && controller.state.currentAyahIndex == surahWideIndex,
       isTafsirOpen: _openTafsirMap[tafsirKey] ?? false,
       onToggleTafsir: () {
         setState(() {
@@ -229,7 +225,7 @@ class _GlobalQuranPageViewState extends ConsumerState<GlobalQuranPageView> {
           id: 0,
           userId: 'default_user',
           verseId: verse.id,
-          verseKey: '${surahNumber}:${verse.verseNumber}',
+          verseKey: '$surahNumber:${verse.verseNumber}',
           surahNumber: surahNumber,
           verseNumber: verse.verseNumber,
           arabicText: arabicText,

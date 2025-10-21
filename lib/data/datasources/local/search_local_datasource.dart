@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/verse_model.dart';
 
 class SearchLocalDataSource {
-  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
   static const String _recentTermsKey = 'recent_search_terms';
   
   List<VerseModel>? _cachedVerses;
@@ -19,8 +19,9 @@ class SearchLocalDataSource {
     }
     
     try {
-      final String response = await rootBundle.loadString(_versesJsonPath);
-      final Map<String, dynamic> data = json.decode(response);
+      final String response = await rootBundle.loadString(_translationsJsonPath);
+      final Map<String, dynamic> jsonData = json.decode(response);
+      final Map<String, dynamic> data = jsonData['data'] as Map<String, dynamic>;
       
       final List<VerseModel> allVerses = [];
       
@@ -29,20 +30,20 @@ class SearchLocalDataSource {
         if (surahNumber == null) continue;
         
         final surah = surahEntry.value as Map<String, dynamic>;
-        final versesList = surah['verses'] as List;
+        final versesList = surah['ayahs'] as List;
         
         for (var verseJson in versesList) {
           final verse = VerseModel(
             id: 0, // Not available in local data
             surahId: surahNumber,
-            verseNumber: verseJson['verse_number'] as int,
-            arabicText: verseJson['arabic_text'] as String,
+            verseNumber: verseJson['number'] as int,
+            arabicText: '', // Not available in translations file
             tajikText: verseJson['tajik_text'] as String? ?? '',
             transliteration: verseJson['transliteration'] as String? ?? '',
             farsi: null, // Not available in local data
             russian: null, // Not available in local data
             tafsir: verseJson['tafsir'] as String?,
-            uniqueKey: '${surahNumber}:${verseJson['verse_number']}',
+            uniqueKey: '${surahNumber}:${verseJson['number']}',
           );
           allVerses.add(verse);
         }

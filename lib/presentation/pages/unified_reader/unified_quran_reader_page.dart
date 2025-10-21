@@ -1,20 +1,16 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/global_quran_page_provider.dart';
 import '../../providers/mushaf_provider.dart';
-import '../../../data/services/audio_service.dart';
+import '../../providers/quran_provider.dart';
 import '../../../data/services/settings_service.dart';
+import '../../../data/services/audio_service.dart';
 import '../../widgets/mushaf/mushaf_page_view.dart';
 import '../../widgets/quran/global_quran_page_view.dart';
-import '../../widgets/quran/audio_player_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
-import '../../../core/theme/app_theme.dart';
-import 'package:share_plus/share_plus.dart';
 
 enum ReaderMode { mushaf, translation }
 
@@ -41,37 +37,55 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   bool _isWordByWordMode = false;
   bool _showAudioPlayer = false;
   bool _showControls = false;
-  bool _showQuickActions = false;
-  String _translationLang = 'tajik';
-  String _audioEdition = 'ar.alafasy';
+  bool _showSettingsPanel = false;
+  String _selectedQari = 'Abdul Basit Murattal';
   late PageController _pageController;
   int _currentPageNumber = 1;
-  int _initialPageNumber = 1;
   bool _isLoading = true;
-  late AnimationController _fabAnimationController;
-  late Animation<double> _fabAnimation;
-  late AnimationController _controlsAnimationController;
-  late Animation<double> _controlsAnimation;
+  late AnimationController _headerAnimationController;
+  late AnimationController _footerAnimationController;
+  late AnimationController _settingsAnimationController;
+  late Animation<Offset> _headerAnimation;
+  late Animation<Offset> _footerAnimation;
+  late Animation<double> _settingsAnimation;
 
   @override
   void initState() {
     super.initState();
     
-    _fabAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _fabAnimation = CurvedAnimation(
-      parent: _fabAnimationController,
-      curve: Curves.easeInOut,
-    );
-    
-    _controlsAnimationController = AnimationController(
+    // Initialize animation controllers
+    _headerAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _controlsAnimation = CurvedAnimation(
-      parent: _controlsAnimationController,
+    _footerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _settingsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    
+    // Initialize animations
+    _headerAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    _footerAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _footerAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    _settingsAnimation = CurvedAnimation(
+      parent: _settingsAnimationController,
       curve: Curves.easeInOut,
     );
     
@@ -82,8 +96,6 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
         setState(() {
           _showTransliteration = s.getShowTransliteration();
           _isWordByWordMode = s.getWordByWordMode();
-          _translationLang = s.getTranslationLanguage();
-          _audioEdition = s.getAudioEdition();
         });
       } catch (_) {
       }
@@ -98,57 +110,11 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
       }
 
       setState(() {
-        _initialPageNumber = startPage;
         _currentPageNumber = startPage;
         _pageController = PageController(initialPage: startPage - 1);
         _isLoading = false;
       });
-
-      if (widget.initialVerseNumber != null && widget.surahNumber != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToVerse(widget.surahNumber!, widget.initialVerseNumber!);
-        });
-      }
     });
-  }
-
-  void _scrollToVerse(int surahNumber, int verseNumber) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    if (!mounted) return;
-
-    try {
-      final mushafJsonString = await rootBundle.loadString('assets/data/alquran_cloud_complete_quran.json');
-      final mushafData = json.decode(mushafJsonString) as Map<String, dynamic>;
-      final dataSection = mushafData['data'] as Map<String, dynamic>;
-      final surahsList = dataSection['surahs'] as List<dynamic>;
-
-      if (surahNumber < 1 || surahNumber > surahsList.length) {
-        return;
-      }
-
-      final surahData = surahsList[surahNumber - 1] as Map<String, dynamic>;
-      final ayahsList = surahData['ayahs'] as List<dynamic>;
-
-      for (final ayahJson in ayahsList) {
-        final ayahData = ayahJson as Map<String, dynamic>;
-        final ayahVerseNumber = ayahData['numberInSurah'] as int;
-        
-        if (ayahVerseNumber == verseNumber) {
-          final versePage = ayahData['page'] as int;
-          
-          if (_pageController.hasClients) {
-            final pageIndex = versePage - 1;
-            _pageController.jumpToPage(pageIndex);
-            setState(() {
-              _currentPageNumber = versePage;
-            });
-          }
-          break;
-        }
-      }
-    } catch (e) {
-    }
   }
 
   @override
@@ -156,8 +122,9 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
     if (!_isLoading) {
       _pageController.dispose();
     }
-    _fabAnimationController.dispose();
-    _controlsAnimationController.dispose();
+    _headerAnimationController.dispose();
+    _footerAnimationController.dispose();
+    _settingsAnimationController.dispose();
     super.dispose();
   }
 
@@ -172,36 +139,101 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   void _toggleControls() {
     setState(() {
       _showControls = !_showControls;
-      if (_showControls) {
-        _controlsAnimationController.forward();
-      } else {
-        _controlsAnimationController.reverse();
-        if (_showQuickActions) {
-          _showQuickActions = false;
-          _fabAnimationController.reverse();
-        }
-      }
     });
-  }
-
-  void _toggleQuickActions() {
-    setState(() {
-      _showQuickActions = !_showQuickActions;
-    });
-    if (_showQuickActions) {
-      _fabAnimationController.forward();
+    
+    if (_showControls) {
+      _headerAnimationController.forward();
+      _footerAnimationController.forward();
     } else {
-      _fabAnimationController.reverse();
+      _headerAnimationController.reverse();
+      _footerAnimationController.reverse();
+      _hideSettingsPanel();
     }
   }
 
-  void _goToPage(int page) {
-    if (page >= 1 && page <= 604) {
-      _pageController.jumpToPage(page - 1);
+  void _hideSettingsPanel() {
+    if (_showSettingsPanel) {
       setState(() {
-        _currentPageNumber = page;
+        _showSettingsPanel = false;
       });
+      _settingsAnimationController.reverse();
     }
+  }
+
+  void _toggleSettingsPanel() {
+    setState(() {
+      _showSettingsPanel = !_showSettingsPanel;
+    });
+    
+    if (_showSettingsPanel) {
+      _settingsAnimationController.forward();
+    } else {
+      _settingsAnimationController.reverse();
+    }
+  }
+
+  void _toggleTransliteration() {
+      setState(() {
+      _showTransliteration = !_showTransliteration;
+    });
+    // Save to settings
+    SettingsService().setShowTransliteration(_showTransliteration);
+  }
+
+  void _toggleWordByWordMode() {
+    setState(() {
+      _isWordByWordMode = !_isWordByWordMode;
+    });
+    // Save to settings
+    SettingsService().setWordByWordMode(_isWordByWordMode);
+  }
+
+  void _toggleAudioPlayer() {
+    setState(() {
+      _showAudioPlayer = !_showAudioPlayer;
+    });
+    
+    if (_showAudioPlayer) {
+      // Start playing audio for current page
+      _playCurrentPageAudio();
+    } else {
+      // Stop audio
+      QuranAudioService().stop();
+    }
+  }
+
+  void _playCurrentPageAudio() {
+    try {
+      final pageAsync = ref.read(globalQuranPageProvider(_currentPageNumber));
+      pageAsync.maybeWhen(
+        data: (page) {
+          if (page.verses.isNotEmpty) {
+            final firstVerse = page.verses.first;
+            QuranAudioService().playVerse(
+              firstVerse.surahId,
+              firstVerse.verseNumber,
+              edition: _selectedQari,
+            );
+          }
+        },
+        orElse: () {},
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Хатоги дар пахш кардани аудио: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _selectQari(String qari) {
+    setState(() {
+      _selectedQari = qari;
+    });
+    // Save to settings
+    SettingsService().setAudioEdition(qari);
   }
 
   @override
@@ -213,817 +245,516 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
       );
     }
 
-    if (_currentMode == ReaderMode.mushaf) {
-      return _buildMushafMode();
-    } else {
-      return _buildTranslationMode();
-    }
-  }
-
-  Widget _buildMushafMode() {
-    final mushafDataAsync = ref.watch(mushafDataProvider);
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
-      body: mushafDataAsync.when(
-        data: (data) => SafeArea(
-          child: Stack(
-            children: [
-              GestureDetector(
-                onTap: _toggleControls,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: 604,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPageNumber = index + 1;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final pageNumber = index + 1;
-                    return MushafPageView(pageNumber: pageNumber);
-                  },
-                ),
-              ),
-              
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: FadeTransition(
-                    opacity: _controlsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, -1),
-                        end: Offset.zero,
-                      ).animate(_controlsAnimation),
-                      child: _buildUnifiedHeader(),
-                    ),
-                  ),
-                ),
-              ),
-              
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: FadeTransition(
-                    opacity: _controlsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(_controlsAnimation),
-                      child: _buildPageIndicator(),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        loading: () => const LoadingWidget(),
-        error: (error, stack) => CustomErrorWidget(
-          message: 'Хато ҳангоми боркунии Мусҳаф',
-          onRetry: () => ref.refresh(mushafDataProvider),
-        ),
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
-    );
-  }
-
-  Widget _buildTranslationMode() {
-    final surahInfoAsync = widget.surahNumber != null
-        ? ref.watch(surahInfoProvider(widget.surahNumber!))
-        : null;
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
+      body: GestureDetector(
+        onTap: _toggleControls,
         child: Stack(
           children: [
-            Column(
-              children: [
-                if (_showAudioPlayer && widget.surahNumber != null)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: AudioPlayerWidget(
-                      surahNumber: widget.surahNumber!,
-                      isCompact: true,
-                      onClose: () {
-                        setState(() {
-                          _showAudioPlayer = false;
-                        });
-                      },
-                    ),
-                  ),
-                
-                Expanded(
-                  child: GestureDetector(
-                    onTap: _toggleControls,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: 604,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPageNumber = index + 1;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final pageNumber = index + 1;
-                        return GlobalQuranPageView(
-                          pageNumber: pageNumber,
-                          focusedSurahNumber: widget.surahNumber,
-                          showTransliteration: _showTransliteration,
-                          isWordByWordMode: _isWordByWordMode,
-                          translationLang: _translationLang,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // Main content
+            _buildMainContent(),
             
+            // Header panel
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: FadeTransition(
-                  opacity: _controlsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -1),
-                      end: Offset.zero,
-                    ).animate(_controlsAnimation),
-                    child: _buildUnifiedHeader(),
-                  ),
-                ),
+              child: SlideTransition(
+                position: _headerAnimation,
+                child: _buildHeaderPanel(),
               ),
             ),
             
+            // Footer panel
             Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: FadeTransition(
-                  opacity: _controlsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
-                    ).animate(_controlsAnimation),
-                    child: _buildPageIndicator(),
-                  ),
-                ),
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SlideTransition(
+                position: _footerAnimation,
+                child: _buildFooterPanel(),
               ),
             ),
+            
+            // Settings panel (only in translation mode)
+            if (_currentMode == ReaderMode.translation && _showSettingsPanel)
+              _buildSettingsPanel(),
           ],
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  Widget _buildUnifiedHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
-          ],
+  Widget _buildMainContent() {
+    return PageView.builder(
+      controller: _pageController,
+      onPageChanged: (pageIndex) {
+        setState(() {
+          _currentPageNumber = pageIndex + 1;
+        });
+      },
+      itemBuilder: (context, pageIndex) {
+        final pageNumber = pageIndex + 1;
+        
+        if (_currentMode == ReaderMode.mushaf) {
+          return _buildMushafContent(pageNumber);
+        } else {
+          return _buildTranslationContent(pageNumber);
+        }
+      },
+    );
+  }
+
+  Widget _buildMushafContent(int pageNumber) {
+    final mushafDataAsync = ref.watch(mushafDataProvider);
+
+    return mushafDataAsync.when(
+      data: (data) => SafeArea(
+        child: MushafPageView(
+          pageNumber: pageNumber,
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: Theme.of(context).iconTheme.color,
-            ),
-            onPressed: () {
-              try {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/');
-                }
-              } catch (e) {
-                context.go('/');
-              }
-            },
-          ),
-          
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _currentMode == ReaderMode.mushaf 
-                      ? Icons.auto_stories 
-                      : Icons.translate,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 1,
-                  height: 16,
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Саҳифа $_currentPageNumber',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          IconButton(
-            icon: Icon(
-              Icons.bookmark_border,
-              color: Theme.of(context).iconTheme.color,
-            ),
-            onPressed: () {
-              context.push('/bookmarks');
-            },
-            tooltip: 'Захираҳо',
+      loading: () => const Center(child: LoadingWidget()),
+      error: (error, stack) => Center(
+        child: CustomErrorWidget(
+          message: error.toString(),
+          onRetry: () {
+            ref.invalidate(mushafDataProvider);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranslationContent(int pageNumber) {
+    final surahDataAsync = ref.watch(globalQuranPageProvider(pageNumber));
+
+    return surahDataAsync.when(
+      data: (data) => SafeArea(
+        child: GlobalQuranPageView(
+          pageNumber: pageNumber,
+          showTransliteration: _showTransliteration,
+          isWordByWordMode: _isWordByWordMode,
+          translationLang: 'tajik',
+        ),
+      ),
+      loading: () => const Center(child: LoadingWidget()),
+      error: (error, stack) => Center(
+        child: CustomErrorWidget(
+          message: error.toString(),
+          onRetry: () {
+            ref.invalidate(globalQuranPageProvider(pageNumber));
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-    );
-  }
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Top row: Back button, Surah name, Bookmark button
+              Row(
+                children: [
+                  // Back button
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: Icon(
+                      Icons.arrow_back_ios_rounded,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  
+                  // Surah name (centered)
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          _getCurrentSurahName(),
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Саҳифа $_currentPageNumber • Ҷузъ ${_getCurrentJuz()}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Bookmark button
+                  IconButton(
+                    onPressed: _addBookmark,
+                    icon: Icon(
+                      Icons.bookmark_border_rounded,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
 
-  Widget _buildPageIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.85),
-            Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
-          ],
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton.filled(
-            icon: const Icon(Icons.navigate_before, size: 20),
-            onPressed: _currentPageNumber > 1 
-                ? () => _goToPage(_currentPageNumber - 1) 
-                : null,
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              foregroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).shadowColor.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  // Bookmarks list button
+                  IconButton(
+                    onPressed: () => context.push('/bookmarks'),
+                    icon: Icon(
+                      Icons.bookmark_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    tooltip: 'Хатбаракҳо',
+                  ),
+
+                  // Single mode toggle button
+                  IconButton(
+                    tooltip: _currentMode == ReaderMode.mushaf ? 'Switch to Translation' : 'Switch to Mushaf',
+                    icon: Icon(
+                      _currentMode == ReaderMode.mushaf 
+                          ? Icons.menu_book_rounded 
+                          : Icons.translate_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 22, // smaller for compact header
+                    ),
+                    onPressed: _toggleMode,
+                  ),
+
+                  // Settings icon (only for translation mode)
+                  if (_currentMode == ReaderMode.translation)
+                    IconButton(
+                      onPressed: _toggleSettingsPanel,
+                      icon: Icon(
+                        _showSettingsPanel ? Icons.close_rounded : Icons.settings_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                ],
                 ),
               ],
             ),
-            child: Text(
-              '$_currentPageNumber / 604',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          IconButton.filled(
-            icon: const Icon(Icons.navigate_next, size: 20),
-            onPressed: _currentPageNumber < 604 
-                ? () => _goToPage(_currentPageNumber + 1) 
-                : null,
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              foregroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return IgnorePointer(
-      ignoring: !_showControls,
-      child: FadeTransition(
-        opacity: _controlsAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(8),
+  Widget _buildFooterPanel() {
+    return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).shadowColor.withOpacity(0.15),
-                blurRadius: 16,
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              // Play/Pause button
+              IconButton(
+                onPressed: _toggleAudioPlayer,
+                icon: Icon(
+                  _showAudioPlayer ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 28,
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // Qari name (centered)
+              Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+                    Text(
+                      _selectedQari,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      'Қори',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // Qari dropdown button
+              PopupMenuButton<String>(
+                onSelected: _selectQari,
+                itemBuilder: (context) => _getQariList().map((qari) {
+                  return PopupMenuItem<String>(
+                    value: qari,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _selectedQari == qari ? Icons.check_rounded : null,
+                      color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            qari,
+                            style: TextStyle(
+                              color: _selectedQari == qari 
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface,
+                              fontWeight: _selectedQari == qari 
+                                  ? FontWeight.w600 
+                                  : FontWeight.normal,
+                ),
+              ),
+            ),
+          ],
+                    ),
+                  );
+                }).toList(),
+            child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Theme.of(context).colorScheme.onSurface,
+            ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsPanel() {
+    return Positioned(
+      top: 120, // Below header
+      left: 16,
+      right: 16,
+      child: ScaleTransition(
+        scale: _settingsAnimation,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.2),
+                blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            if (_showQuickActions) ...[
-              ScaleTransition(
-                scale: _fabAnimation,
-                child: _buildActionButton(
-                  icon: _currentMode == ReaderMode.mushaf 
-                      ? Icons.translate 
-                      : Icons.auto_stories,
-                  tooltip: _currentMode == ReaderMode.mushaf 
-                      ? 'Ҳолати тарҷума' 
-                      : 'Ҳолати Мусҳаф',
-                  onPressed: _toggleMode,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              if (_currentMode == ReaderMode.translation) ...[
-                ScaleTransition(
-                  scale: _fabAnimation,
-                  child: _buildActionButton(
-                    icon: _showAudioPlayer ? Icons.pause_circle : Icons.play_circle,
-                    tooltip: 'Садо',
-                    onPressed: () {
-                      setState(() {
-                        _showAudioPlayer = !_showAudioPlayer;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              
-              ScaleTransition(
-                scale: _fabAnimation,
-                child: _buildActionButton(
-                  icon: Icons.settings,
-                  tooltip: 'Танзимот',
-                  onPressed: () => _showSettingsBottomSheet(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: Theme.of(context).dividerColor.withOpacity(0.1),
-              ),
-              const SizedBox(height: 12),
-            ],
-            
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _toggleQuickActions,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: AnimatedRotation(
-                    turns: _showQuickActions ? 0.125 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.menu_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            child: Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-              size: 22,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showSettingsBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildSettingsBottomSheet(),
-    );
-  }
-
-  Widget _buildSettingsBottomSheet() {
-    return StatefulBuilder(
-      builder: (context, setModalState) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.settings,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      'Танзимоти намоиш',
+              Text(
+                'Танзимот',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                      ),
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Transliteration toggle
+              _buildSettingsToggle(
+                'Транслитератсия',
+                'Намоиши транслитератсия',
+                _showTransliteration,
+                Icons.font_download_rounded,
+                _toggleTransliteration,
+              ),
+              
+                const SizedBox(height: 16),
+              
+              // Word-by-word toggle
+              _buildSettingsToggle(
+                'Ҳарфи ба ҳарф',
+                'Намоиши тарҷумаи ҳарфи ба ҳарф',
+                _isWordByWordMode,
+                Icons.text_fields_rounded,
+                _toggleWordByWordMode,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsToggle(
+    String title,
+    String subtitle,
+    bool value,
+    IconData icon,
+    VoidCallback onToggle,
+  ) {
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: value 
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: value 
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: value 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+            Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  ),
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    _currentMode == ReaderMode.mushaf 
-                        ? Icons.auto_stories 
-                        : Icons.translate,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  title: const Text('Ҳолати намоиш'),
-                  subtitle: Text(_currentMode == ReaderMode.mushaf ? 'Мусҳаф' : 'Тарҷума'),
-                  trailing: Switch(
-                    value: _currentMode == ReaderMode.translation,
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    onChanged: (value) {
-                      setModalState(() {
-                        _currentMode = value ? ReaderMode.translation : ReaderMode.mushaf;
-                      });
-                      setState(() {
-                        _currentMode = value ? ReaderMode.translation : ReaderMode.mushaf;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              
-              if (_currentMode == ReaderMode.translation) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                
-                ListTile(
-                  leading: Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
-                  title: const Text('Забони тарҷума'),
-                  subtitle: Text(_getTranslationLanguageName(_translationLang)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showTranslationLanguageDialog(context, setModalState);
-                  },
-                ),
-                
-                SwitchListTile(
-                  secondary: Icon(Icons.text_fields, color: Theme.of(context).colorScheme.primary),
-                  title: const Text('Транслитератсия'),
-                  subtitle: const Text('Нусхаи лотинӣ нишон дода шавад'),
-                  value: _showTransliteration,
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  onChanged: (value) {
-                    setModalState(() => _showTransliteration = value);
-                    setState(() => _showTransliteration = value);
-                    Future(() async {
-                      final s = SettingsService();
-                      await s.init();
-                      await s.setShowTransliteration(value);
-                    });
-                  },
-                ),
-                
-                SwitchListTile(
-                  secondary: Icon(Icons.compare_arrows, color: Theme.of(context).colorScheme.primary),
-                  title: const Text('Калима ба калима'),
-                  subtitle: const Text('Тарҷумаи ҳар калима'),
-                  value: _isWordByWordMode,
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  onChanged: (value) {
-                    setModalState(() => _isWordByWordMode = value);
-                    setState(() => _isWordByWordMode = value);
-                    Future(() async {
-                      final s = SettingsService();
-                      await s.init();
-                      await s.setWordByWordMode(value);
-                    });
-                  },
-                ),
-                
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 8),
-                
-                ListTile(
-                  leading: Icon(Icons.record_voice_over, color: Theme.of(context).colorScheme.primary),
-                  title: const Text('Қорӣ'),
-                  subtitle: Text(_getQariName(_audioEdition)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showQariSelectionDialog(context, setModalState);
-                  },
-                ),
-              ],
-              
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
+            ),
+            Switch(
+              value: value,
+              onChanged: (_) => onToggle(),
+              activeThumbColor: Colors.white,
+              activeTrackColor: Theme.of(context).colorScheme.primary,
+              inactiveThumbColor: Theme.of(context).colorScheme.outline,
+              inactiveTrackColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  String _getTranslationLanguageName(String lang) {
-    switch (lang) {
-      case 'tajik':
-        return 'Тоҷикӣ';
-      case 'farsi':
-        return 'Форсӣ';
-      case 'russian':
-        return 'Русӣ';
-      default:
-        return 'Тоҷикӣ';
+  String _getCurrentSurahName() {
+    if (widget.surahNumber != null) {
+      final surahInfoAsync = ref.read(surahInfoProvider(widget.surahNumber!));
+      return surahInfoAsync.maybeWhen(
+        data: (surah) => surah?.nameTajik ?? 'Сура',
+        orElse: () => 'Сура',
+      );
+    }
+    
+    // For page-based navigation, get surah from current page
+    final pageAsync = ref.read(globalQuranPageProvider(_currentPageNumber));
+    return pageAsync.maybeWhen(
+      data: (page) {
+        if (page.surahsOnPage.isNotEmpty) {
+          final firstSurahNumber = page.surahsOnPage.first;
+          final surahInfoAsync = ref.read(surahInfoProvider(firstSurahNumber));
+          return surahInfoAsync.maybeWhen(
+            data: (surah) => surah?.nameTajik ?? 'Сура',
+            orElse: () => 'Сура',
+          );
+        }
+        return 'Сура';
+      },
+      orElse: () => 'Сура',
+    );
+  }
+
+  int _getCurrentJuz() {
+    final pageAsync = ref.read(globalQuranPageProvider(_currentPageNumber));
+    return pageAsync.maybeWhen(
+      data: (page) => page.juz,
+      orElse: () => 1,
+    );
+  }
+
+  void _addBookmark() async {
+    try {
+      // Get current verse information
+      final pageAsync = ref.read(globalQuranPageProvider(_currentPageNumber));
+      pageAsync.maybeWhen(
+        data: (page) {
+          if (page.verses.isNotEmpty) {
+            // Add bookmark logic would go here
+            // For now, just show a snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Оят ба захираҳо илова карда шуд'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+        orElse: () {},
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Хатоги дар захира кардан: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
-  String _getQariName(String edition) {
-    switch (edition) {
-      case 'ar.alafasy':
-        return 'Мишарӣ Алъафасӣ';
-      case 'ar.husary':
-        return 'Маъмуди Халил Ҳусарӣ';
-      case 'ar.abdulbasit':
-        return 'Абдул Босит';
-      case 'ar.minshawi':
-        return 'Миншовӣ';
-      default:
-        return 'Мишарӣ Алъафасӣ';
-    }
-  }
-
-  void _showTranslationLanguageDialog(BuildContext context, StateSetter setModalState) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            const Text('Интихоби забон'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildLanguageOption(context, 'Тоҷикӣ', 'tajik', setModalState),
-            _buildLanguageOption(context, 'Форсӣ', 'farsi', setModalState),
-            _buildLanguageOption(context, 'Русӣ', 'russian', setModalState),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption(
-    BuildContext context,
-    String name,
-    String value,
-    StateSetter setModalState,
-  ) {
-    final isSelected = _translationLang == value;
-    
-    return InkWell(
-      onTap: () {
-        setModalState(() => _translationLang = value);
-        setState(() => _translationLang = value);
-        Future(() async {
-          final s = SettingsService();
-          await s.init();
-          await s.setTranslationLanguage(value);
-        });
-        Navigator.of(context).pop();
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary 
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              name,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Theme.of(context).colorScheme.primary : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showQariSelectionDialog(BuildContext context, StateSetter setModalState) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.record_voice_over, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            const Text('Интихоби қорӣ'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildQariOption(context, 'Мишарӣ Алъафасӣ', 'ar.alafasy', setModalState),
-            _buildQariOption(context, 'Маъмуди Халил Ҳусарӣ', 'ar.husary', setModalState),
-            _buildQariOption(context, 'Абдул Босит', 'ar.abdulbasit', setModalState),
-            _buildQariOption(context, 'Миншовӣ', 'ar.minshawi', setModalState),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQariOption(
-    BuildContext context,
-    String name,
-    String edition,
-    StateSetter setModalState,
-  ) {
-    final isSelected = _audioEdition == edition;
-    
-    return InkWell(
-      onTap: () {
-        setModalState(() => _audioEdition = edition);
-        setState(() => _audioEdition = edition);
-        Future(() async {
-          final s = SettingsService();
-          await s.init();
-          await s.setAudioEdition(edition);
-        });
-        Navigator.of(context).pop();
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary 
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                name,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Theme.of(context).colorScheme.primary : null,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  List<String> _getQariList() {
+    return [
+      'Abdul Basit Murattal',
+      'Abdul Basit Mujawwad',
+      'Abdurrahmaan As-Sudais',
+      'Mishary Rashid Alafasy',
+      'Saad Al-Ghamdi',
+      'Muhammad Al-Minshawi',
+      'Mahmoud Khalil Al-Husary',
+      'Muhammad Siddiq Al-Minshawi',
+    ];
   }
 }

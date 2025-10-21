@@ -173,34 +173,6 @@ class ApiService {
         final response = await _apiDio.get(url);
         return response;
       }
-      // Unreachable in success paths; keep for completeness
-      throw Exception('Search failed');
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  // Get word-by-word analysis from Supabase
-  Future<Response> getWordAnalysis(int surahNumber, int verseNumber) async {
-    try {
-      final verseKey = '$surahNumber:$verseNumber';
-      final response = await _supabaseDio.get('/rest/v1/word_by_word?unique_key=eq.$verseKey&order=word_number');
-      return response;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  // Batch fetch word-by-word by unique keys
-  Future<Response> getWordByWordByKeys(List<String> uniqueKeys) async {
-    try {
-      if (uniqueKeys.isEmpty) {
-        return Response(requestOptions: RequestOptions(), data: []);
-      }
-      final keys = uniqueKeys.map((k) => '"$k"').join(',');
-      final url = '/rest/v1/word_by_word?unique_key=in.($keys)&order=unique_key,word_number';
-      final response = await _supabaseDio.get(url);
-      return response;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -216,8 +188,6 @@ class ApiService {
         if (data['code'] == 200 && data['data'] != null) {
           // The API returns the full surah data, but we need to construct the audio URL
           // AlQuran Cloud provides audio URLs in a specific format
-          final surahData = data['data'];
-          final surahName = surahData['englishName'].toString().toLowerCase().replaceAll(' ', '');
           final audioUrl = 'https://cdn.islamic.network/quran/audio-surah/128/$reciter/$surahNumber.mp3';
           return audioUrl;
         }
@@ -371,7 +341,6 @@ class ApiService {
       case DioExceptionType.badCertificate:
         return Exception('Bad certificate. Please check your connection.');
       case DioExceptionType.unknown:
-      default:
         return Exception('An unknown error occurred: ${error.message}');
     }
   }

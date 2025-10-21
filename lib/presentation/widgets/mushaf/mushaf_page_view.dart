@@ -24,18 +24,19 @@ class MushafPageView extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildPageHeader(context, page),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Expanded(
                   child: _buildPageContent(context, page, constraints),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 _buildPageFooter(context, page),
               ],
             );
@@ -52,20 +53,30 @@ class MushafPageView extends ConsumerWidget {
     );
   }
 
+  // --------------------- HEADER ---------------------
   Widget _buildPageHeader(BuildContext context, MushafPage page) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    String surahName = page.verses.isNotEmpty ? page.verses.first.surahName : '';
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'جُزۡءُ ${_toArabicNumerals(page.juz)}',
           style: TextStyle(
             fontFamily: 'Amiri',
             fontSize: 12,
-            color: isDark 
-                ? Colors.grey[400]
-                : AppTheme.textHintColor,
+            color: isDark ? Colors.grey[400] : AppTheme.textHintColor,
+            fontWeight: FontWeight.normal,
+          ),
+          textDirection: TextDirection.rtl,
+        ),
+        Text(
+          surahName,
+          style: TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 12,
+            color: isDark ? Colors.grey[400] : AppTheme.textHintColor,
             fontWeight: FontWeight.normal,
           ),
           textDirection: TextDirection.rtl,
@@ -74,205 +85,140 @@ class MushafPageView extends ConsumerWidget {
     );
   }
 
+  // --------------------- PAGE CONTENT ---------------------
+  // --------------------- PAGE CONTENT ---------------------
   Widget _buildPageContent(BuildContext context, MushafPage page, BoxConstraints constraints) {
-    return FittedBox(
-      fit: BoxFit.contain,
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        width: constraints.maxWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: _buildContentWidgets(page, context),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildContentWidgets(MushafPage page, BuildContext context) {
     final widgets = <Widget>[];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    int currentSurahNumber = -1;
-    final List<InlineSpan> currentParagraphSpans = [];
-    bool isFirstVerseOfSurah = false;
 
-    void flushParagraph() {
-      if (currentParagraphSpans.isNotEmpty) {
-        widgets.add(
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text.rich(
-              TextSpan(children: List.from(currentParagraphSpans)),
-              textAlign: isFirstVerseOfSurah ? TextAlign.center : TextAlign.justify,
-              style: TextStyle(
-                fontFamily: 'Amiri',
-                fontSize: 20,
-                color: isDark 
-                    ? AppTheme.arabicTextColorDark 
-                    : AppTheme.arabicTextColor,
-                height: 1.8,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ),
-        );
-        currentParagraphSpans.clear();
-        isFirstVerseOfSurah = false;
-      }
+    if (page.verses.isEmpty) return const SizedBox();
+
+    final firstVerse = page.verses.first;
+
+    // Add Surah header only at the start of Surah
+    if (firstVerse.numberInSurah == 1) {
+      widgets.add(_buildSurahHeader(context, firstVerse.surahName));
     }
 
-    for (int i = 0; i < page.verses.length; i++) {
+    // Extract Bismillah if not Surah 1
+    const bismillahText = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ';
+    String remainingText = '';
+    if (firstVerse.arabicText.startsWith(bismillahText) && firstVerse.surahNumber != 1) {
+      widgets.add(const SizedBox(height: 6));
+      widgets.add(_buildBismillah(context, bismillahText));
+      widgets.add(const SizedBox(height: 6));
+      remainingText = firstVerse.arabicText.replaceFirst(bismillahText, '').trim();
+    } else {
+      remainingText = firstVerse.arabicText;
+    }
+
+    // Build continuous text for all verses
+    final textSpans = <InlineSpan>[];
+    if (remainingText.isNotEmpty) {
+      textSpans.add(TextSpan(text: '$remainingText '));
+      textSpans.add(_buildEndOfAyahSpan(firstVerse.numberInSurah));
+    }
+
+    for (int i = 1; i < page.verses.length; i++) {
       final verse = page.verses[i];
-
-      if (verse.numberInSurah == 1) {
-        flushParagraph();
-
-        if (widgets.isNotEmpty) {
-          widgets.add(const SizedBox(height: 12));
-        }
-
-        widgets.add(_buildSurahHeader(context, verse.surahName, verse.surahNumber));
-        widgets.add(const SizedBox(height: 8));
-        currentSurahNumber = verse.surahNumber;
-
-        isFirstVerseOfSurah = true;
-        currentParagraphSpans.add(
-          TextSpan(
-            text: '${verse.arabicText} ',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        );
-        
-        currentParagraphSpans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _buildVerseNumber(context, verse.numberInSurah),
-            ),
-          ),
-        );
-        currentParagraphSpans.add(const TextSpan(text: ' '));
-        
-        flushParagraph();
-      } else {
-        currentParagraphSpans.add(
-          TextSpan(text: '${verse.arabicText} '),
-        );
-
-        currentParagraphSpans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _buildVerseNumber(context, verse.numberInSurah),
-            ),
-          ),
-        );
-
-        currentParagraphSpans.add(const TextSpan(text: ' '));
-      }
+      textSpans.add(TextSpan(text: '${verse.arabicText} '));
+      textSpans.add(_buildEndOfAyahSpan(verse.numberInSurah));
     }
 
-    flushParagraph();
-
-    return widgets;
-  }
-
-  Widget _buildSurahHeader(BuildContext context, String surahName, int surahNumber) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppTheme.primaryColor,
-            AppTheme.secondaryColor,
-            AppTheme.primaryColor,
-          ],
+    widgets.add(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Text.rich(
+          TextSpan(children: textSpans),
+          textAlign: TextAlign.justify,
+          style: TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 20,
+            height: 1.8,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.arabicTextColorDark
+                : AppTheme.arabicTextColor,
+          ),
         ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildOrnament(),
-          const SizedBox(width: 12),
-          Text(
-            surahName,
-            style: const TextStyle(
-              fontFamily: 'Amiri',
-              fontSize: 18,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textDirection: TextDirection.rtl,
-          ),
-          const SizedBox(width: 12),
-          _buildOrnament(),
-        ],
+    );
+
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.contain,
+        alignment: Alignment.topCenter,
+        child: SizedBox(width: constraints.maxWidth, child: Column(children: widgets)),
       ),
     );
   }
 
-  Widget _buildOrnament() {
-    return const Icon(
-      Icons.auto_awesome,
-      color: Colors.white,
-      size: 14,
-    );
-  }
 
-  Widget _buildVerseNumber(BuildContext context, int number) {
+  // --------------------- SURAH HEADER ---------------------
+  Widget _buildSurahHeader(BuildContext context, String surahName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? AppTheme.darkPrimaryColor : AppTheme.primaryColor;
-    
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: color,
-          width: 1.2,
-        ),
-      ),
+    return Center(
       child: Text(
-        _toArabicNumerals(number),
+        '۞ $surahName ۞',
         style: TextStyle(
           fontFamily: 'Amiri',
-          fontSize: 12,
-          color: color,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : Colors.black,
         ),
         textDirection: TextDirection.rtl,
       ),
     );
   }
 
-  Widget _buildPageFooter(BuildContext context, page) {
+  // --------------------- BISMILLAH ---------------------
+  Widget _buildBismillah(BuildContext context, String text) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    return Center(
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: 'Amiri',
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.rtl,
+      ),
+    );
+  }
+
+  // --------------------- END-OF-AYAH SPAN ---------------------
+  InlineSpan _buildEndOfAyahSpan(int number) {
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Text(
+        '۝${_toArabicNumerals(number)} ',
+        style: const TextStyle(
+          fontFamily: 'Amiri',
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  // --------------------- FOOTER ---------------------
+  Widget _buildPageFooter(BuildContext context, MushafPage page) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Text(
         _toArabicNumerals(pageNumber),
         style: TextStyle(
           fontFamily: 'Amiri',
           fontSize: 14,
-          color: isDark 
-              ? Colors.grey[400]
-              : AppTheme.textHintColor,
+          color: isDark ? Colors.grey[400] : AppTheme.textHintColor,
           fontWeight: FontWeight.normal,
         ),
       ),
     );
   }
 
+  // --------------------- ARABIC NUMERALS ---------------------
   String _toArabicNumerals(int number) {
     const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     return number

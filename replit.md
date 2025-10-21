@@ -53,8 +53,8 @@ The application emphasizes a modern, polished interface with full dark mode supp
 
 - **AlQuran Cloud API**: Used for fetching audio recitations and potentially other content.
 - **Local JSON Files**:
-    - `alquran_cloud_complete_quran.json`: Contains complete Quran data with page and juz metadata.
-    - `surah_verses.json`: Stores Tajik translations, transliterations, and tafsir.
+    - `alquran_cloud_complete_quran.json`: Contains complete Quran data with Arabic text, page and juz metadata.
+    - `quran_mirror_with_translations.json`: Stores Tajik translations, transliterations, and tafsir.
     - Pre-loaded data for duas, tasbeehs, and word learning modules.
 - **Hive**: Used for local data storage, particularly for bookmarks and user preferences.
 - **SharedPreferences**: Utilized for lightweight key-value pair storage.

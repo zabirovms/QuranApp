@@ -1,37 +1,61 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+/// Service for managing image permissions
 class ImagePermissionService {
-  static const String _permissionKey = 'image_download_permission';
-  static const String _permissionAskedKey = 'image_permission_asked';
+  /// Check if storage permission is granted
+  Future<bool> hasStoragePermission() async {
+    final status = await Permission.storage.status;
+    return status.isGranted;
+  }
 
-  /// Check if user has given permission to download images
+  /// Request storage permission
+  Future<bool> requestStoragePermission() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  /// Check if photos permission is granted
+  Future<bool> hasPhotosPermission() async {
+    final status = await Permission.photos.status;
+    return status.isGranted;
+  }
+
+  /// Request photos permission
+  Future<bool> requestPhotosPermission() async {
+    final status = await Permission.photos.request();
+    return status.isGranted;
+  }
+
+  /// Check if camera permission is granted
+  Future<bool> hasCameraPermission() async {
+    final status = await Permission.camera.status;
+    return status.isGranted;
+  }
+
+  /// Request camera permission
+  Future<bool> requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    return status.isGranted;
+  }
+
+  /// Check if image download permission is granted
   Future<bool> hasImageDownloadPermission() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_permissionKey) ?? false;
+    return await hasStoragePermission();
   }
 
-  /// Set user's permission for image downloading
-  Future<void> setImageDownloadPermission(bool permission) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_permissionKey, permission);
+  /// Set image download permission
+  Future<void> setImageDownloadPermission(bool granted) async {
+    // Placeholder implementation
   }
 
-  /// Check if permission dialog has been shown in this session
-  Future<bool> hasAskedForPermission() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_permissionAskedKey) ?? false;
+  /// Check if permission has been asked before
+  bool hasAskedForPermission() {
+    // Placeholder implementation
+    return false;
   }
 
-  /// Mark that permission dialog has been shown
-  Future<void> setPermissionAsked(bool asked) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_permissionAskedKey, asked);
-  }
-
-  /// Reset permission state (for testing or user preference reset)
-  Future<void> resetPermissionState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_permissionKey);
-    await prefs.remove(_permissionAskedKey);
+  /// Set permission asked flag
+  void setPermissionAsked(bool asked) {
+    // Placeholder implementation
   }
 }

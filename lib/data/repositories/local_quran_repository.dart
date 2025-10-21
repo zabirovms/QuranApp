@@ -2,6 +2,7 @@ import '../datasources/local/surah_local_datasource.dart';
 import '../datasources/local/verse_local_datasource.dart';
 import '../datasources/local/search_local_datasource.dart';
 import '../datasources/local/bookmark_local_datasource.dart';
+import '../datasources/local/word_by_word_local_datasource.dart';
 import '../models/surah_model.dart';
 import '../models/verse_model.dart';
 import '../models/bookmark_model.dart';
@@ -12,16 +13,19 @@ class LocalQuranRepository implements QuranRepository {
   final VerseLocalDataSource _verseLocalDataSource;
   final SearchLocalDataSource _searchLocalDataSource;
   final BookmarkLocalDataSource _bookmarkLocalDataSource;
+  final WordByWordLocalDataSource _wordByWordLocalDataSource;
 
   LocalQuranRepository({
     required SurahLocalDataSource surahLocalDataSource,
     required VerseLocalDataSource verseLocalDataSource,
     required SearchLocalDataSource searchLocalDataSource,
     required BookmarkLocalDataSource bookmarkLocalDataSource,
+    required WordByWordLocalDataSource wordByWordLocalDataSource,
   }) : _surahLocalDataSource = surahLocalDataSource,
        _verseLocalDataSource = verseLocalDataSource,
        _searchLocalDataSource = searchLocalDataSource,
-       _bookmarkLocalDataSource = bookmarkLocalDataSource;
+       _bookmarkLocalDataSource = bookmarkLocalDataSource,
+       _wordByWordLocalDataSource = wordByWordLocalDataSource;
 
   // Surah operations - now using local data
   @override
@@ -105,7 +109,26 @@ class LocalQuranRepository implements QuranRepository {
   // Word analysis operations
   @override
   Future<List<Map<String, dynamic>>> getWordAnalysisByVerse(int verseId) async {
-    throw UnimplementedError('Word analysis not available locally yet');
+    try {
+      // Parse verseId to get surah and verse numbers
+      // Assuming verseId format is like "1:1" or we need to find the verse first
+      final verse = await _verseLocalDataSource.getVerseByKey(verseId.toString());
+      if (verse == null) {
+        return [];
+      }
+      
+      final words = await _wordByWordLocalDataSource.getWordByWordForVerse(verse.surahId, verse.verseNumber);
+      
+      // Convert to the expected format
+      return words.map((word) => {
+        'word_number': word.wordNumber,
+        'arabic': word.arabic,
+        'farsi': word.farsi,
+        'unique_key': word.uniqueKey,
+      }).toList();
+    } catch (e) {
+      throw Exception('Failed to get word analysis from local data: $e');
+    }
   }
 
   // Search history operations

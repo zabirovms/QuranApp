@@ -11,7 +11,6 @@ import '../presentation/pages/settings/settings_page.dart';
 import '../presentation/pages/search/search_page.dart';
 import '../presentation/pages/bookmarks/bookmarks_page.dart';
 import '../presentation/pages/splash/splash_page.dart';
-import '../presentation/pages/mushaf/mushaf_reader_page.dart';
 import '../presentation/pages/unified_reader/unified_quran_reader_page.dart';
 
 // Router configuration
@@ -134,27 +133,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsPage(),
-      ),
-      
-      // Mushaf Reader
-      GoRoute(
-        path: '/mushaf',
-        name: 'mushaf',
-        builder: (context, state) {
-          final pageParam = state.uri.queryParameters['page'];
-          final initialPage = pageParam != null ? int.tryParse(pageParam) ?? 1 : 1;
-          return MushafReaderPage(initialPage: initialPage);
-        },
-      ),
-      
-      // Mushaf Reader with specific page
-      GoRoute(
-        path: '/mushaf/:page',
-        name: 'mushaf-page',
-        builder: (context, state) {
-          final page = int.parse(state.pathParameters['page']!);
-          return MushafReaderPage(initialPage: page);
-        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

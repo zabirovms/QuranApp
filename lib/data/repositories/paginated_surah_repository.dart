@@ -5,7 +5,7 @@ import '../models/verse_model.dart';
 
 class PaginatedSurahRepository {
   static const String _jsonPath = 'assets/data/alquran_cloud_complete_quran.json';
-  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
   
   final Map<int, PaginatedSurahData> _surahCache = {};
   final Map<String, SurahPage> _pageCache = {};
@@ -20,8 +20,9 @@ class PaginatedSurahRepository {
     final dataSection = mushafData['data'] as Map<String, dynamic>;
     final surahsList = dataSection['surahs'] as List<dynamic>;
 
-    final versesJsonString = await rootBundle.loadString(_versesJsonPath);
+    final versesJsonString = await rootBundle.loadString(_translationsJsonPath);
     final versesData = json.decode(versesJsonString) as Map<String, dynamic>;
+    final translationsData = versesData['data'] as Map<String, dynamic>;
     final surahKey = surahNumber.toString();
 
     if (surahNumber < 1 || surahNumber > surahsList.length) {
@@ -31,8 +32,8 @@ class PaginatedSurahRepository {
     final surahJson = surahsList[surahNumber - 1] as Map<String, dynamic>;
     final ayahsList = surahJson['ayahs'] as List<dynamic>;
 
-    final verseTranslations = versesData.containsKey(surahKey)
-        ? (versesData[surahKey] as Map<String, dynamic>)['verses'] as List
+    final surahTranslations = translationsData.containsKey(surahKey)
+        ? (translationsData[surahKey] as Map<String, dynamic>)['ayahs'] as List
         : [];
 
     final Map<int, SurahPage> pageMap = {};
@@ -43,8 +44,8 @@ class PaginatedSurahRepository {
       final pageNumber = ayahData['page'] as int;
       final juz = ayahData['juz'] as int;
 
-      final translationData = verseTranslations.firstWhere(
-        (v) => v['verse_number'] == verseNumber,
+      final translationData = surahTranslations.firstWhere(
+        (v) => v['number'] == verseNumber,
         orElse: () => null,
       );
 

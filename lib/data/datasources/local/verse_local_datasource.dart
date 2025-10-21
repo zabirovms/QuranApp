@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import '../../models/verse_model.dart';
 
 class VerseLocalDataSource {
-  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
   
   Future<List<VerseModel>> getVersesBySurah(int surahNumber) async {
     try {
-      final String response = await rootBundle.loadString(_versesJsonPath);
-      final Map<String, dynamic> data = json.decode(response);
+      final String response = await rootBundle.loadString(_translationsJsonPath);
+      final Map<String, dynamic> jsonData = json.decode(response);
+      final Map<String, dynamic> data = jsonData['data'] as Map<String, dynamic>;
       
       final surahKey = surahNumber.toString();
       if (!data.containsKey(surahKey)) {
@@ -16,20 +17,20 @@ class VerseLocalDataSource {
       }
       
       final surah = data[surahKey] as Map<String, dynamic>;
-      final versesList = surah['verses'] as List;
+      final versesList = surah['ayahs'] as List;
       
       return versesList.map((verseJson) {
         return VerseModel(
           id: 0, // Not available in local data
           surahId: surahNumber,
-          verseNumber: verseJson['verse_number'] as int,
-          arabicText: verseJson['arabic_text'] as String,
+          verseNumber: verseJson['number'] as int,
+          arabicText: '', // Not available in translations file
           tajikText: verseJson['tajik_text'] as String? ?? '',
           transliteration: verseJson['transliteration'] as String? ?? '',
           farsi: null, // Not available in local data
           russian: null, // Not available in local data
           tafsir: verseJson['tafsir'] as String?, // Now available in local data
-          uniqueKey: '${surahNumber}:${verseJson['verse_number']}',
+          uniqueKey: '${surahNumber}:${verseJson['number']}',
         );
       }).toList();
     } catch (e) {

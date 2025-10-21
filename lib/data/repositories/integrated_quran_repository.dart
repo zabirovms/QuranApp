@@ -1,68 +1,48 @@
 import 'package:dio/dio.dart';
 
 import '../datasources/remote/alquran_cloud_api.dart';
-import '../datasources/remote/api_service.dart';
+import '../datasources/local/word_by_word_local_datasource.dart';
+import '../datasources/local/verse_local_datasource.dart';
+import '../datasources/local/surah_local_datasource.dart';
 import '../models/alquran_cloud_models.dart';
 import '../models/surah_model.dart';
 import '../models/verse_model.dart';
 import '../models/word_by_word_model.dart';
 
-/// Repository that merges Supabase (translations, tafsir, wbw) with
-/// AlQuran Cloud (Arabic text, audio, markers) for the Surah page.
+/// Repository that merges local data (translations, Arabic text) with
+/// AlQuran Cloud (audio only) and local word-by-word data for the Surah page.
 class IntegratedQuranRepository {
-  IntegratedQuranRepository({required ApiService apiService, required AlQuranCloudApi aqc})
-      : _apiService = apiService,
-        _aqc = aqc;
+  IntegratedQuranRepository({
+    required AlQuranCloudApi aqc,
+    required WordByWordLocalDataSource wordByWordDataSource,
+    required VerseLocalDataSource verseDataSource,
+    required SurahLocalDataSource surahDataSource,
+  }) : _aqc = aqc,
+       _wordByWordDataSource = wordByWordDataSource,
+       _verseDataSource = verseDataSource,
+       _surahDataSource = surahDataSource;
 
-  final ApiService _apiService;
   final AlQuranCloudApi _aqc;
+  final WordByWordLocalDataSource _wordByWordDataSource;
+  final VerseLocalDataSource _verseDataSource;
+  final SurahLocalDataSource _surahDataSource;
 
   Future<SurahModel?> getSurahMeta(int surahNumber) async {
-    final res = await _apiService.getSurahByNumber(surahNumber);
-    final data = res.data;
-    if (data == null) return null;
-    if (data is List) {
-      if (data.isEmpty) return null;
-      final first = data.first as Map<String, dynamic>;
-      return SurahModel.fromJson(first);
-    }
-    if (data is Map<String, dynamic>) {
-      return SurahModel.fromJson(data);
-    }
-    return null;
+    return await _surahDataSource.getSurahByNumber(surahNumber);
   }
 
   Future<List<VerseModel>> getSupabaseVerses(int surahNumber) async {
-    final res = await _apiService.getVersesBySurah(surahNumber);
-    final list = (res.data as List?) ?? const [];
-    return list.map((e) => VerseModel.fromJson(e)).toList();
+    return await _verseDataSource.getVersesBySurah(surahNumber);
   }
 
   Future<Map<String, List<WordByWordModel>>> getWordByWordForSurah(int surahNumber) async {
-    final verses = await getSupabaseVerses(surahNumber);
-    final keys = verses.map((v) => v.uniqueKey).toList();
-
-    // Fetch in batches to avoid URL length limits and 414/empty responses
-    const int batchSize = 50;
-    final items = <WordByWordModel>[];
-    for (var i = 0; i < keys.length; i += batchSize) {
-      final batch = keys.sublist(i, i + batchSize > keys.length ? keys.length : i + batchSize);
-      try {
-        final res = await _apiService.getWordByWordByKeys(batch);
-        final list = (res.data as List?) ?? const [];
-        items.addAll(list.map((e) => WordByWordModel.fromJson(e)));
-      } catch (e) {
-        // Continue with other batches; optionally log
-      }
+    try {
+      // Use local datasource instead of Supabase API
+      return await _wordByWordDataSource.getWordByWordForSurah(surahNumber);
+    } catch (e) {
+      // Return empty map if local data fails
+      return <String, List<WordByWordModel>>{};
     }
-    final grouped = <String, List<WordByWordModel>>{};
-    for (final item in items) {
-      grouped.putIfAbsent(item.uniqueKey, () => []).add(item);
-    }
-    for (final key in grouped.keys) {
-      grouped[key]!.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
-    }
-    return grouped;
   }
 
   Future<(List<AqcAyah>, List<AqcAyah>)> getArabicAndAudio(int surahNumber, String audioEdition) async {
@@ -87,6 +67,7 @@ class IntegratedQuranRepository {
       return (textEdition.ayahs, audioEditionParsed.ayahs);
     }
   }
+
 }
 
 

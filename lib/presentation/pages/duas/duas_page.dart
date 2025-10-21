@@ -77,7 +77,7 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
 
   Future<void> _initializePermission() async {
     final hasPermission = await _permissionService.hasImageDownloadPermission();
-    final permissionAsked = await _permissionService.hasAskedForPermission();
+    final permissionAsked = _permissionService.hasAskedForPermission();
     
     state = state.copyWith(
       hasPermission: hasPermission,
@@ -131,18 +131,18 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
 
   Future<void> requestPermission() async {
     state = state.copyWith(permissionAsked: true);
-    await _permissionService.setPermissionAsked(true);
+    _permissionService.setPermissionAsked(true);
   }
 
   Future<void> grantPermission() async {
-    await _permissionService.setImageDownloadPermission(true);
+    _permissionService.setImageDownloadPermission(true);
     state = state.copyWith(hasPermission: true);
     // Load images after permission is granted
     await loadImages();
   }
 
   Future<void> denyPermission() async {
-    await _permissionService.setImageDownloadPermission(false);
+    _permissionService.setImageDownloadPermission(false);
     state = state.copyWith(hasPermission: false);
   }
 
@@ -286,7 +286,7 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
 
   String _getImageTitle(String imageUrl) {
     final imageApiService = ImageApiService();
-    return imageApiService.getImageTitle(imageUrl);
+    return imageApiService.getImageTitle(0); // Use index 0 as placeholder
   }
 }
 
@@ -835,7 +835,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
 
   String _getImageTitle(String imageUrl) {
     final imageApiService = ImageApiService();
-    return imageApiService.getImageTitle(imageUrl);
+    return imageApiService.getImageTitle(0); // Use index 0 as placeholder
   }
 
   Widget _buildEmptyState(bool isQuranic) {

@@ -1,33 +1,32 @@
 import 'package:dio/dio.dart';
 
-/// Lightweight client for AlQuran Cloud API
-/// Docs: https://alquran.cloud/api
+/// AlQuran Cloud API client for fetching Arabic text and audio data
 class AlQuranCloudApi {
-  AlQuranCloudApi({Dio? dio}) : _dio = dio ?? Dio(BaseOptions(baseUrl: 'https://api.alquran.cloud/v1'));
-
   final Dio _dio;
 
-  /// Fetch combined editions for a surah (Arabic Uthmani + audio)
-  /// Example editions: quran-uthmani, ar.alafasy
-  Future<Response<dynamic>> getSurahCombined({required int surahNumber, required String audioEdition}) {
-    final path = '/surah/$surahNumber/editions/quran-uthmani,$audioEdition';
-    return _dio.get(path);
+  AlQuranCloudApi() : _dio = Dio(BaseOptions(
+    baseUrl: 'https://api.alquran.cloud/v1',
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+  ));
+
+  /// Get Arabic text for a surah
+  Future<Response> getSurahArabic({required int surahNumber}) async {
+    return await _dio.get('/surah/$surahNumber/quran-uthmani');
   }
 
-  /// Fetch Arabic Uthmani text only
-  Future<Response<dynamic>> getSurahArabic({required int surahNumber}) {
-    return _dio.get('/surah/$surahNumber/quran-uthmani');
+  /// Get audio data for a surah
+  Future<Response> getSurahAudio({required int surahNumber, required String audioEdition}) async {
+    return await _dio.get('/surah/$surahNumber/$audioEdition');
   }
 
-  /// Fetch audio edition only
-  Future<Response<dynamic>> getSurahAudio({required int surahNumber, required String audioEdition}) {
-    return _dio.get('/surah/$surahNumber/$audioEdition');
+  /// Get combined Arabic text and audio data
+  Future<Response> getSurahCombined({required int surahNumber, required String audioEdition}) async {
+    return await _dio.get('/surah/$surahNumber/quran-uthmani,$audioEdition');
   }
 
-  /// List available audio editions (for reciter selector)
-  Future<Response<dynamic>> listAudioEditions() {
-    return _dio.get('/edition', queryParameters: {'format': 'audio'});
+  /// Get verse audio
+  Future<Response> getVerseAudio({required int surahNumber, required int verseNumber, required String audioEdition}) async {
+    return await _dio.get('/ayah/$surahNumber:$verseNumber/$audioEdition');
   }
 }
-
-

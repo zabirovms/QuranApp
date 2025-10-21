@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../../data/datasources/remote/api_service.dart';
+import '../../data/datasources/remote/alquran_cloud_api.dart';
 import '../../data/repositories/local_quran_repository.dart';
 import '../../data/datasources/local/surah_local_datasource.dart';
 import '../../data/datasources/local/verse_local_datasource.dart';
 import '../../data/datasources/local/search_local_datasource.dart';
 import '../../data/datasources/local/bookmark_local_datasource.dart';
-import '../../data/datasources/remote/alquran_cloud_api.dart';
+import '../../data/datasources/local/word_by_word_local_datasource.dart';
 import '../pages/surah/surah_controller.dart';
 import '../../domain/repositories/quran_repository.dart';
 import '../../domain/usecases/get_all_surahs_usecase.dart';
@@ -20,9 +20,8 @@ import '../../data/models/verse_model.dart';
 import '../../data/models/bookmark_model.dart';
 
 // Providers for dependencies
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
-
 final alquranCloudApiProvider = Provider<AlQuranCloudApi>((ref) => AlQuranCloudApi());
+
 
 final surahLocalDataSourceProvider = Provider<SurahLocalDataSource>((ref) => SurahLocalDataSource());
 
@@ -32,10 +31,19 @@ final searchLocalDataSourceProvider = Provider<SearchLocalDataSource>((ref) => S
 
 final bookmarkLocalDataSourceProvider = Provider<BookmarkLocalDataSource>((ref) => BookmarkLocalDataSource());
 
+final wordByWordLocalDataSourceProvider = Provider<WordByWordLocalDataSource>((ref) => WordByWordLocalDataSource());
+
 final surahControllerProvider = ChangeNotifierProvider.family<SurahController, int>((ref, surahNumber) {
-  final api = ref.watch(apiServiceProvider);
   final aqc = ref.watch(alquranCloudApiProvider);
-  final controller = SurahController(apiService: api, aqc: aqc);
+  final wordByWordDataSource = ref.watch(wordByWordLocalDataSourceProvider);
+  final verseDataSource = ref.watch(verseLocalDataSourceProvider);
+  final surahDataSource = ref.watch(surahLocalDataSourceProvider);
+  final controller = SurahController(
+    aqc: aqc,
+    wordByWordDataSource: wordByWordDataSource,
+    verseDataSource: verseDataSource,
+    surahDataSource: surahDataSource,
+  );
   // Default audio edition can be persisted later via settings
   controller.load(surahNumber: surahNumber, audioEdition: 'ar.alafasy');
   return controller;
@@ -47,6 +55,7 @@ final quranRepositoryProvider = Provider<QuranRepository>((ref) {
     verseLocalDataSource: ref.watch(verseLocalDataSourceProvider),
     searchLocalDataSource: ref.watch(searchLocalDataSourceProvider),
     bookmarkLocalDataSource: ref.watch(bookmarkLocalDataSourceProvider),
+    wordByWordLocalDataSource: ref.watch(wordByWordLocalDataSourceProvider),
   );
 });
 

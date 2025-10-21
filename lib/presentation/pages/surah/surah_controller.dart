@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/datasources/remote/alquran_cloud_api.dart';
-import '../../../data/datasources/remote/api_service.dart';
+import '../../../data/datasources/local/word_by_word_local_datasource.dart';
+import '../../../data/datasources/local/verse_local_datasource.dart';
+import '../../../data/datasources/local/surah_local_datasource.dart';
 import '../../../data/models/alquran_cloud_models.dart';
 import '../../../data/models/surah_model.dart';
 import '../../../data/models/verse_model.dart';
@@ -85,8 +87,17 @@ class SurahViewState {
 }
 
 class SurahController extends ChangeNotifier {
-  SurahController({required ApiService apiService, required AlQuranCloudApi aqc})
-      : _repo = IntegratedQuranRepository(apiService: apiService, aqc: aqc);
+  SurahController({
+    required AlQuranCloudApi aqc,
+    required WordByWordLocalDataSource wordByWordDataSource,
+    required VerseLocalDataSource verseDataSource,
+    required SurahLocalDataSource surahDataSource,
+  }) : _repo = IntegratedQuranRepository(
+         aqc: aqc,
+         wordByWordDataSource: wordByWordDataSource,
+         verseDataSource: verseDataSource,
+         surahDataSource: surahDataSource,
+       );
 
   final IntegratedQuranRepository _repo;
   SurahViewState state = SurahViewState(loading: false);
@@ -97,8 +108,8 @@ class SurahController extends ChangeNotifier {
     try {
       final surah = await _repo.getSurahMeta(surahNumber);
       final verses = await _repo.getSupabaseVerses(surahNumber);
-      final (arabic, audio) = await _repo.getArabicAndAudio(surahNumber, audioEdition);
       final wbw = await _repo.getWordByWordForSurah(surahNumber);
+      final (arabic, audio) = await _repo.getArabicAndAudio(surahNumber, audioEdition);
 
       // compute section starts (1-based ayah indices)
       List<int> startsFor(List<int?> series) {

@@ -326,11 +326,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           const SizedBox(height: 12),
                           
                           // Arabic text
-                          Text(
-                            verse.arabicText,
+                          HighlightedText(
+                            text: verse.arabicText,
+                            highlight: searchState.query,
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontFamily: 'Amiri',
                               height: 1.8,
+                            ),
+                            highlightStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontFamily: 'Amiri',
+                              height: 1.8,
+                              backgroundColor: Colors.yellow.withOpacity(0.3),
+                              fontWeight: FontWeight.bold,
                             ),
                             textDirection: TextDirection.rtl,
                           ),
@@ -339,21 +346,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           
                           // Transliteration
                           if (verse.transliteration?.isNotEmpty == true)
-                            Text(
-                              verse.transliteration!,
+                            HighlightedText(
+                              text: verse.transliteration!,
+                              highlight: searchState.query,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 fontStyle: FontStyle.italic,
+                              ),
+                              highlightStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                fontStyle: FontStyle.italic,
+                                backgroundColor: Colors.yellow.withOpacity(0.3),
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           
                           const SizedBox(height: 8),
                           
                           // Tajik translation
-                          Text(
-                            verse.tajikText,
+                          HighlightedText(
+                            text: verse.tajikText,
+                            highlight: searchState.query,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               height: 1.4,
+                            ),
+                            highlightStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.4,
+                              backgroundColor: Colors.yellow.withOpacity(0.3),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],

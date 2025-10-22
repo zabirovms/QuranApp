@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/mushaf_provider.dart';
+import '../../providers/mushaf_15_lines_provider.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
-import '../../../data/models/mushaf_models.dart';
+import '../../../data/models/uthmani_models.dart';
 import '../../../core/theme/app_theme.dart';
 
 class MushafPageView extends ConsumerWidget {
@@ -16,47 +16,42 @@ class MushafPageView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pageAsync = ref.watch(mushafPageProvider(pageNumber));
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageAsync = ref.watch(mushaf15LinesPageProvider(pageNumber));
 
     return pageAsync.when(
       data: (page) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildPageHeader(context, page),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _buildPageContent(context, page, constraints),
-                ),
-                const SizedBox(height: 12),
-                _buildPageFooter(context, page),
-              ],
-            );
-          },
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildPageHeader(context, page),
+            const SizedBox(height: 4),
+            Expanded(
+              child: _buildPageContent(context, page),
+            ),
+            const SizedBox(height: 4),
+            _buildPageFooter(context, page),
+          ],
         ),
       ),
       loading: () => const Center(child: LoadingWidget()),
       error: (error, stack) => Center(
         child: CustomErrorWidget(
           message: 'Хато: $error',
-          onRetry: () => ref.refresh(mushafPageProvider(pageNumber)),
+          onRetry: () => ref.refresh(mushaf15LinesPageProvider(pageNumber)),
         ),
       ),
     );
   }
 
   // --------------------- HEADER ---------------------
-  Widget _buildPageHeader(BuildContext context, MushafPage page) {
+  Widget _buildPageHeader(BuildContext context, MushafPage15Lines page) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    String surahName = page.verses.isNotEmpty ? page.verses.first.surahName : '';
+    String surahName = page.surahNames.isNotEmpty ? page.surahNames.first : '';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,85 +81,71 @@ class MushafPageView extends ConsumerWidget {
   }
 
   // --------------------- PAGE CONTENT ---------------------
-  // --------------------- PAGE CONTENT ---------------------
-  Widget _buildPageContent(BuildContext context, MushafPage page, BoxConstraints constraints) {
-    final widgets = <Widget>[];
+  Widget _buildPageContent(BuildContext context, MushafPage15Lines page) {
+    if (page.lines.isEmpty) return const SizedBox();
 
-    if (page.verses.isEmpty) return const SizedBox();
+    // Each line gets Expanded for equal spacing (15 lines per page)
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: page.lines
+          .map((line) => Expanded(child: _buildLine(context, line)))
+          .toList(),
+    );
+  }
 
-    final firstVerse = page.verses.first;
+  // --------------------- LINE BUILDER ---------------------
+  Widget _buildLine(BuildContext context, MushafLine line) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Add Surah header only at the start of Surah
-    if (firstVerse.numberInSurah == 1) {
-      widgets.add(_buildSurahHeader(context, firstVerse.surahName));
-    }
-
-    // Extract Bismillah if not Surah 1
-    const bismillahText = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ';
-    String remainingText = '';
-    if (firstVerse.arabicText.startsWith(bismillahText) && firstVerse.surahNumber != 1) {
-      widgets.add(const SizedBox(height: 6));
-      widgets.add(_buildBismillah(context, bismillahText));
-      widgets.add(const SizedBox(height: 6));
-      remainingText = firstVerse.arabicText.replaceFirst(bismillahText, '').trim();
+    if (line.isSurahName) {
+      return _buildSurahHeader(context, line.text);
+    } else if (line.isBismillah) {
+      return _buildBismillah(context, line.text);
     } else {
-      remainingText = firstVerse.arabicText;
+      return _buildAyahLine(context, line, isDark);
     }
+  }
 
-    // Build continuous text for all verses
-    final textSpans = <InlineSpan>[];
-    if (remainingText.isNotEmpty) {
-      textSpans.add(TextSpan(text: '$remainingText '));
-      textSpans.add(_buildEndOfAyahSpan(firstVerse.numberInSurah));
-    }
-
-    for (int i = 1; i < page.verses.length; i++) {
-      final verse = page.verses[i];
-      textSpans.add(TextSpan(text: '${verse.arabicText} '));
-      textSpans.add(_buildEndOfAyahSpan(verse.numberInSurah));
-    }
-
-    widgets.add(
-      Directionality(
+  // --------------------- AYAH LINE ---------------------
+  // --------------------- AYAH LINE ---------------------
+  Widget _buildAyahLine(BuildContext context, MushafLine line, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Directionality(
         textDirection: TextDirection.rtl,
-        child: Text.rich(
-          TextSpan(children: textSpans),
-          textAlign: TextAlign.justify,
+        child: Text(
+          line.text,
+          textAlign: line.isCentered ? TextAlign.center : TextAlign.justify,
           style: TextStyle(
             fontFamily: 'Amiri',
-            fontSize: 20,
-            height: 1.8,
-            color: Theme.of(context).brightness == Brightness.dark
+            fontSize: 22,
+            height: 1.6,
+            color: isDark
                 ? AppTheme.arabicTextColorDark
                 : AppTheme.arabicTextColor,
           ),
         ),
       ),
     );
-
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.contain,
-        alignment: Alignment.topCenter,
-        child: SizedBox(width: constraints.maxWidth, child: Column(children: widgets)),
-      ),
-    );
   }
-
 
   // --------------------- SURAH HEADER ---------------------
   Widget _buildSurahHeader(BuildContext context, String surahName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
-      child: Text(
-        '۞ $surahName ۞',
-        style: TextStyle(
-          fontFamily: 'Amiri',
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : Colors.black,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(
+          '۞ $surahName ۞',
+          style: TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+          textDirection: TextDirection.rtl,
         ),
-        textDirection: TextDirection.rtl,
       ),
     );
   }
@@ -173,37 +154,25 @@ class MushafPageView extends ConsumerWidget {
   Widget _buildBismillah(BuildContext context, String text) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
-      child: Text(
-        text,
-        style: TextStyle(
-          fontFamily: 'Amiri',
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : Colors.black,
-        ),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.rtl,
-      ),
-    );
-  }
-
-  // --------------------- END-OF-AYAH SPAN ---------------------
-  InlineSpan _buildEndOfAyahSpan(int number) {
-    return WidgetSpan(
-      alignment: PlaceholderAlignment.middle,
-      child: Text(
-        '۝${_toArabicNumerals(number)} ',
-        style: const TextStyle(
-          fontFamily: 'Amiri',
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: 'Amiri',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.rtl,
         ),
       ),
     );
   }
 
   // --------------------- FOOTER ---------------------
-  Widget _buildPageFooter(BuildContext context, MushafPage page) {
+  Widget _buildPageFooter(BuildContext context, MushafPage15Lines page) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Text(

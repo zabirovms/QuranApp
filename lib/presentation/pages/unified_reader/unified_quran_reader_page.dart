@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/global_quran_page_provider.dart';
-import '../../providers/mushaf_provider.dart';
-import '../../providers/quran_provider.dart';
 import '../../../data/services/settings_service.dart';
 import '../../../data/services/audio_service.dart';
 import '../../widgets/mushaf/mushaf_page_view.dart';
@@ -307,22 +305,9 @@ class _UnifiedQuranReaderPageState extends ConsumerState<UnifiedQuranReaderPage>
   }
 
   Widget _buildMushafContent(int pageNumber) {
-    final mushafDataAsync = ref.watch(mushafDataProvider);
-
-    return mushafDataAsync.when(
-      data: (data) => SafeArea(
-        child: MushafPageView(
-          pageNumber: pageNumber,
-        ),
-      ),
-      loading: () => const Center(child: LoadingWidget()),
-      error: (error, stack) => Center(
-        child: CustomErrorWidget(
-          message: error.toString(),
-          onRetry: () {
-            ref.invalidate(mushafDataProvider);
-          },
-        ),
+    return SafeArea(
+      child: MushafPageView(
+        pageNumber: pageNumber,
       ),
     );
   }

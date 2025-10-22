@@ -109,51 +109,50 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final versesAsync = ref.watch(versesProvider(widget.surahNumber));
     final controller = ref.watch(surahControllerProvider(widget.surahNumber));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: surahAsync.when(
-          data: (surah) => Row(
-            children: [
-              Expanded(
-                child: Text(surah?.nameTajik ?? 'Сураи ${widget.surahNumber}'),
-              ),
-              const SizedBox(width: 8),
-              _buildSurahSelector(context, surah),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        // Always navigate to home when back button is pressed
+        context.go('/');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: surahAsync.when(
+            data: (surah) => Row(
+              children: [
+                Expanded(
+                  child: Text(surah?.nameTajik ?? 'Сураи ${widget.surahNumber}'),
+                ),
+                const SizedBox(width: 8),
+                _buildSurahSelector(context, surah),
+              ],
+            ),
+            loading: () => Row(
+              children: [
+                Expanded(
+                  child: Text('Сураи ${widget.surahNumber}'),
+                ),
+                const SizedBox(width: 8),
+                _buildSurahSelector(context, null),
+              ],
+            ),
+            error: (_, __) => Row(
+              children: [
+                Expanded(
+                  child: Text('Сураи ${widget.surahNumber}'),
+                ),
+                const SizedBox(width: 8),
+                _buildSurahSelector(context, null),
+              ],
+            ),
           ),
-          loading: () => Row(
-            children: [
-              Expanded(
-                child: Text('Сураи ${widget.surahNumber}'),
-              ),
-              const SizedBox(width: 8),
-              _buildSurahSelector(context, null),
-            ],
-          ),
-          error: (_, __) => Row(
-            children: [
-              Expanded(
-                child: Text('Сураи ${widget.surahNumber}'),
-              ),
-              const SizedBox(width: 8),
-              _buildSurahSelector(context, null),
-            ],
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            try {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            } catch (e) {
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
               context.go('/');
-            }
-          },
-        ),
+            },
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.bookmark),
@@ -517,6 +516,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           ),
         ],
         ),
+      ),
       ),
     );
   }

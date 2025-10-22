@@ -102,11 +102,34 @@ class _BackHandler extends StatelessWidget {
       onPopInvoked: (didPop) async {
         if (didPop) return;
         final router = GoRouter.of(context);
-        // If we can pop in router, do it; else allow system to exit
-        if (router.canPop()) {
+        
+        // Get current location
+        final currentLocation = GoRouterState.of(context).uri.path;
+        
+        // Debug logging
+        print('Back button pressed. Current location: $currentLocation');
+        
+        // Define routes that should navigate back to home instead of exiting
+        // This includes tab routes and surah pages
+        final tabRoutes = ['/tasbeeh', '/learn-words', '/duas', '/search', '/bookmarks', '/settings'];
+        
+        // Check if current location matches surah page pattern
+        final isSurahPage = currentLocation.startsWith('/surah/');
+        
+        print('Is tab route: ${tabRoutes.contains(currentLocation)}');
+        print('Is surah page: $isSurahPage');
+        
+        // If we're on a tab route or surah page, navigate to home instead of exiting
+        if (tabRoutes.contains(currentLocation) || isSurahPage) {
+          print('Navigating to home...');
+          router.go('/');
+        } else if (router.canPop()) {
+          print('Popping route...');
+          // If we can pop in router, do it
           router.pop();
         } else {
-          // On home, allow app exit
+          print('Allowing app exit...');
+          // On home or other routes, allow app exit
         }
       },
       child: child,

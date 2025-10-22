@@ -926,7 +926,7 @@ class QuranicDuaCard extends StatelessWidget {
                         Icon(
                           Icons.format_list_numbered,
                           size: 14,
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -934,7 +934,7 @@ class QuranicDuaCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],

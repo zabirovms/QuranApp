@@ -19,11 +19,7 @@ final quranicDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
   return jsonList.map((json) => DuaModel.fromJson(json)).toList();
 });
 
-// Cached image list provider - fetches once and caches
-final duaImagesProvider = FutureProvider<List<String>>((ref) async {
-  final imageApiService = ImageApiService();
-  return await imageApiService.fetchImageUrls();
-});
+// Removed duaImagesProvider - using permission-aware cachedImagesProvider instead
 
 // Cached image list state - persists across tab switches
 final cachedImagesProvider = StateNotifierProvider<CachedImagesNotifier, CachedImagesState>((ref) => CachedImagesNotifier());
@@ -72,7 +68,11 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
   final ImagePermissionService _permissionService = ImagePermissionService();
 
   CachedImagesNotifier() : super(CachedImagesState()) {
-    _initializePermission();
+    _initializePermissionAsync();
+  }
+
+  void _initializePermissionAsync() async {
+    await _initializePermission();
   }
 
   Future<void> _initializePermission() async {
@@ -159,6 +159,12 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
   void clearCache() {
     state = CachedImagesState();
     _initializePermission();
+  }
+
+  Future<void> resetPermissions() async {
+    await _permissionService.resetPermissionState();
+    state = CachedImagesState();
+    await _initializePermission();
   }
 }
 
@@ -306,12 +312,27 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    // Show permission dialog when switching to Дигар tab
+    if (_tabController.index == 1) {
+      final cachedImagesState = ref.read(cachedImagesProvider);
+      
+      if (!cachedImagesState.permissionAsked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showPermissionDialog();
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -319,7 +340,6 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final quranicDuasAsync = ref.watch(quranicDuasProvider);
-    final duaImagesAsync = ref.watch(duaImagesProvider);
     final searchState = ref.watch(duasSearchProvider);
 
     return Scaffold(
@@ -337,14 +357,6 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           },
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              // Clear cache and reset permissions
-              ref.read(cachedImagesProvider.notifier).clearCache();
-            },
-            tooltip: 'Тоза кардани кеш ва танзимот',
-          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
@@ -366,7 +378,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           // Qur'anic Duas Tab
           _buildQuranicTab(quranicDuasAsync, searchState),
           // Other Duas Tab (Images)
-          _buildOtherTab(duaImagesAsync, searchState),
+          _buildOtherTab(searchState),
         ],
       ),
     );
@@ -428,22 +440,15 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
       loading: () => const Center(child: LoadingWidget()),
       error: (error, stack) => Center(
         child: CustomErrorWidget(
-          message: 'Хатогии боргирӣ: $error',
+          message: 'Хатогии зеркашӣ: $error',
           onRetry: () => ref.refresh(quranicDuasProvider),
         ),
       ),
     );
   }
 
-  Widget _buildOtherTab(AsyncValue<List<String>> duaImagesAsync, DuasSearchState searchState) {
+  Widget _buildOtherTab(DuasSearchState searchState) {
     final cachedImagesState = ref.watch(cachedImagesProvider);
-    
-    // Show permission dialog if not asked yet
-    if (!cachedImagesState.permissionAsked) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showPermissionDialog();
-      });
-    }
 
     // Load images if permission granted and not already loaded
     if (cachedImagesState.hasPermission && 
@@ -470,7 +475,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             controller: _searchController,
             focusNode: _searchFocusNode,
             decoration: InputDecoration(
-              hintText: 'Ҷустуҷӯи тасвирҳои дуо...',
+              hintText: 'Ҷустуҷӯи дуо...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -545,14 +550,14 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             ),
             const SizedBox(height: 16),
             Text(
-              'Тасвирҳо боргирӣ нашудаанд',
+              'Тасвирҳо зеркашӣ нашудаанд',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Барои дидани тасвирҳо, иҷозаи боргирӣ диҳед',
+              'Барои дидани тасвирҳо, иҷозаи зеркашӣ диҳед',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[500],
               ),
@@ -562,7 +567,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             ElevatedButton.icon(
               onPressed: () => _showPermissionDialog(),
               icon: const Icon(Icons.download),
-              label: const Text('Иҷозаи боргирӣ диҳед'),
+              label: const Text('Иҷозаи зеркашӣ додан'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
@@ -589,7 +594,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Дар ҳолати офлайн, танҳо номҳои тасвирҳо намоиш дода мешаванд',
+                      'Баъд аз зеркашӣ метавонед дар ҳолати офлайн ҳам ба тасвирҳо дастрасӣ дошта бошед.',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 12,
@@ -641,7 +646,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             ),
             const SizedBox(height: 16),
             Text(
-              isNetworkError ? 'Интернет пайваст нест' : 'Хатогии боргирӣ',
+              isNetworkError ? 'Интернет пайваст нест' : 'Хатогии зеркашӣ',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: isNetworkError ? Colors.orange[600] : Colors.red[600],
                 fontWeight: FontWeight.w600,
@@ -650,7 +655,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             const SizedBox(height: 8),
             Text(
               isNetworkError 
-                ? 'Лутфан пайвасти интернетро тафтиш кунед ва дубора кӯшиш кунед'
+                ? 'Лутфан интернетро тафтиш кунед ва дубора кӯшиш кунед'
                 : error,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[600],
@@ -666,7 +671,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
                     ref.read(cachedImagesProvider.notifier).retryLoadImages();
                   },
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Дубора кӯшиш'),
+                  label: const Text('Навсозӣ'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,

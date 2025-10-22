@@ -12,147 +12,100 @@ class ImagePermissionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          Icon(
-            Icons.image,
-            color: Theme.of(context).primaryColor,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Боргирии тасвирҳо',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
+    final theme = Theme.of(context);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      backgroundColor: theme.dialogBackgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20), // compact top
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Барои намоиши тасвирҳои дуо, барнома онҳоро боргирӣ ва захира мекунад. '
-              'Ин амал метавонад мобилӣ интернет истифода кунад.',
-              style: TextStyle(fontSize: 15),
-            ),
-            const SizedBox(height: 16),
-
-            // Info row for local caching
-            _buildInfoRow(
-              context,
-              Icons.storage,
-              'Захираи маҳаллӣ',
-              'Тасвирҳо барои боздиди зуд ва офлайн захира мешаванд',
+            // Icon at the top
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.image, color: theme.primaryColor, size: 36),
             ),
 
             const SizedBox(height: 12),
 
-            // Info row for network usage
-            _buildInfoRow(
-              context,
-              Icons.data_usage,
-              'Истифодаи мобилӣ',
-              'Мобилӣ интернет метавонад истифода шавад',
-              isWarning: true,
+            // Title
+            Text(
+              'Боргирии тасвирҳо',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // Optional notice
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+            // Message text — now starts immediately after title
+            Text(
+              'Барои намоиши тасвирҳо, барнома онҳоро боргирӣ ва захира мекунад. Мобилӣ интернет метавонад истифода шавад.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                height: 1.4,
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue[700],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Buttons row: Accept highlighted, Decline outlined
+            Row(
+              children: [
+                // Decline — outlined button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDecline,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: theme.dividerColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     child: Text(
-                      'Шумо метавонед ин танзимотро дар ҳар вақт тағйир диҳед',
-                      style: TextStyle(color: Colors.blue[700], fontSize: 12),
-                      softWrap: true,
+                      'Рад кардан',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.textTheme.bodyMedium?.color,
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Accept — elevated, highlighted
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onAccept,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 3,
+                    ),
+                    child: Text(
+                      'Қабул кардан',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: onDecline,
-          child: const Text(
-            'Рад кардан',
-            style: TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: onAccept,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text(
-            'Қабул кардан',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String description, {
-    bool isWarning = false,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          color: isWarning ? Colors.orange[700] : Theme.of(context).primaryColor,
-          size: 20,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isWarning ? Colors.orange[700] : null,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                description,
-                style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                softWrap: true,
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

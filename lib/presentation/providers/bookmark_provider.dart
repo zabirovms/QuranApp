@@ -75,11 +75,11 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
   // Add bookmark from verse
   Future<bool> addBookmark(VerseModel verse, String surahName) async {
     try {
-      await _bookmarkUseCase.addBookmarkFromVerse(verse, _userId, surahName);
+      final bookmarkId = await _bookmarkUseCase.addBookmarkFromVerse(verse, _userId, surahName);
       
       // Update local state
       final newBookmark = BookmarkModel(
-        id: 0, // Will be updated when we refresh
+        id: bookmarkId,
         userId: _userId,
         verseId: verse.id,
         verseKey: verse.uniqueKey,
@@ -110,16 +110,24 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
   // Remove bookmark
   Future<bool> removeBookmark(int bookmarkId) async {
     try {
+      // Validate bookmark ID
+      if (bookmarkId <= 0) {
+        throw Exception('Invalid bookmark ID: $bookmarkId');
+      }
+      
+      // Find the bookmark to remove first
+      final bookmarkToRemove = state.bookmarks.firstWhere(
+        (b) => b.id == bookmarkId,
+        orElse: () => throw Exception('Bookmark not found with ID: $bookmarkId'),
+      );
+      
       final success = await _bookmarkUseCase.removeBookmark(bookmarkId);
       
       if (success) {
         // Update local state
         final updatedBookmarks = state.bookmarks.where((b) => b.id != bookmarkId).toList();
         final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
-        
-        // Find the removed bookmark to update status
-        final removedBookmark = state.bookmarks.firstWhere((b) => b.id == bookmarkId);
-        updatedStatus[removedBookmark.verseKey] = false;
+        updatedStatus[bookmarkToRemove.verseKey] = false;
         
         state = state.copyWith(
           bookmarks: updatedBookmarks,
@@ -134,20 +142,67 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
     }
   }
 
+  // Remove bookmark by verse key (alternative method)
+  Future<bool> removeBookmarkByVerseKey(String verseKey) async {
+    try {
+      print('Removing bookmark with verse key: $verseKey for user: $_userId');
+      
+      final success = await _bookmarkUseCase.removeBookmarkByVerseKey(_userId, verseKey);
+      
+      print('Remove bookmark result: $success');
+      
+      if (success) {
+        // Update local state
+        final updatedBookmarks = state.bookmarks.where((b) => b.verseKey != verseKey).toList();
+        final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
+        updatedStatus[verseKey] = false;
+        
+        print('Updated bookmarks count: ${updatedBookmarks.length}');
+        
+        state = state.copyWith(
+          bookmarks: updatedBookmarks,
+          bookmarkStatus: updatedStatus,
+        );
+      }
+      
+      return success;
+    } catch (e) {
+      print('Error removing bookmark: $e');
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
   // Toggle bookmark (add if not exists, remove if exists)
   Future<bool> toggleBookmark(VerseModel verse, String surahName) async {
-    final isCurrentlyBookmarked = state.bookmarkStatus[verse.uniqueKey] ?? false;
-    
-    if (isCurrentlyBookmarked) {
-      // Find and remove the bookmark
-      final bookmark = state.bookmarks.firstWhere(
-        (b) => b.verseKey == verse.uniqueKey,
-        orElse: () => throw Exception('Bookmark not found'),
-      );
-      return await removeBookmark(bookmark.id);
-    } else {
-      // Add new bookmark
-      return await addBookmark(verse, surahName);
+    try {
+      final isCurrentlyBookmarked = state.bookmarkStatus[verse.uniqueKey] ?? false;
+      
+      if (isCurrentlyBookmarked) {
+        // Remove bookmark by verse key
+        final success = await _bookmarkUseCase.removeBookmarkByVerseKey(_userId, verse.uniqueKey);
+        
+        if (success) {
+          // Update local state
+          final updatedBookmarks = state.bookmarks.where((b) => b.verseKey != verse.uniqueKey).toList();
+          final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
+          updatedStatus[verse.uniqueKey] = false;
+          
+          state = state.copyWith(
+            bookmarks: updatedBookmarks,
+            bookmarkStatus: updatedStatus,
+          );
+        }
+        
+        return success;
+      } else {
+        // Add new bookmark
+        final success = await addBookmark(verse, surahName);
+        return success;
+      }
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
     }
   }
 

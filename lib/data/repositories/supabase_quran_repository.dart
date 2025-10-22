@@ -120,6 +120,22 @@ class SupabaseQuranRepository implements QuranRepository {
   }
 
   @override
+  Future<bool> removeBookmarkByVerseKey(String userId, String verseKey) async {
+    try {
+      // Get all bookmarks for user and find the one with matching verse key
+      final bookmarks = await getBookmarksByUser(userId);
+      final bookmark = bookmarks.firstWhere(
+        (b) => b.verseKey == verseKey,
+        orElse: () => throw Exception('Bookmark not found'),
+      );
+      
+      return await removeBookmark(bookmark.id);
+    } catch (e) {
+      throw Exception('Failed to remove bookmark by verse key: $e');
+    }
+  }
+
+  @override
   Future<VerseModel?> getVerseByKey(String uniqueKey) async {
     try {
       // Parse uniqueKey (format: "surahNumber:verseNumber")

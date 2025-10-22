@@ -33,9 +33,10 @@ class ImageApiService {
                      name.toLowerCase().endsWith('.webp');
             })
             .map((item) {
-              // Construct the public download URL
+              // Construct the public download URL with proper encoding
               final name = item['name'] as String? ?? '';
-              return 'https://storage.googleapis.com/quran-tajik/$name';
+              final encodedName = Uri.encodeComponent(name);
+              return 'https://storage.googleapis.com/quran-tajik/$encodedName';
             })
             .toList();
         

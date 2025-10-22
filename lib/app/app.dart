@@ -12,6 +12,7 @@ import '../presentation/pages/settings/settings_page.dart';
 import '../presentation/pages/search/search_page.dart';
 import '../presentation/pages/bookmarks/bookmarks_page.dart';
 import '../presentation/pages/splash/splash_page.dart';
+import '../presentation/providers/user_provider.dart';
 
 // Router configuration
 final routerProvider = Provider<GoRouter>((ref) {
@@ -91,7 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/bookmarks',
         name: 'bookmarks',
-        builder: (context, state) => const BookmarksPage(userId: 'default_user'),
+        builder: (context, state) => Consumer(
+          builder: (context, ref, child) {
+            final userId = ref.watch(currentUserIdProvider);
+            return BookmarksPage(userId: userId);
+          },
+        ),
       ),
       
       // Settings

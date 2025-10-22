@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../../shared/widgets/highlighted_text.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/quran_provider.dart';
 
@@ -163,13 +164,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               'tajik',
               searchState.selectedFilter,
               Icons.translate,
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              'Тафсир',
-              'tafsir',
-              searchState.selectedFilter,
-              Icons.menu_book,
             ),
           ],
         ),

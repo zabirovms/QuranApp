@@ -17,7 +17,6 @@ import '../../domain/usecases/search_verses_usecase.dart';
 import '../../domain/usecases/bookmark_usecase.dart';
 import '../../data/models/surah_model.dart';
 import '../../data/models/verse_model.dart';
-import '../../data/models/bookmark_model.dart';
 
 // Providers for dependencies
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
@@ -89,10 +88,7 @@ final versesProvider = FutureProvider.family<List<VerseModel>, int>((ref, surahN
 
 final searchResultsProvider = StateNotifierProvider<SearchNotifier, AsyncValue<List<VerseModel>>>((ref) => SearchNotifier(ref.watch(searchVersesUseCaseProvider)));
 
-final bookmarksProvider = FutureProvider<List<BookmarkModel>>((ref) async {
-  final useCase = ref.watch(bookmarkUseCaseProvider);
-  return await useCase.getBookmarksByUser('default_user');
-});
+// Old bookmark provider removed - use bookmark_provider.dart instead
 
 // Connectivity status provider (true when online, false when offline)
 // Note: This is kept for other features that might need it, but surahs now use local data
@@ -134,41 +130,4 @@ class SearchNotifier extends StateNotifier<AsyncValue<List<VerseModel>>> {
   }
 }
 
-// Legacy bookmark notifier - kept for backward compatibility
-class LegacyBookmarkNotifier extends StateNotifier<AsyncValue<List<BookmarkModel>>> {
-  final BookmarkUseCase _bookmarkUseCase;
-
-  LegacyBookmarkNotifier(this._bookmarkUseCase) : super(const AsyncValue.loading()) {
-    _loadBookmarks();
-  }
-
-  Future<void> _loadBookmarks() async {
-    try {
-      final bookmarks = await _bookmarkUseCase.getBookmarksByUser('default_user');
-      state = AsyncValue.data(bookmarks);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> addBookmark(BookmarkModel bookmark) async {
-    try {
-      await _bookmarkUseCase.addBookmark(bookmark);
-      await _loadBookmarks(); // Refresh the list
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> removeBookmark(int bookmarkId) async {
-    try {
-      await _bookmarkUseCase.removeBookmark(bookmarkId);
-      await _loadBookmarks(); // Refresh the list
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-}
-
-// Legacy bookmark notifier provider
-final legacyBookmarkNotifierProvider = StateNotifierProvider<LegacyBookmarkNotifier, AsyncValue<List<BookmarkModel>>>((ref) => LegacyBookmarkNotifier(ref.watch(bookmarkUseCaseProvider)));
+// Legacy bookmark notifier removed - use bookmark_provider.dart instead

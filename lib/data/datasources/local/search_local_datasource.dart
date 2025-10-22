@@ -59,12 +59,13 @@ class SearchLocalDataSource {
 
   void _buildIndex(List<VerseModel> verses) {
     // Build normalized fields once to avoid regex/split on every keystroke
+    // Exclude tafsir from index to improve performance and reduce memory usage
     _index = verses.map((v) => _VerseIndexEntry(
       verse: v,
       arabic: _normalizeText(v.arabicText),
       translit: _normalizeText(v.transliteration ?? ''),
       tajik: _normalizeText(v.tajikText),
-      tafsir: _normalizeText(v.tafsir ?? ''),
+      tafsir: '', // Not used in search anymore
     )).toList(growable: false);
   }
 
@@ -102,38 +103,6 @@ class SearchLocalDataSource {
         .trim();
   }
   
-  // Check if query matches text (with fuzzy matching)
-  bool _matchesText(String query, String text) {
-    final normalizedQuery = _normalizeText(query);
-    final normalizedText = _normalizeText(text);
-    
-    if (normalizedText.contains(normalizedQuery)) {
-      return true;
-    }
-    
-    // Fuzzy matching for partial words
-    final queryWords = normalizedQuery.split(' ');
-    final textWords = normalizedText.split(' ');
-    
-    // Check if all query words are found in text (in any order)
-    for (final queryWord in queryWords) {
-      if (queryWord.length < 2) continue; // Skip very short words
-      
-      bool wordFound = false;
-      for (final textWord in textWords) {
-        if (textWord.contains(queryWord) || queryWord.contains(textWord)) {
-          wordFound = true;
-          break;
-        }
-      }
-      
-      if (!wordFound) {
-        return false;
-      }
-    }
-    
-    return queryWords.isNotEmpty;
-  }
   
   // Search verses with advanced matching
   Future<List<VerseModel>> searchVerses(
@@ -175,13 +144,9 @@ class SearchLocalDataSource {
         case 'tajik':
           matches = entry.tajik.contains(normalizedQuery);
           break;
-        case 'tafsir':
-          // tafsir is large; only search when explicitly requested
-          matches = entry.tafsir.contains(normalizedQuery);
-          break;
         case 'both':
         default:
-          // Exclude tafsir from default 'both' to keep search light
+          // Search in Arabic, transliteration, and Tajik only - tafsir excluded
           matches = entry.arabic.contains(normalizedQuery) ||
                     entry.translit.contains(normalizedQuery) ||
                     entry.tajik.contains(normalizedQuery);
@@ -198,16 +163,14 @@ class SearchLocalDataSource {
     results.sort((a, b) {
       final queryLower = query.toLowerCase();
       
-      // Check for exact matches in different fields
+      // Check for exact matches in different fields (excluding tafsir)
       final aExact = a.arabicText.toLowerCase().contains(queryLower) ||
                      (a.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
-                     a.tajikText.toLowerCase().contains(queryLower) ||
-                     (a.tafsir?.toLowerCase().contains(queryLower) ?? false);
+                     a.tajikText.toLowerCase().contains(queryLower);
       
       final bExact = b.arabicText.toLowerCase().contains(queryLower) ||
                      (b.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
-                     b.tajikText.toLowerCase().contains(queryLower) ||
-                     (b.tafsir?.toLowerCase().contains(queryLower) ?? false);
+                     b.tajikText.toLowerCase().contains(queryLower);
       
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;

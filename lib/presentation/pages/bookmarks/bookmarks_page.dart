@@ -244,13 +244,32 @@ class BookmarksPage extends ConsumerWidget {
     WidgetRef ref,
     BookmarkModel bookmark,
   ) async {
+    print('Bookmark to remove: ID=${bookmark.id}, verseKey=${bookmark.verseKey}, surah=${bookmark.surahNumber}:${bookmark.verseNumber}');
+    
     final notifier = ref.read(bookmarkNotifierProvider(userId).notifier);
-    final success = await notifier.removeBookmark(bookmark.id);
+    
+    // Try verse key-based removal first
+    bool success = await notifier.removeBookmarkByVerseKey(bookmark.verseKey);
+    
+    // If that fails, try ID-based removal as fallback
+    if (!success && bookmark.id > 0) {
+      print('Verse key removal failed, trying ID-based removal');
+      success = await notifier.removeBookmark(bookmark.id);
+    }
+    
+    print('Remove bookmark success: $success');
     
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Хатбарак хориҷ карда шуд'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Хатоги дар хориҷ кардани хатбарак'),
           duration: Duration(seconds: 2),
         ),
       );

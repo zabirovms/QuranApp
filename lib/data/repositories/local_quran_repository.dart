@@ -102,6 +102,15 @@ class LocalQuranRepository implements QuranRepository {
     }
   }
 
+  @override
+  Future<bool> removeBookmarkByVerseKey(String userId, String verseKey) async {
+    try {
+      return await _bookmarkLocalDataSource.removeBookmarkByVerseKey(userId, verseKey);
+    } catch (e) {
+      throw Exception('Failed to remove bookmark by verse key: $e');
+    }
+  }
+
   // Word analysis operations
   @override
   Future<List<Map<String, dynamic>>> getWordAnalysisByVerse(int verseId) async {

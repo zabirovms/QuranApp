@@ -68,10 +68,24 @@ class BookmarkLocalDataSource {
     final db = await database;
     
     try {
+      // First check if bookmark already exists
+      final existing = await db.query(
+        _tableName,
+        where: 'user_id = ? AND verse_key = ?',
+        whereArgs: [bookmark.userId, bookmark.verseKey],
+        limit: 1,
+      );
+      
+      if (existing.isNotEmpty) {
+        // Bookmark already exists, return existing ID
+        return existing.first['id'] as int;
+      }
+      
+      // Insert new bookmark
       final id = await db.insert(
         _tableName,
         bookmark.toJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
       );
       return id;
     } catch (e) {
@@ -118,13 +132,33 @@ class BookmarkLocalDataSource {
     final db = await database;
     
     try {
+      print('Database: Removing bookmark with user_id: $userId, verse_key: $verseKey');
+      
+      // First check if the bookmark exists
+      final existing = await db.query(
+        _tableName,
+        where: 'user_id = ? AND verse_key = ?',
+        whereArgs: [userId, verseKey],
+        limit: 1,
+      );
+      
+      print('Found ${existing.length} bookmarks to remove');
+      
+      if (existing.isEmpty) {
+        print('No bookmark found to remove');
+        return false;
+      }
+      
       final result = await db.delete(
         _tableName,
         where: 'user_id = ? AND verse_key = ?',
         whereArgs: [userId, verseKey],
       );
+      
+      print('Delete result: $result rows affected');
       return result > 0;
     } catch (e) {
+      print('Database error: $e');
       throw Exception('Failed to remove bookmark by verse key: $e');
     }
   }

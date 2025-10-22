@@ -208,38 +208,38 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
     final tasbeehDataAsync = ref.watch(tasbeehDataProvider);
     final settings = ref.watch(tasbeehSettingsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Тасбеҳгӯяк'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            try {
-              if (GoRouter.of(context).canPop()) {
-                GoRouter.of(context).pop();
-              } else {
-                GoRouter.of(context).go('/');
-              }
-            } catch (e) {
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        // Always navigate to home when back button is pressed
+        GoRouter.of(context).go('/');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Тасбеҳгӯяк'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
               GoRouter.of(context).go('/');
-            }
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsDialog(context),
+            },
           ),
-        ],
-      ),
-      body: tasbeehDataAsync.when(
-        data: (tasbeehs) => _buildContent(tasbeehs, settings),
-        loading: () => const Center(child: LoadingWidget()),
-        error: (error, stack) => Center(
-          child: CustomErrorWidget(
-            message: 'Хатогии боргирӣ: $error',
-            onRetry: () => ref.refresh(tasbeehDataProvider),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () => _showSettingsDialog(context),
+            ),
+          ],
+        ),
+        body: tasbeehDataAsync.when(
+          data: (tasbeehs) => _buildContent(tasbeehs, settings),
+          loading: () => const Center(child: LoadingWidget()),
+          error: (error, stack) => Center(
+            child: CustomErrorWidget(
+              message: 'Хатогии боргирӣ: $error',
+              onRetry: () => ref.refresh(tasbeehDataProvider),
+            ),
           ),
         ),
       ),

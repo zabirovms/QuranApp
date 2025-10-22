@@ -61,7 +61,9 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
-  # Code Generation (removed; not used)
+  # Code Generation
+  build_runner: ^2.4.7
+  json_serializable: ^6.8.0
 
   # Linting
   flutter_lints: ^6.0.0

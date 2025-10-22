@@ -60,6 +60,28 @@ class _VerseItemState extends ConsumerState<VerseItem> {
     }
   }
 
+  String _getArabicTextWithEndSymbol() {
+    // Convert verse number to Arabic-Indic numerals
+    final arabicVerseNumber = _convertToArabicNumerals(widget.verse.verseNumber);
+    
+    // Append the end-of-ayah symbol with verse number
+    return '${widget.verse.arabicText} \u06dd$arabicVerseNumber';
+  }
+
+  String _convertToArabicNumerals(int number) {
+    const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    
+    if (number == 0) return arabicNumerals[0];
+    
+    String result = '';
+    while (number > 0) {
+      result = arabicNumerals[number % 10] + result;
+      number ~/= 10;
+    }
+    
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -97,7 +119,7 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    widget.verse.arabicText,
+                    _getArabicTextWithEndSymbol(),
                     style: theme.textTheme.titleLarge?.copyWith(
                       height: 1.5, // reduced line height
                       fontSize: 22,

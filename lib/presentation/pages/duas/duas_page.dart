@@ -342,20 +342,23 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     final quranicDuasAsync = ref.watch(quranicDuasProvider);
     final searchState = ref.watch(duasSearchProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Дуоҳо'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (GoRouter.of(context).canPop()) {
-              GoRouter.of(context).pop();
-            } else {
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        // Always navigate to home when back button is pressed
+        GoRouter.of(context).go('/');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Дуоҳо'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
               GoRouter.of(context).go('/');
-            }
-          },
-        ),
+            },
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -380,6 +383,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           // Other Duas Tab (Images)
           _buildOtherTab(searchState),
         ],
+      ),
       ),
     );
   }
@@ -437,7 +441,11 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           ],
         );
       },
-      loading: () => const Center(child: LoadingWidget()),
+      loading: () => const Center(
+        child: LoadingCircularWidget(
+          size: 50, // optional, adjust as needed
+        ),
+      ),
       error: (error, stack) => Center(
         child: CustomErrorWidget(
           message: 'Хатогии зеркашӣ: $error',

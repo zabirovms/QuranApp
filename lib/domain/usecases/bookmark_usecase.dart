@@ -40,6 +40,11 @@ class BookmarkUseCase {
     return await _repository.removeBookmark(bookmarkId);
   }
 
+  // Remove bookmark by verse key
+  Future<bool> removeBookmarkByVerseKey(String userId, String verseKey) async {
+    return await _repository.removeBookmarkByVerseKey(userId, verseKey);
+  }
+
   // Check if a verse is bookmarked
   Future<bool> isVerseBookmarked(String userId, String verseKey) async {
     final bookmarks = await getBookmarksByUser(userId);

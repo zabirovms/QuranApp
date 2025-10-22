@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/quran_provider.dart';
+import '../../providers/bookmark_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../../data/services/audio_service.dart';
 import '../../../data/services/settings_service.dart';
-import '../../../data/models/bookmark_model.dart';
 import '../../widgets/quran/verse_item.dart';
 import '../../widgets/quran/audio_player_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -111,9 +112,33 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     return Scaffold(
       appBar: AppBar(
         title: surahAsync.when(
-          data: (surah) => Text(surah?.nameTajik ?? 'Сураи ${widget.surahNumber}'),
-          loading: () => Text('Сураи ${widget.surahNumber}'),
-          error: (_, __) => Text('Сураи ${widget.surahNumber}'),
+          data: (surah) => Row(
+            children: [
+              Expanded(
+                child: Text(surah?.nameTajik ?? 'Сураи ${widget.surahNumber}'),
+              ),
+              const SizedBox(width: 8),
+              _buildSurahSelector(context, surah),
+            ],
+          ),
+          loading: () => Row(
+            children: [
+              Expanded(
+                child: Text('Сураи ${widget.surahNumber}'),
+              ),
+              const SizedBox(width: 8),
+              _buildSurahSelector(context, null),
+            ],
+          ),
+          error: (_, __) => Row(
+            children: [
+              Expanded(
+                child: Text('Сураи ${widget.surahNumber}'),
+              ),
+              const SizedBox(width: 8),
+              _buildSurahSelector(context, null),
+            ],
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -145,9 +170,20 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           ),
         ],
       ),
-      body: CustomScrollView(
-        controller: _scrollController,
-         slivers: [
+      body: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          // Swipe left to go to next surah
+          if (details.primaryVelocity! > 0 && widget.surahNumber > 1) {
+            _navigateToSurah(widget.surahNumber - 1);
+          }
+          // Swipe right to go to previous surah
+          else if (details.primaryVelocity! < 0 && widget.surahNumber < 114) {
+            _navigateToSurah(widget.surahNumber + 1);
+          }
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+           slivers: [
           if (_showAudioPlayer)
             SliverToBoxAdapter(
               child: Padding(
@@ -164,7 +200,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
               ),
             ),
 
-          // Surah Info
+          // Surah Info - Compact Design
           surahAsync.when(
             data: (surah) {
               if (surah == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -172,153 +208,188 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                return SliverToBoxAdapter(
                  child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        surah.nameArabic,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textDirection: TextDirection.rtl,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                        spreadRadius: 0,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        surah.nameTajik,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        surah.nameEnglish,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                       Row(
-                         mainAxisAlignment: MainAxisAlignment.center,
-                         children: [
-                           Chip(
-                             label: Text('${surah.versesCount} оят'),
-                             backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                           ),
-                           const SizedBox(width: 8),
-                           Chip(
-                             label: Text(surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ'),
-                             backgroundColor: surah.revelationType == 'Meccan' 
-                                 ? Colors.green.withOpacity(0.1)
-                                 : Colors.blue.withOpacity(0.1),
-                           ),
-                         ],
-                       ),
-                       const SizedBox(height: 8),
-                       // Actions moved from AppBar to Surah header
-                       Row(
-                         mainAxisAlignment: MainAxisAlignment.center,
-                         children: [
-                           PopupMenuButton<String>(
-                             icon: const Icon(Icons.record_voice_over),
-                             tooltip: 'Қорӣ',
-                             onSelected: (edition) {
-                               ref.read(surahControllerProvider(widget.surahNumber)).changeAudioEdition(
-                                 surahNumber: widget.surahNumber,
-                                 audioEdition: edition,
-                               );
-                               Future(() async {
-                                 final settings = SettingsService();
-                                 await settings.init();
-                                 await settings.setAudioEdition(edition);
-                               });
-                             },
-                             itemBuilder: (context) => const [
-                               PopupMenuItem(value: 'ar.alafasy', child: Text('Мишарӣ Алъафасӣ')),
-                               PopupMenuItem(value: 'ar.husary', child: Text('Маъмуди Халил Ҳусарӣ')),
-                               PopupMenuItem(value: 'ar.abdulbasit', child: Text('Абдул Босит')),
-                               PopupMenuItem(value: 'ar.minshawi', child: Text('Миншовӣ')),
-                             ],
-                           ),
-                           const SizedBox(width: 8),
-                           IconButton(
-                             icon: const Icon(Icons.audiotrack),
-                             tooltip: 'Плеери садо',
-                             onPressed: () {
-                               setState(() {
-                                 _showAudioPlayer = !_showAudioPlayer;
-                               });
-                             },
-                           ),
-                           const SizedBox(width: 8),
-                           IconButton(
-                             icon: const Icon(Icons.share),
-                             tooltip: 'Мубодила',
-                             onPressed: () async {
-                               await Share.share('Reading ${surah.nameEnglish} (${surah.number})');
-                             },
-                           ),
-                         ],
-                       ),
-                      const SizedBox(height: 8),
-                       if ((surah.description ?? '').trim().isNotEmpty)
-                         Container(
-                           margin: const EdgeInsets.only(top: 8),
-                           decoration: BoxDecoration(
-                             color: Colors.transparent,
-                             borderRadius: BorderRadius.circular(8),
-                           ),
-                           child: Column(
-                             crossAxisAlignment: CrossAxisAlignment.start,
-                             children: [
-                               InkWell(
-                                 onTap: () {
-                                   setState(() {
-                                     _isSurahDescriptionExpanded = !_isSurahDescriptionExpanded;
-                                   });
-                                 },
-                                 child: Row(
-                                   mainAxisSize: MainAxisSize.min,
-                                   children: [
-                                     const Icon(Icons.info_outline),
-                                     const SizedBox(width: 8),
-                                     Text(
-                                       'Маълумот',
-                                       style: Theme.of(context).textTheme.titleMedium,
-                                     ),
-                                     const SizedBox(width: 8),
-                                     Icon(_isSurahDescriptionExpanded ? Icons.expand_less : Icons.expand_more),
-                                   ],
-                                 ),
-                               ),
-                               if (_isSurahDescriptionExpanded)
-                                 GestureDetector(
-                                   behavior: HitTestBehavior.opaque,
-                                   onTap: () {
-                                     setState(() {
-                                       _isSurahDescriptionExpanded = false;
-                                     });
-                                   },
-                                   child: Padding(
-                                     padding: const EdgeInsets.only(top: 8),
-                                     child: Align(
-                                       alignment: Alignment.centerLeft,
-                                       child: Text(
-                                         surah.description!.trim(),
-                                         textAlign: TextAlign.start,
-                                         style: Theme.of(context).textTheme.bodyMedium,
-                                       ),
-                                     ),
-                                   ),
-                                 ),
-                             ],
-                           ),
-                         ),
                     ],
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          // Arabic Name - Compact
+                          Text(
+                            surah.nameArabic,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                              letterSpacing: 0.5,
+                              height: 1.2,
+                            ),
+                            textDirection: TextDirection.rtl,
+                            textAlign: TextAlign.center,
+                          ),
+                          
+                          const SizedBox(height: 8),
+                          
+                          // Tajik and English names - Inline
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                surah.nameTajik,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 1,
+                                height: 16,
+                                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                surah.nameEnglish,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Info chips - Compact
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildCompactChip(
+                                context,
+                                '${surah.versesCount} оят',
+                                Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildCompactChip(
+                                context,
+                                surah.revelationType == 'Meccan' ? 'Маккӣ' : 'Мадинӣ',
+                                surah.revelationType == 'Meccan' ? Colors.green : Colors.blue,
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Action buttons - Compact
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildCompactActionButton(
+                                context,
+                                Icons.audiotrack,
+                                'Плеери садо',
+                                () {
+                                  setState(() {
+                                    _showAudioPlayer = !_showAudioPlayer;
+                                  });
+                                },
+                              ),
+                              _buildCompactActionButton(
+                                context,
+                                Icons.share,
+                                'Мубодила',
+                                () async {
+                                  await Share.share('Reading ${surah.nameEnglish} (${surah.number})');
+                                },
+                              ),
+                            ],
+                          ),
+                          
+                          // Description section - Compact
+                          if ((surah.description ?? '').trim().isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isSurahDescriptionExpanded = !_isSurahDescriptionExpanded;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Маълумот',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _isSurahDescriptionExpanded ? Icons.expand_less : Icons.expand_more,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (_isSurahDescriptionExpanded)
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(top: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  surah.description!.trim(),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    height: 1.5,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -347,86 +418,85 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                 );
               }
 
-              return SliverPadding(
-                padding: const EdgeInsets.only(bottom: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final verse = verses[index];
-                      final arabicText = (index < controller.state.arabic.length)
-                          ? controller.state.arabic[index].text
-                          : verse.arabicText;
-                       // audioUrl unused in this view; computation removed
-                      final wbw = controller.state.wordByWord[verse.uniqueKey]
-                          ?.map((w) => {'arabic': w.arabic, 'meaning': w.farsi ?? ''})
-                          .toList();
-                    return VerseItem(
-                      verse: verse.copyWith(arabicText: arabicText),
-                      showTransliteration: _showTransliteration,
-                      showTafsir: false, // per-verse control
-                      isWordByWordMode: _isWordByWordMode,
-                      wordByWordTokens: wbw,
-                      translationTextOverride: () {
-                        switch (_translationLang) {
-                          case 'farsi':
-                            return verse.farsi ?? verse.tajikText;
-                          case 'russian':
-                            return verse.russian ?? verse.tajikText;
-                          default:
-                            return verse.tajikText;
-                        }
-                      }(),
-                      isHighlighted: controller.state.currentAyahIndex == index || _highlightedVerseIndex == index,
-                      isTafsirOpen: _openTafsirIndex == index,
-                      onToggleTafsir: () {
-                        setState(() {
-                          _openTafsirIndex = _openTafsirIndex == index ? null : index;
-                        });
-                      },
-                      onPlayAudio: () {
-                        final currentEdition = controller.state.audioEdition;
-                        QuranAudioService().playVerse(widget.surahNumber, verse.verseNumber, edition: currentEdition);
-                        ref.read(surahControllerProvider(widget.surahNumber)).setCurrentAyahIndex(index);
-                      },
-                      onBookmark: () async {
-                        final bm = BookmarkModel(
-                          id: 0,
-                          userId: 'default_user',
-                          verseId: verse.id,
-                          verseKey: '${widget.surahNumber}:${verse.verseNumber}',
-                          surahNumber: widget.surahNumber,
-                          verseNumber: verse.verseNumber,
-                          arabicText: arabicText,
-                          tajikText: verse.tajikText,
-                          surahName: surahAsync.maybeWhen(data: (s) => s?.nameTajik ?? '', orElse: () => ''),
-                          createdAt: DateTime.now(),
-                        );
-                        try {
-                          await ref.read(bookmarkUseCaseProvider).addBookmark(bm);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Оят ба захираҳо илова карда шуд'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Хатоги дар захира кардан: $e'),
-                                duration: const Duration(seconds: 3),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    );
-                    },
-                    childCount: verses.length,
-                  ),
-                ),
+              return Consumer(
+                builder: (context, ref, child) {
+                  final userId = ref.watch(currentUserIdProvider);
+                  final bookmarkState = ref.watch(bookmarkNotifierProvider(userId));
+                  
+                  return SliverPadding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final verse = verses[index];
+                          final arabicText = (index < controller.state.arabic.length)
+                              ? controller.state.arabic[index].text
+                              : verse.arabicText;
+                          final wbw = controller.state.wordByWord[verse.uniqueKey]
+                              ?.map((w) => {'arabic': w.arabic, 'meaning': w.farsi ?? ''})
+                              .toList();
+                          
+                          // Check if verse is bookmarked
+                          final isBookmarked = bookmarkState.bookmarkStatus[verse.uniqueKey] ?? false;
+                          
+                          return VerseItem(
+                            verse: verse.copyWith(arabicText: arabicText),
+                            showTransliteration: _showTransliteration,
+                            showTafsir: false, // per-verse control
+                            isWordByWordMode: _isWordByWordMode,
+                            wordByWordTokens: wbw,
+                            translationTextOverride: () {
+                              switch (_translationLang) {
+                                case 'farsi':
+                                  return verse.farsi ?? verse.tajikText;
+                                case 'russian':
+                                  return verse.russian ?? verse.tajikText;
+                                default:
+                                  return verse.tajikText;
+                              }
+                            }(),
+                            isHighlighted: _highlightedVerseIndex == index,
+                            isTafsirOpen: _openTafsirIndex == index,
+                            isBookmarked: isBookmarked,
+                            onToggleTafsir: () {
+                              setState(() {
+                                _openTafsirIndex = _openTafsirIndex == index ? null : index;
+                              });
+                            },
+                            onPlayAudio: () {
+                              final currentEdition = controller.state.audioEdition;
+                              QuranAudioService().playVerse(widget.surahNumber, verse.verseNumber, edition: currentEdition);
+                              ref.read(surahControllerProvider(widget.surahNumber)).setCurrentAyahIndex(index);
+                            },
+                            onBookmark: () async {
+                              final notifier = ref.read(bookmarkNotifierProvider(userId).notifier);
+                              final surahName = surahAsync.maybeWhen(
+                                data: (s) => s?.nameTajik ?? '', 
+                                orElse: () => ''
+                              );
+                              
+                              final success = await notifier.toggleBookmark(verse, surahName);
+                              
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      success 
+                                        ? (isBookmarked ? 'Хатбарак хориҷ карда шуд' : 'Оят ба захираҳо илова карда шуд')
+                                        : 'Хатоги дар захира кардан'
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                        childCount: verses.length,
+                      ),
+                    ),
+                  );
+                },
               );
             },
             loading: () => const SliverToBoxAdapter(
@@ -446,6 +516,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -455,40 +526,75 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   // Removed marker navigation (juz, hizb, ruku, manzil, page)
 
   void _showDisplaySettings(BuildContext context) {
+    final controller = ref.read(surahControllerProvider(widget.surahNumber));
+    
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Танзимоти намоиш',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                // Header
+                Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Танзимоти намоиш',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 
                 // Translation Language
-                ListTile(
-                  title: const Text('Забони тарҷума'),
-                  subtitle: Text(_getTranslationLanguageName(_translationLang)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showTranslationLanguageDialog(context, setModalState);
-                  },
+                _buildModernSettingTile(
+                  context,
+                  Icons.translate,
+                  'Забони тарҷума',
+                  _getTranslationLanguageName(_translationLang),
+                  () => _showTranslationLanguageDialog(context, setModalState),
                 ),
                 
+                const SizedBox(height: 16),
+                
+                // Qari Selection
+                _buildModernSettingTile(
+                  context,
+                  Icons.record_voice_over,
+                  'Қориъ',
+                  _getQariName(controller.state.audioEdition),
+                  () => _showQariDialog(context, setModalState, controller),
+                ),
+                
+                const SizedBox(height: 16),
+                
                 // Show Transliteration
-                SwitchListTile(
-                  title: const Text('Намоиши транслитератсия'),
-                  subtitle: const Text('Транслитератсияи арабӣ нишон дода шавад'),
-                  value: _showTransliteration,
-                  onChanged: (value) {
+                _buildModernSwitchTile(
+                  context,
+                  Icons.text_fields,
+                  'Намоиши транслитератсия',
+                  'Транслитератсияи арабӣ нишон дода шавад',
+                  _showTransliteration,
+                  (value) {
                     setModalState(() {
                       _showTransliteration = value;
                     });
@@ -503,14 +609,16 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                   },
                 ),
                 
-                // Tafsir toggle removed; handled per-verse only
+                const SizedBox(height: 16),
                 
                 // Word by Word Mode
-                SwitchListTile(
-                  title: const Text('Ҳолати калима ба калима'),
-                  subtitle: const Text('Тарҷума калима ба калима нишон дода шавад'),
-                  value: _isWordByWordMode,
-                  onChanged: (value) {
+                _buildModernSwitchTile(
+                  context,
+                  Icons.format_list_bulleted,
+                  'Ҳолати калима ба калима',
+                  'Тарҷума калима ба калима нишон дода шавад',
+                  _isWordByWordMode,
+                  (value) {
                     setModalState(() {
                       _isWordByWordMode = value;
                     });
@@ -532,10 +640,18 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     child: const Text('Тайёр'),
                   ),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -626,6 +742,476 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       ),
     );
   }
+
+  Widget _buildCompactChip(BuildContext context, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: color,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactActionButton(BuildContext context, IconData icon, String tooltip, VoidCallback onPressed) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  void _navigateToSurah(int surahNumber) {
+    if (surahNumber >= 1 && surahNumber <= 114) {
+      context.go('/surah/$surahNumber');
+    }
+  }
+
+  Widget _buildSurahSelector(BuildContext context, dynamic currentSurah) {
+    return PopupMenuButton<int>(
+      icon: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${widget.surahNumber}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+      tooltip: 'Интихоби сура',
+      onSelected: (surahNumber) {
+        _navigateToSurah(surahNumber);
+      },
+      itemBuilder: (context) {
+        return List.generate(114, (index) {
+          final surahNumber = index + 1;
+          final isSelected = surahNumber == widget.surahNumber;
+          
+          return PopupMenuItem<int>(
+            value: surahNumber,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$surahNumber',
+                        style: TextStyle(
+                          color: isSelected 
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurface,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _getSurahName(surahNumber),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected 
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(
+                      Icons.check,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  String _getSurahName(int surahNumber) {
+    // This is a simplified version - in a real app you'd want to load this from your data source
+    final surahNames = {
+      1: 'Ал-Фотиҳа',
+      2: 'Ал-Бақара',
+      3: 'Оли Имрон',
+      4: 'Ан-Нисо',
+      5: 'Ал-Маида',
+      6: 'Ал-Анъом',
+      7: 'Ал-Аъроф',
+      8: 'Ал-Анфол',
+      9: 'Ат-Тавба',
+      10: 'Юнус',
+      11: 'Ҳуд',
+      12: 'Юсуф',
+      13: 'Ар-Раъд',
+      14: 'Иброҳим',
+      15: 'Ал-Ҳиҷр',
+      16: 'Ан-Наҳл',
+      17: 'Ал-Исро',
+      18: 'Ал-Каҳф',
+      19: 'Марям',
+      20: 'Тоҳо',
+      21: 'Ал-Анбиё',
+      22: 'Ал-Ҳаҷҷ',
+      23: 'Ал-Муъминун',
+      24: 'Ан-Нур',
+      25: 'Ал-Фурқон',
+      26: 'Аш-Шуъаро',
+      27: 'Ан-Намл',
+      28: 'Ал-Қасас',
+      29: 'Ал-Анкабут',
+      30: 'Ар-Рум',
+      31: 'Луқмон',
+      32: 'Ас-Саҷда',
+      33: 'Ал-Аҳзоб',
+      34: 'Сабаъ',
+      35: 'Фотир',
+      36: 'Ясин',
+      37: 'Ас-Соффот',
+      38: 'Сод',
+      39: 'Аз-Зумар',
+      40: 'Ғофир',
+      41: 'Фуссилат',
+      42: 'Аш-Шуро',
+      43: 'Аз-Зухруф',
+      44: 'Ад-Духон',
+      45: 'Ал-Ҷосия',
+      46: 'Ал-Аҳқоф',
+      47: 'Муҳаммад',
+      48: 'Ал-Фатҳ',
+      49: 'Ал-Ҳуҷурот',
+      50: 'Қоф',
+      51: 'Аз-Зориёт',
+      52: 'Ат-Тур',
+      53: 'Ан-Наҷм',
+      54: 'Ал-Қамар',
+      55: 'Ар-Раҳмон',
+      56: 'Ал-Воқиа',
+      57: 'Ал-Ҳадид',
+      58: 'Ал-Муҷодала',
+      59: 'Ал-Ҳашр',
+      60: 'Ал-Мумтаҳана',
+      61: 'Ас-Сафф',
+      62: 'Ал-Ҷумъа',
+      63: 'Ал-Мунофиқун',
+      64: 'Ат-Тағобун',
+      65: 'Ат-Талақ',
+      66: 'Ат-Таҳрим',
+      67: 'Ал-Мулк',
+      68: 'Ал-Қалам',
+      69: 'Ал-Ҳоққа',
+      70: 'Ал-Маъориҷ',
+      71: 'Нуҳ',
+      72: 'Ал-Ҷинн',
+      73: 'Ал-Муззаммил',
+      74: 'Ал-Муддассир',
+      75: 'Ал-Қиёма',
+      76: 'Ал-Инсон',
+      77: 'Ал-Мурсалот',
+      78: 'Ан-Набоъ',
+      79: 'Ан-Назиъот',
+      80: 'Абаса',
+      81: 'Ат-Таквир',
+      82: 'Ал-Инфитор',
+      83: 'Ал-Мутоффифин',
+      84: 'Ал-Иншиқоқ',
+      85: 'Ал-Буруҷ',
+      86: 'Ат-Ториқ',
+      87: 'Ал-Аъло',
+      88: 'Ал-Ғошия',
+      89: 'Ал-Фаҷр',
+      90: 'Ал-Балад',
+      91: 'Аш-Шамс',
+      92: 'Ал-Лайл',
+      93: 'Аз-Зуҳо',
+      94: 'Ал-Иншироҳ',
+      95: 'Ат-Тин',
+      96: 'Ал-Алақ',
+      97: 'Ал-Қадр',
+      98: 'Ал-Байина',
+      99: 'Аз-Залзала',
+      100: 'Ал-Одиёт',
+      101: 'Ал-Қориа',
+      102: 'Ат-Такосур',
+      103: 'Ал-Аср',
+      104: 'Ал-Ҳумаза',
+      105: 'Ал-Фил',
+      106: 'Қурайш',
+      107: 'Ал-Маъун',
+      108: 'Ал-Кавсар',
+      109: 'Ал-Кофирун',
+      110: 'Ан-Наср',
+      111: 'Ал-Масад',
+      112: 'Ал-Ихлос',
+      113: 'Ал-Фалақ',
+      114: 'Ан-Нас',
+    };
+    
+    return surahNames[surahNumber] ?? 'Сураи $surahNumber';
+  }
+
+  Widget _buildModernSettingTile(BuildContext context, IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+        ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernSwitchTile(BuildContext context, IconData icon, String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: SwitchListTile(
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+        value: value,
+        onChanged: onChanged,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  String _getQariName(String qari) {
+    switch (qari) {
+      case 'ar.alafasy':
+        return 'Мишарӣ Алъафасӣ';
+      case 'ar.husary':
+        return 'Маъмуди Халил Ҳусарӣ';
+      case 'ar.abdulbasit':
+        return 'Абдул Босит';
+      case 'ar.minshawi':
+        return 'Миншовӣ';
+      default:
+        return 'Мишарӣ Алъафасӣ';
+    }
+  }
+
+  void _showQariDialog(BuildContext context, StateSetter setModalState, dynamic controller) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Интихоби қориъ'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('Мишарӣ Алъафасӣ'),
+              value: 'ar.alafasy',
+              groupValue: controller.state.audioEdition,
+              onChanged: (value) {
+                controller.changeAudioEdition(
+                  surahNumber: widget.surahNumber,
+                  audioEdition: value!,
+                );
+                Future(() async {
+                  final settings = SettingsService();
+                  await settings.init();
+                  await settings.setAudioEdition(value);
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Маъмуди Халил Ҳусарӣ'),
+              value: 'ar.husary',
+              groupValue: controller.state.audioEdition,
+              onChanged: (value) {
+                controller.changeAudioEdition(
+                  surahNumber: widget.surahNumber,
+                  audioEdition: value!,
+                );
+                Future(() async {
+                  final settings = SettingsService();
+                  await settings.init();
+                  await settings.setAudioEdition(value);
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Абдул Босит'),
+              value: 'ar.abdulbasit',
+              groupValue: controller.state.audioEdition,
+              onChanged: (value) {
+                controller.changeAudioEdition(
+                  surahNumber: widget.surahNumber,
+                  audioEdition: value!,
+                );
+                Future(() async {
+                  final settings = SettingsService();
+                  await settings.init();
+                  await settings.setAudioEdition(value);
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Миншовӣ'),
+              value: 'ar.minshawi',
+              groupValue: controller.state.audioEdition,
+              onChanged: (value) {
+                controller.changeAudioEdition(
+                  surahNumber: widget.surahNumber,
+                  audioEdition: value!,
+                );
+                Future(() async {
+                  final settings = SettingsService();
+                  await settings.init();
+                  await settings.setAudioEdition(value);
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
 
 // JumpChip removed with marker navigation

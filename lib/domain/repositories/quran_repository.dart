@@ -22,6 +22,7 @@ abstract class QuranRepository {
   Future<int> addBookmark(BookmarkModel bookmark);
   Future<List<BookmarkModel>> getBookmarksByUser(String userId);
   Future<bool> removeBookmark(int bookmarkId);
+  Future<bool> removeBookmarkByVerseKey(String userId, String verseKey);
 
   // Word analysis operations
   Future<List<Map<String, dynamic>>> getWordAnalysisByVerse(int verseId);

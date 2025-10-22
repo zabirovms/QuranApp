@@ -301,48 +301,71 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
               itemBuilder: (context, index) {
                 final tasbeeh = tasbeehs[index];
                 final isSelected = index == settings.currentTasbeehIndex;
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final progressColor = isDark
+                    ? const Color.fromARGB(255, 59, 104, 69) // bright color for dark mode
+                    : Theme.of(context).primaryColor;
                 
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 8.0),
                   elevation: isSelected ? 4 : 1,
-                  color: isSelected 
-                      ? Theme.of(context).primaryColor.withOpacity(0.1)
-                      : null,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            tasbeeh.arabic,
-                            style: const TextStyle(
-                              fontSize: 24,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            tasbeeh.tajikTransliteration,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: const Color.fromARGB(221, 168, 167, 167),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            tasbeeh.tajikTranslation,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isSelected ? [
+                          progressColor.withOpacity(0.2),
+                          progressColor.withOpacity(0.3),
+                        ] : [
+                          progressColor.withOpacity(0.1),
+                          progressColor.withOpacity(0.2),
                         ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected 
+                            ? progressColor.withOpacity(0.6)
+                            : progressColor.withOpacity(0.3),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              tasbeeh.arabic,
+                              style: const TextStyle(
+                                fontSize: 24,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              tasbeeh.tajikTransliteration,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: const Color.fromARGB(221, 168, 167, 167),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tasbeeh.tajikTranslation,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -468,62 +491,84 @@ Widget _buildCollectionTab(List<TasbeehModel> tasbeehs, TasbeehSettings settings
             itemCount: tasbeehs.length,
             itemBuilder: (context, index) {
               final tasbeeh = tasbeehs[index];
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final progressColor = isDark
+                  ? const Color.fromARGB(255, 59, 104, 69) // bright color for dark mode
+                  : Theme.of(context).primaryColor;
+              
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        tasbeeh.arabic,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        progressColor.withOpacity(0.1),
+                        progressColor.withOpacity(0.2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: progressColor.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          tasbeeh.arabic,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        tasbeeh.tajikTransliteration,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).textTheme.bodySmall?.color, // same as translation
-                          fontWeight: FontWeight.w600,
-                          fontStyle: FontStyle.italic,
+                        const SizedBox(height: 6),
+                        Text(
+                          tasbeeh.tajikTransliteration,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).textTheme.bodySmall?.color, // same as translation
+                            fontWeight: FontWeight.w600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tasbeeh.tajikTranslation,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        const SizedBox(height: 4),
+                        Text(
+                          tasbeeh.tajikTranslation,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            ref.read(tasbeehSettingsProvider.notifier).updateCurrentTasbeehIndex(index);
-                                
-                                // Switch to counter tab first
-                                _tabController.animateTo(0);
-                                
-                                // Wait until the next frame, THEN jump
-                                Future.delayed(const Duration(milliseconds: 150), () {
-                                  if (_pageController.hasClients) {
-                                    _pageController.jumpToPage(index);
-                                  }
-                                });
-                              },                   
-                              child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              ref.read(tasbeehSettingsProvider.notifier).updateCurrentTasbeehIndex(index);
+                                  
+                                  // Switch to counter tab first
+                                  _tabController.animateTo(0);
+                                  
+                                  // Wait until the next frame, THEN jump
+                                  Future.delayed(const Duration(milliseconds: 150), () {
+                                    if (_pageController.hasClients) {
+                                      _pageController.jumpToPage(index);
+                                    }
+                                  });
+                                },                   
+                                child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

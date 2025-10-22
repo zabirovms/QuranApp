@@ -89,19 +89,24 @@ class _VerseItemState extends ConsumerState<VerseItem> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Arabic Text
-              Text(
-                widget.verse.arabicText,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  height: 1.5, // reduced line height
-                  fontSize: 22,
-                  fontFamily: 'Amiri',
-                  letterSpacing: 0.5,
-                ),
+              Directionality(
                 textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    widget.verse.arabicText,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      height: 1.5, // reduced line height
+                      fontSize: 22,
+                      fontFamily: 'Amiri',
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
               ),
 
               const SizedBox(height: 6),

@@ -3,33 +3,63 @@ import 'package:flutter/services.dart';
 import '../../models/verse_model.dart';
 
 class VerseLocalDataSource {
-  static const String _versesJsonPath = 'assets/data/surah_verses.json';
+  static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
   
   Future<List<VerseModel>> getVersesBySurah(int surahNumber) async {
     try {
-      final String response = await rootBundle.loadString(_versesJsonPath);
-      final Map<String, dynamic> data = json.decode(response);
+      // Load Arabic text from alquran_cloud_complete_quran.json
+      final String arabicResponse = await rootBundle.loadString(_arabicJsonPath);
+      final Map<String, dynamic> arabicData = json.decode(arabicResponse);
       
-      final surahKey = surahNumber.toString();
-      if (!data.containsKey(surahKey)) {
+      // Load translations from quran_mirror_with_translations.json
+      final String translationsResponse = await rootBundle.loadString(_translationsJsonPath);
+      final Map<String, dynamic> translationsData = json.decode(translationsResponse);
+      
+      // Get Arabic verses
+      final List<dynamic> arabicSurahs = arabicData['data']['surahs'];
+      final arabicSurahData = arabicSurahs.firstWhere(
+        (surah) => surah['number'] == surahNumber,
+        orElse: () => null,
+      );
+      
+      // Get translation verses
+      final List<dynamic> translationSurahs = translationsData['data']['surahs'];
+      final translationSurahData = translationSurahs.firstWhere(
+        (surah) => surah['number'] == surahNumber,
+        orElse: () => null,
+      );
+      
+      if (arabicSurahData == null || translationSurahData == null) {
         return [];
       }
       
-      final surah = data[surahKey] as Map<String, dynamic>;
-      final versesList = surah['verses'] as List;
+      final List<dynamic> arabicAyahs = arabicSurahData['ayahs'] as List;
+      final List<dynamic> translationAyahs = translationSurahData['ayahs'] as List;
       
-      return versesList.map((verseJson) {
+      // Create a map of translations by verse number for quick lookup
+      final Map<int, Map<String, dynamic>> translationMap = {};
+      for (var ayah in translationAyahs) {
+        translationMap[ayah['number'] as int] = ayah;
+      }
+      
+      return arabicAyahs.map((arabicAyah) {
+        final verseNumber = arabicAyah['numberInSurah'] as int;
+        final translation = translationMap[arabicAyah['numberInSurah']];
+        
         return VerseModel(
-          id: 0, // Not available in local data
+          id: arabicAyah['number'] as int,
           surahId: surahNumber,
-          verseNumber: verseJson['verse_number'] as int,
-          arabicText: verseJson['arabic_text'] as String,
-          tajikText: verseJson['tajik_text'] as String? ?? '',
-          transliteration: verseJson['transliteration'] as String? ?? '',
-          farsi: null, // Not available in local data
-          russian: null, // Not available in local data
-          tafsir: verseJson['tafsir'] as String?, // Now available in local data
-          uniqueKey: '${surahNumber}:${verseJson['verse_number']}',
+          verseNumber: verseNumber,
+          arabicText: arabicAyah['text'] as String,
+          tajikText: translation?['tajik_text'] as String? ?? '',
+          transliteration: translation?['transliteration'] as String? ?? '',
+          farsi: null, // Not available in this data source
+          russian: null, // Not available in this data source
+          tafsir: translation?['tafsir'] as String?,
+          page: arabicAyah['page'] as int?,
+          juz: arabicAyah['juz'] as int?,
+          uniqueKey: '${surahNumber}:${verseNumber}',
         );
       }).toList();
     } catch (e) {

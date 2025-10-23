@@ -64,8 +64,9 @@ class _VerseItemState extends ConsumerState<VerseItem> {
     // Convert verse number to Arabic-Indic numerals
     final arabicVerseNumber = _convertToArabicNumerals(widget.verse.verseNumber);
     
-    // Append the end-of-ayah symbol with verse number
-    return '${widget.verse.arabicText} \u06dd$arabicVerseNumber';
+    // Remove any trailing newlines and append the end-of-ayah symbol with verse number
+    final cleanArabicText = widget.verse.arabicText.trim();
+    return '$cleanArabicText\u06dd$arabicVerseNumber';
   }
 
   String _convertToArabicNumerals(int number) {
@@ -297,8 +298,9 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                     icon: Icons.copy,
                     tooltip: 'Нусхабардорӣ',
                     onPressed: () async {
+                      final cleanArabicText = widget.verse.arabicText.trim();
                       final text =
-                          '${widget.verse.arabicText}\n\n${widget.verse.tajikText}\n\n(${widget.verse.surahId}:${widget.verse.verseNumber})';
+                          '{$cleanArabicText}\n\n${widget.verse.tajikText}\n\n(Қуръон ${widget.verse.surahId}:${widget.verse.verseNumber})';
                       await Clipboard.setData(ClipboardData(text: text));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -318,8 +320,9 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                     icon: Icons.share,
                     tooltip: 'Мубодила',
                     onPressed: () async {
+                      final cleanArabicText = widget.verse.arabicText.trim();
                       final text =
-                          '${widget.verse.arabicText}\n\n${widget.verse.tajikText}\n\n(${widget.verse.surahId}:${widget.verse.verseNumber})';
+                          '{$cleanArabicText}\n\n${widget.verse.tajikText}\n\n(Қуръон ${widget.verse.surahId}:${widget.verse.verseNumber})';
                       await Share.share(text);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

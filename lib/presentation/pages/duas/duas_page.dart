@@ -307,12 +307,14 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   late TabController _tabController;
+  bool _isSearchExpanded = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
+    _tabController.addListener(_onTabChangedForSearch);
   }
 
   void _onTabChanged() {
@@ -328,13 +330,55 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     }
   }
 
+  void _onTabChangedForSearch() {
+    // Clear search when switching tabs
+    _searchController.clear();
+    _clearSearch();
+    // Collapse search when switching tabs
+    if (_isSearchExpanded) {
+      setState(() {
+        _isSearchExpanded = false;
+      });
+      _searchFocusNode.unfocus();
+    }
+    // Trigger rebuild to update hint text
+    setState(() {});
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _tabController.removeListener(_onTabChanged);
+    _tabController.removeListener(_onTabChangedForSearch);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleSearch(String value) {
+    final quranicDuasAsync = ref.read(quranicDuasProvider);
+    final cachedImagesState = ref.read(cachedImagesProvider);
+    
+    quranicDuasAsync.whenData((quranicDuas) {
+      if (_tabController.index == 0) {
+        // Search in Quranic duas
+        ref.read(duasSearchProvider.notifier).searchQuranicDuas(value, quranicDuas);
+      } else {
+        // Search in images
+        if (cachedImagesState.imageUrls.isNotEmpty) {
+          ref.read(duasSearchProvider.notifier).searchImages(value, cachedImagesState.imageUrls);
+        }
+      }
+    });
+  }
+
+  void _clearSearch() {
+    final quranicDuasAsync = ref.read(quranicDuasProvider);
+    final cachedImagesState = ref.read(cachedImagesProvider);
+    
+    quranicDuasAsync.whenData((quranicDuas) {
+      ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, cachedImagesState.imageUrls);
+    });
   }
 
   @override
@@ -342,38 +386,97 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     final quranicDuasAsync = ref.watch(quranicDuasProvider);
     final searchState = ref.watch(duasSearchProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        // Always navigate to home when back button is pressed
-        GoRouter.of(context).go('/');
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
-          title: const Text('Дуоҳо'),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              GoRouter.of(context).go('/');
+          title: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              final searchWidth = _isSearchExpanded ? (availableWidth * 0.6).clamp(200.0, 300.0) : 40.0;
+              
+              return Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      if (GoRouter.of(context).canPop()) {
+                        GoRouter.of(context).pop();
+                      } else {
+                        GoRouter.of(context).go('/');
+                      }
+                    },
+                  ),
+                  const Text('Дуоҳо'),
+                  const Spacer(),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: searchWidth,
+                    child: _isSearchExpanded
+                        ? TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            decoration: InputDecoration(
+                              hintText: _tabController.index == 0 ? 'Ҷустуҷӯи дуоҳои Қуръонӣ...' : 'Ҷустуҷӯи дуо...',
+                              prefixIcon: const Icon(Icons.search, size: 18),
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_searchController.text.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, size: 18),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _clearSearch();
+                                      },
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 18),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isSearchExpanded = false;
+                                      });
+                                      _searchController.clear();
+                                      _clearSearch();
+                                      _searchFocusNode.unfocus();
+                                    },
+                                  ),
+                                ],
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).cardColor,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              isDense: true,
+                            ),
+                            onChanged: (value) {
+                              _handleSearch(value);
+                            },
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () {
+                              setState(() {
+                                _isSearchExpanded = true;
+                              });
+                              Future.delayed(const Duration(milliseconds: 100), () {
+                                _searchFocusNode.requestFocus();
+                              });
+                            },
+                          ),
+                  ),
+                ],
+              );
             },
           ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              _searchFocusNode.requestFocus();
-            },
+          centerTitle: false,
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Қуръонӣ'),
+              Tab(text: 'Дигар'),
+            ],
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Қуръонӣ'),
-            Tab(text: 'Дигар'),
-          ],
-        ),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -383,7 +486,6 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           // Other Duas Tab (Images)
           _buildOtherTab(searchState),
         ],
-      ),
       ),
     );
   }
@@ -398,48 +500,11 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           });
         }
 
-        return Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                decoration: InputDecoration(
-                  hintText: 'Ҷустуҷӯи дуоҳои Қуръонӣ...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, []);
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                ),
-                onChanged: (value) {
-                  ref.read(duasSearchProvider.notifier).searchQuranicDuas(value, quranicDuas);
-                },
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: searchState.isSearching
-                  ? const Center(child: CircularProgressIndicator())
-                  : searchState.filteredDuas.isEmpty
-                      ? _buildEmptyState(true)
-                      : _buildQuranicDuasList(searchState.filteredDuas),
-            ),
-          ],
-        );
+        return searchState.isSearching
+            ? const Center(child: CircularProgressIndicator())
+            : searchState.filteredDuas.isEmpty
+                ? _buildEmptyState(true)
+                : _buildQuranicDuasList(searchState.filteredDuas);
       },
       loading: () => const Center(
         child: LoadingCircularWidget(
@@ -474,44 +539,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
       });
     }
 
-    return Column(
-      children: [
-        // Search bar for images
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Ҷустуҷӯи дуо...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        ref.read(duasSearchProvider.notifier).clearSearch([], cachedImagesState.imageUrls);
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).cardColor,
-            ),
-            onChanged: (value) {
-              ref.read(duasSearchProvider.notifier).searchImages(value, cachedImagesState.imageUrls);
-            },
-          ),
-        ),
-
-        // Content
-        Expanded(
-          child: _buildContent(cachedImagesState, searchState),
-        ),
-      ],
-    );
+    return _buildContent(cachedImagesState, searchState);
   }
 
   Widget _buildContent(CachedImagesState cachedImagesState, DuasSearchState searchState) {

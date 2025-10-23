@@ -159,6 +159,8 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late PageController _pageController;
+  PageController? _tasbeehSelectorController;
+  int _currentTabIndex = 0;
   int _lastVibrationTime = 0;
 
   @override
@@ -166,12 +168,14 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _pageController = PageController();
+    _tasbeehSelectorController = PageController();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _pageController.dispose();
+    _tasbeehSelectorController?.dispose();
     super.dispose();
   }
 
@@ -208,21 +212,18 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
     final tasbeehDataAsync = ref.watch(tasbeehDataProvider);
     final settings = ref.watch(tasbeehSettingsProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        // Always navigate to home when back button is pressed
-        GoRouter.of(context).go('/');
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
-          title: const Text('Тасбеҳгӯяк'),
+          title: const Text('Зикрҳои исломӣ'),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              GoRouter.of(context).go('/');
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                GoRouter.of(context).go('/');
+              }
             },
           ),
           actions: [
@@ -232,45 +233,55 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
             ),
           ],
         ),
-        body: tasbeehDataAsync.when(
-          data: (tasbeehs) => _buildContent(tasbeehs, settings),
-          loading: () => const Center(child: LoadingWidget()),
-          error: (error, stack) => Center(
-            child: CustomErrorWidget(
-              message: 'Хатогии боргирӣ: $error',
-              onRetry: () => ref.refresh(tasbeehDataProvider),
-            ),
-          ),
-        ),
-      ),
-    );
+         body: tasbeehDataAsync.when(
+           data: (tasbeehs) => _buildContent(tasbeehs, settings),
+           loading: () => const Center(child: LoadingWidget()),
+           error: (error, stack) => Center(
+             child: CustomErrorWidget(
+               message: 'Хатогии боргирӣ: $error',
+               onRetry: () => ref.refresh(tasbeehDataProvider),
+             ),
+           ),
+         ),
+         bottomNavigationBar: BottomNavigationBar(
+           type: BottomNavigationBarType.fixed,
+           currentIndex: _currentTabIndex,
+           onTap: (index) {
+             setState(() {
+               _currentTabIndex = index;
+             });
+             _pageController.animateToPage(
+               index,
+               duration: const Duration(milliseconds: 300),
+               curve: Curves.easeInOut,
+             );
+           },
+           items: const [
+             BottomNavigationBarItem(
+               icon: Icon(Icons.timer),
+               label: 'Тасбеҳгӯяк',
+             ),
+             BottomNavigationBarItem(
+               icon: Icon(Icons.book),
+               label: 'Зикрҳо',
+             ),
+           ],
+         ),
+     );
   }
 
   Widget _buildContent(List<TasbeehModel> tasbeehs, TasbeehSettings settings) {
-    return Column(
+    return PageView(
+      controller: _pageController,
+      onPageChanged: (index) {
+        setState(() {
+          _currentTabIndex = index;
+        });
+        _tabController.animateTo(index);
+      },
       children: [
-        TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.timer),
-              text: 'Тасбеҳгӯяк',
-            ),
-            Tab(
-              icon: Icon(Icons.book),
-              text: 'Зикрҳо',
-            ),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildCounterTab(tasbeehs, settings),
-              _buildCollectionTab(tasbeehs, settings),
-            ],
-          ),
-        ),
+        _buildCounterTab(tasbeehs, settings),
+        _buildCollectionTab(tasbeehs, settings),
       ],
     );
   }
@@ -288,91 +299,87 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Tasbeeh selector
-          SizedBox(
-            height: 150,
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (index) {
-                ref.read(tasbeehSettingsProvider.notifier)
-                    .updateCurrentTasbeehIndex(index);
-              },
-              itemCount: tasbeehs.length,
-              itemBuilder: (context, index) {
-                final tasbeeh = tasbeehs[index];
-                final isSelected = index == settings.currentTasbeehIndex;
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-                final progressColor = isDark
-                    ? const Color.fromARGB(255, 59, 104, 69) // bright color for dark mode
-                    : Theme.of(context).primaryColor;
-                
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
-                  elevation: isSelected ? 4 : 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isSelected ? [
-                          progressColor.withOpacity(0.2),
-                          progressColor.withOpacity(0.3),
-                        ] : [
-                          progressColor.withOpacity(0.1),
-                          progressColor.withOpacity(0.2),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected 
-                            ? progressColor.withOpacity(0.6)
-                            : progressColor.withOpacity(0.3),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              tasbeeh.arabic,
-                              style: const TextStyle(
-                                fontSize: 24,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              tasbeeh.tajikTransliteration,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: const Color.fromARGB(221, 168, 167, 167),
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              tasbeeh.tajikTranslation,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).textTheme.bodySmall?.color,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+           // Tasbeeh selector
+           SizedBox(
+             height: 150,
+             child: PageView.builder(
+               controller: _tasbeehSelectorController,
+               onPageChanged: (index) {
+                 ref.read(tasbeehSettingsProvider.notifier)
+                     .updateCurrentTasbeehIndex(index);
+               },
+               itemCount: tasbeehs.length,
+               itemBuilder: (context, index) {
+                 final tasbeeh = tasbeehs[index];
+                 final isSelected = index == settings.currentTasbeehIndex;
+                 final isDark = Theme.of(context).brightness == Brightness.dark;
+                 final progressColor = isDark
+                     ? const Color.fromARGB(255, 59, 104, 69) // bright color for dark mode
+                     : Theme.of(context).primaryColor;
+                 
+                 return Card(
+                   margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                   elevation: isSelected ? 4 : 1,
+                   child: Container(
+                     decoration: BoxDecoration(
+                       gradient: LinearGradient(
+                         begin: Alignment.topLeft,
+                         end: Alignment.bottomRight,
+                         colors: isSelected ? [
+                           progressColor.withOpacity(0.2),
+                           progressColor.withOpacity(0.3),
+                         ] : [
+                           progressColor.withOpacity(0.1),
+                           progressColor.withOpacity(0.2),
+                         ],
+                       ),
+                       borderRadius: BorderRadius.circular(12),
+                       border: Border.all(
+                         color: isSelected 
+                             ? progressColor.withOpacity(0.6)
+                             : progressColor.withOpacity(0.3),
+                         width: isSelected ? 2 : 1,
+                       ),
+                     ),
+                     child: SingleChildScrollView(
+                       padding: const EdgeInsets.all(16.0),
+                       child: Column(
+                         mainAxisAlignment: MainAxisAlignment.center,
+                         children: [
+                           Text(
+                             tasbeeh.arabic,
+                             style: const TextStyle(
+                               fontSize: 24,
+                             ),
+                             textAlign: TextAlign.center,
+                           ),
+                           const SizedBox(height: 8),
+                           Text(
+                             tasbeeh.tajikTransliteration,
+                             style: TextStyle(
+                               fontSize: 16,
+                               color: const Color.fromARGB(221, 168, 167, 167),
+                               fontWeight: FontWeight.w600,
+                             ),
+                             textAlign: TextAlign.center,
+                           ),
+                           const SizedBox(height: 4),
+                           Text(
+                             tasbeeh.tajikTranslation,
+                             style: TextStyle(
+                               fontSize: 14,
+                               color: Theme.of(context).textTheme.bodySmall?.color,
+                             ),
+                             textAlign: TextAlign.center,
+                           ),
+                         ],
+                       ),
+                     ),
+                   ),
+                 );
+               },
+             ),
+           ),
           
           const SizedBox(height: 16),
           
@@ -478,14 +485,6 @@ Widget _buildCollectionTab(List<TasbeehModel> tasbeehs, TasbeehSettings settings
     padding: const EdgeInsets.all(16.0),
     child: Column(
       children: [
-        Text(
-          'Зикрҳои исломӣ',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
         Expanded(
           child: ListView.builder(
             itemCount: tasbeehs.length,
@@ -548,25 +547,26 @@ Widget _buildCollectionTab(List<TasbeehModel> tasbeehs, TasbeehSettings settings
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              ref.read(tasbeehSettingsProvider.notifier).updateCurrentTasbeehIndex(index);
-                                  
-                                  // Switch to counter tab first
-                                  _tabController.animateTo(0);
-                                  
-                                  // Wait until the next frame, THEN jump
-                                  Future.delayed(const Duration(milliseconds: 150), () {
-                                    if (_pageController.hasClients) {
-                                      _pageController.jumpToPage(index);
-                                    }
-                                  });
-                                },                   
-                                child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
-                          ),
-                        ),
+                         SizedBox(
+                           width: double.infinity,
+                           child: OutlinedButton(
+                             onPressed: () {
+                               ref.read(tasbeehSettingsProvider.notifier).updateCurrentTasbeehIndex(index);
+                                   
+                                   // Switch to counter tab first
+                                   _tabController.animateTo(0);
+                                   _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                   
+                                   // Wait until the tab switch is complete, THEN jump to the specific dhikr
+                                   Future.delayed(const Duration(milliseconds: 350), () {
+                                     if (_tasbeehSelectorController?.hasClients == true) {
+                                       _tasbeehSelectorController!.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                     }
+                                   });
+                                 },                   
+                                 child: const Text('Шуморидан', style: TextStyle(fontSize: 16)),
+                           ),
+                         ),
                       ],
                     ),
                   ),

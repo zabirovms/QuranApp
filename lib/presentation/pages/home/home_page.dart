@@ -27,16 +27,20 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Қуръон'),
-        backgroundColor: const Color.fromARGB(255, 59, 104, 61), // slight transparency if needed
-        elevation: 0, // remove shadow if you don’t want dark strip
-        centerTitle: false, // 👈 this line left-aligns the title
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () => context.push('/search'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.bookmark),
+            onPressed: () {
+              context.push('/bookmarks');
+            },
+            tooltip: 'Захираҳо',
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -80,7 +84,7 @@ class _SurahsTab extends ConsumerWidget {
     final surahsAsync = ref.watch(surahsProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 2.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

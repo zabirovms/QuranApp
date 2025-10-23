@@ -26,6 +26,8 @@ class SurahViewState {
     this.currentAyahIndex = 0,
     this.repeatMode = RepeatMode.off,
     this.repeatRange,
+    this.wordByWordAvailable = true,
+    this.showWordByWordError = false,
   });
 
   final bool loading;
@@ -44,6 +46,8 @@ class SurahViewState {
   final int currentAyahIndex; // 0-based
   final RepeatMode repeatMode;
   final (int, int)? repeatRange; // inclusive 1-based
+  final bool wordByWordAvailable;
+  final bool showWordByWordError;
 
   SurahViewState copyWith({
     bool? loading,
@@ -62,6 +66,8 @@ class SurahViewState {
     int? currentAyahIndex,
     RepeatMode? repeatMode,
     (int, int)? repeatRange,
+    bool? wordByWordAvailable,
+    bool? showWordByWordError,
   }) {
     return SurahViewState(
       loading: loading ?? this.loading,
@@ -80,6 +86,8 @@ class SurahViewState {
       currentAyahIndex: currentAyahIndex ?? this.currentAyahIndex,
       repeatMode: repeatMode ?? this.repeatMode,
       repeatRange: repeatRange ?? this.repeatRange,
+      wordByWordAvailable: wordByWordAvailable ?? this.wordByWordAvailable,
+      showWordByWordError: showWordByWordError ?? this.showWordByWordError,
     );
   }
 }
@@ -98,7 +106,19 @@ class SurahController extends ChangeNotifier {
       final surah = await _repo.getSurahMeta(surahNumber);
       final verses = await _repo.getSupabaseVerses(surahNumber);
       final (arabic, audio) = await _repo.getArabicAndAudio(surahNumber, audioEdition);
-      final wbw = await _repo.getWordByWordForSurah(surahNumber);
+      
+      // Try to load word-by-word data, but don't fail the entire load if it fails
+      Map<String, List<WordByWordModel>> wbw = {};
+      bool wordByWordAvailable = true;
+      try {
+        wbw = await _repo.getWordByWordForSurah(surahNumber);
+        wordByWordAvailable = wbw.isNotEmpty;
+      } catch (e) {
+        // Log the error but continue with the rest of the data
+        print('Word-by-word data unavailable: $e');
+        wordByWordAvailable = false;
+        // Keep empty wbw map - the UI will handle this gracefully
+      }
 
       // compute section starts (1-based ayah indices)
       List<int> startsFor(List<int?> series) {
@@ -135,6 +155,8 @@ class SurahController extends ChangeNotifier {
         pageStarts: pageStarts,
         wordByWord: wbw,
         currentAyahIndex: 0,
+        wordByWordAvailable: wordByWordAvailable,
+        showWordByWordError: false,
       );
       notifyListeners();
     } catch (e) {
@@ -149,6 +171,16 @@ class SurahController extends ChangeNotifier {
 
   void setCurrentAyahIndex(int index) {
     state = state.copyWith(currentAyahIndex: index);
+    notifyListeners();
+  }
+
+  void showWordByWordError() {
+    state = state.copyWith(showWordByWordError: true);
+    notifyListeners();
+  }
+
+  void hideWordByWordError() {
+    state = state.copyWith(showWordByWordError: false);
     notifyListeners();
   }
 }

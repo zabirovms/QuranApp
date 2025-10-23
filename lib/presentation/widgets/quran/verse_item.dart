@@ -113,23 +113,83 @@ class _VerseItemState extends ConsumerState<VerseItem> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Arabic Text
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    _getArabicTextWithEndSymbol(),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      height: 1.5, // reduced line height
-                      fontSize: 22,
-                      fontFamily: 'Amiri',
-                      letterSpacing: 0.5,
+              // Arabic Text or Word-by-Word Tokens
+              if (widget.isWordByWordMode && (widget.wordByWordTokens?.isNotEmpty ?? false))
+                // Word-by-word display replacing Arabic text
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      alignment: WrapAlignment.end,
+                      textDirection: TextDirection.rtl,
+                      children: [
+                        for (final t in widget.wordByWordTokens!)
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  t['arabic'] ?? '',
+                                  textDirection: TextDirection.rtl,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontFamily: 'Amiri',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if ((t['meaning'] ?? '').isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    t['meaning']!,
+                                    textDirection: TextDirection.ltr,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurface.withOpacity(0.7),
+                                      fontSize: 11,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
-                    textAlign: TextAlign.right,
+                  ),
+                )
+              else
+                // Regular Arabic text display
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _getArabicTextWithEndSymbol(),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        height: 1.5, // reduced line height
+                        fontSize: 22,
+                        fontFamily: 'Amiri',
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
                   ),
                 ),
-              ),
 
               const SizedBox(height: 6),
 
@@ -156,46 +216,6 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                 textAlign: TextAlign.justify,
               ),
 
-              // Word by word tokens
-              if (widget.isWordByWordMode && (widget.wordByWordTokens?.isNotEmpty ?? false)) ...[
-                const SizedBox(height: 6),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      alignment: WrapAlignment.end,
-                      children: [
-                        for (final t in widget.wordByWordTokens!)
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Chip(
-                                label: Text(
-                                  t['arabic'] ?? '',
-                                  textDirection: TextDirection.rtl,
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                              if ((t['meaning'] ?? '').isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2),
-                                  child: Text(
-                                    t['meaning']!,
-                                    textDirection: TextDirection.ltr,
-                                    style: theme.textTheme.labelSmall,
-                                  ),
-                                ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
 
               // Tafsir
               if (((widget.isTafsirOpen ?? _isExpanded)) && widget.verse.tafsir != null) ...[

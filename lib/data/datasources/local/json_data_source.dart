@@ -38,14 +38,4 @@ class JsonDataSource {
       throw Exception('Failed to load word learning data: $e');
     }
   }
-
-  // Uthmani Quran data
-  Future<Map<String, dynamic>> getUthmaniQuranData() async {
-    try {
-      final String jsonString = await rootBundle.loadString('assets/data/uthmani.json');
-      return json.decode(jsonString);
-    } catch (e) {
-      throw Exception('Failed to load Uthmani Quran data: $e');
-    }
-  }
 }

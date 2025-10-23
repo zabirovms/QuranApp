@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../providers/quran_provider.dart';
 import '../../providers/bookmark_provider.dart';
@@ -36,6 +37,11 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   bool _isSurahDescriptionExpanded = false;
   int? _openTafsirIndex; // ensures only one tafsir is open
   int? _highlightedVerseIndex; // for highlighting specific verse
+  
+  // Scroll management
+  final Map<int, GlobalKey> _verseKeys = {};
+  bool _isScrollingToVerse = false;
+  int? _pendingScrollVerse;
 
   @override
   void initState() {
@@ -63,44 +69,201 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   }
 
   void _scrollToVerse(int verseNumber) async {
-    // Wait for verses to load
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (_isScrollingToVerse) return;
     
-    if (!mounted) return;
+    _isScrollingToVerse = true;
+    _pendingScrollVerse = verseNumber;
+    
+    try {
+      // Wait for initial render and data loading
+      await _waitForContentToLoad();
+      
+      if (!mounted) return;
 
-    final versesAsync = ref.read(versesProvider(widget.surahNumber));
-    versesAsync.whenData((verses) {
-      if (verses.isNotEmpty) {
-        // Find the verse index
-        final verseIndex = verses.indexWhere((v) => v.verseNumber == verseNumber);
-        if (verseIndex != -1) {
-          setState(() {
-            _highlightedVerseIndex = verseIndex;
-          });
-
-          // Calculate scroll position (approximate)
-          final itemHeight = 200.0; // Approximate height per verse
-          final targetOffset = (verseIndex * itemHeight) - 100; // Offset for better visibility
-          
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOut,
-            );
+      final versesAsync = ref.read(versesProvider(widget.surahNumber));
+      versesAsync.whenData((verses) {
+        if (verses.isNotEmpty) {
+          // Find the verse index
+          final verseIndex = verses.indexWhere((v) => v.verseNumber == verseNumber);
+          if (verseIndex != -1) {
+            _performPreciseScroll(verseIndex, verseNumber);
           }
-
-          // Remove highlight after 3 seconds
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) {
-              setState(() {
-                _highlightedVerseIndex = null;
-              });
-            }
-          });
         }
+      });
+    } finally {
+      _isScrollingToVerse = false;
+      _pendingScrollVerse = null;
+    }
+  }
+
+  Future<void> _waitForContentToLoad() async {
+    // Wait for initial data loading
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    // Wait for verses to be available
+    int attempts = 0;
+    while (attempts < 30) { // Max 3 seconds
+      final versesAsync = ref.read(versesProvider(widget.surahNumber));
+      if (versesAsync.hasValue && versesAsync.value!.isNotEmpty) {
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+    
+    // Wait for layout to be complete and widgets to be built
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Ensure scroll controller is ready
+    int scrollAttempts = 0;
+    while (!_scrollController.hasClients && scrollAttempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      scrollAttempts++;
+    }
+    
+    // Additional wait for GlobalKeys to be ready
+    await Future.delayed(const Duration(milliseconds: 200));
+  }
+
+  void _performPreciseScroll(int verseIndex, int verseNumber) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    setState(() {
+      _highlightedVerseIndex = verseIndex;
+    });
+
+    // Try precise scroll using GlobalKey first
+    final verseKey = _verseKeys[verseIndex];
+    if (verseKey?.currentContext != null) {
+      _scrollToWidget(verseKey!.currentContext!);
+      
+      // Add a verification scroll after a short delay to ensure we reached the target
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && _highlightedVerseIndex == verseIndex) {
+          _verifyAndCorrectScroll(verseIndex);
+        }
+      });
+    } else {
+      // Fallback to calculated position
+      _scrollToCalculatedPosition(verseIndex);
+      
+      // Add verification for calculated position too
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && _highlightedVerseIndex == verseIndex) {
+          _verifyAndCorrectScroll(verseIndex);
+        }
+      });
+    }
+
+    // Remove highlight after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _highlightedVerseIndex = null;
+        });
       }
     });
+  }
+
+  void _verifyAndCorrectScroll(int verseIndex) {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    final verseKey = _verseKeys[verseIndex];
+    if (verseKey?.currentContext != null) {
+      final RenderBox renderBox = verseKey!.currentContext!.findRenderObject() as RenderBox;
+      final RenderBox scrollBox = _scrollController.position.context.storageContext as RenderBox;
+      final position = renderBox.localToGlobal(Offset.zero, ancestor: scrollBox);
+      
+      // If the verse is not visible or not in the right position, correct it
+      if (position.dy < 50 || position.dy > 300) {
+        Scrollable.ensureVisible(
+          verseKey.currentContext!,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.15, // Position 15% from top
+        );
+      }
+    }
+  }
+
+  void _scrollToWidget(BuildContext context) {
+    try {
+      // Use Scrollable.ensureVisible for precise positioning
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+        alignment: 0.1, // Position the widget 10% from the top of the viewport
+      );
+    } catch (e) {
+      // Fallback to manual calculation if ensureVisible fails
+      _scrollToWidgetFallback(context);
+    }
+  }
+
+  void _scrollToWidgetFallback(BuildContext context) {
+    try {
+      final RenderBox renderBox = context.findRenderObject() as RenderBox;
+      final RenderBox scrollBox = _scrollController.position.context.storageContext as RenderBox;
+      
+      // Get the position of the verse relative to the scroll view
+      final position = renderBox.localToGlobal(Offset.zero, ancestor: scrollBox);
+      
+      // Calculate the target scroll offset
+      final targetOffset = _scrollController.offset + position.dy - 100;
+      
+      _scrollController.animateTo(
+        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      );
+    } catch (e) {
+      // If all else fails, use a simple calculated approach
+      print('Scroll fallback failed: $e');
+    }
+  }
+
+  void _scrollToCalculatedPosition(int verseIndex) {
+    // Try to get more accurate measurements
+    double estimatedHeight = 120.0; // Base height per verse
+    
+    // Adjust for different modes
+    if (_showTransliteration) estimatedHeight += 40;
+    if (_isWordByWordMode) estimatedHeight += 80;
+    
+    // Account for surah info section (more accurate measurement)
+    double surahInfoHeight = _isSurahDescriptionExpanded ? 280.0 : 200.0;
+    if (_showAudioPlayer) surahInfoHeight += 100;
+    
+    // Calculate target position
+    final targetOffset = surahInfoHeight + (verseIndex * estimatedHeight) - 50;
+    
+    // Ensure we don't exceed scroll bounds
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final clampedOffset = targetOffset.clamp(0.0, maxScroll);
+    
+    _scrollController.animateTo(
+      clampedOffset,
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _ensureVerseKeysExist(List<dynamic> verses) {
+    for (int i = 0; i < verses.length; i++) {
+      if (!_verseKeys.containsKey(i)) {
+        _verseKeys[i] = GlobalKey();
+      }
+    }
+  }
+
+  void _handleContentChange() {
+    // If we have a pending scroll, retry after content changes
+    if (_pendingScrollVerse != null && !_isScrollingToVerse) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToVerse(_pendingScrollVerse!);
+      });
+    }
   }
 
   @override
@@ -315,7 +478,16 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                 Icons.share,
                                 'Мубодила',
                                 () async {
-                                  await Share.share('Reading ${surah.nameEnglish} (${surah.number})');
+                                  // Get juz number from first verse
+                                  final juzNumber = versesAsync.value?.isNotEmpty == true 
+                                      ? versesAsync.value!.first.juz ?? 1 
+                                      : 1;
+                                  
+                                  final shareText = 'Сураи ${surah.nameTajik} (Ҷузъи $juzNumber) – ${surah.versesCount} оят\n'
+                                      'Тарҷума ва тафсири онро дар барномаи Quran.tj ё вебсайти www.quran.tj\n'
+                                      'бихонед.';
+                                  
+                                  await Share.share(shareText);
                                 },
                               ),
                             ],
@@ -329,6 +501,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                 setState(() {
                                   _isSurahDescriptionExpanded = !_isSurahDescriptionExpanded;
                                 });
+                                _handleContentChange();
                               },
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
@@ -401,7 +574,40 @@ class _SurahPageState extends ConsumerState<SurahPage> {
             error: (error, stackTrace) => const SliverToBoxAdapter(child: SizedBox.shrink()),
           ),
 
-            // Marker chips removed as requested
+          // Bismillah SVG for surahs except 1 and 9
+          if (widget.surahNumber != 1 && widget.surahNumber != 9)
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Center(
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SvgPicture.asset(
+                        'assets/images/bismillah.svg',
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: 110, // Make SVG even bigger within the container
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Verses List
           versesAsync.when(
@@ -421,15 +627,24 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                   final userId = ref.watch(currentUserIdProvider);
                   final bookmarkState = ref.watch(bookmarkNotifierProvider(userId));
                   
+                  // Ensure verse keys exist for precise scrolling
+                  _ensureVerseKeysExist(verses);
+                  
+                  // Handle delayed scroll after content changes
+                  if (_pendingScrollVerse != null && !_isScrollingToVerse) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToVerse(_pendingScrollVerse!);
+                    });
+                  }
+                  
                   return SliverPadding(
                     padding: const EdgeInsets.only(bottom: 16),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final verse = verses[index];
-                          final arabicText = (index < controller.state.arabic.length)
-                              ? controller.state.arabic[index].text
-                              : verse.arabicText;
+                          // Use only local Arabic text (Bismillah removed) instead of remote API text
+                          final arabicText = verse.arabicText;
                           final wbw = controller.state.wordByWord[verse.uniqueKey]
                               ?.map((w) => {'arabic': w.arabic, 'meaning': w.farsi ?? ''})
                               .toList();
@@ -437,7 +652,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                           // Check if verse is bookmarked
                           final isBookmarked = bookmarkState.bookmarkStatus[verse.uniqueKey] ?? false;
                           
-                          return VerseItem(
+                          return Container(
+                            key: _verseKeys[index],
+                            child: VerseItem(
                             verse: verse.copyWith(arabicText: arabicText),
                             showTransliteration: _showTransliteration,
                             showTafsir: false, // per-verse control
@@ -460,6 +677,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                               setState(() {
                                 _openTafsirIndex = _openTafsirIndex == index ? null : index;
                               });
+                              _handleContentChange();
                             },
                             onPlayAudio: () {
                               final currentEdition = controller.state.audioEdition;
@@ -488,6 +706,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                 );
                               }
                             },
+                          ),
                           );
                         },
                         childCount: verses.length,
@@ -604,6 +823,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                     setState(() {
                       _showTransliteration = value;
                     });
+                    _handleContentChange();
                     Future(() async {
                       final s = SettingsService();
                       await s.init();
@@ -628,6 +848,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                     setState(() {
                       _isWordByWordMode = value;
                     });
+                    _handleContentChange();
                     Future(() async {
                       final s = SettingsService();
                       await s.init();

@@ -114,6 +114,17 @@ class IntegratedQuranRepository {
       return (textEdition.ayahs, audioEditionParsed.ayahs);
     }
   }
+
+  Future<List<AqcAyah>> getAudioOnly(int surahNumber, String audioEdition) async {
+    try {
+      final audioRes = await _aqc.getSurahAudio(surahNumber: surahNumber, audioEdition: audioEdition);
+      final audioData = (audioRes.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
+      final audioEditionParsed = SurahEdition.fromJson(audioData);
+      return audioEditionParsed.ayahs;
+    } catch (e) {
+      throw Exception('Failed to load audio for surah $surahNumber: $e');
+    }
+  }
 }
 
 

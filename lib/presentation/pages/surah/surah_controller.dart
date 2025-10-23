@@ -105,7 +105,8 @@ class SurahController extends ChangeNotifier {
     try {
       final surah = await _repo.getSurahMeta(surahNumber);
       final verses = await _repo.getSupabaseVerses(surahNumber);
-      final (arabic, audio) = await _repo.getArabicAndAudio(surahNumber, audioEdition);
+      // Only load audio data, not Arabic text (we use local Arabic text instead)
+      final audio = await _repo.getAudioOnly(surahNumber, audioEdition);
       
       // Try to load word-by-word data, but don't fail the entire load if it fails
       Map<String, List<WordByWordModel>> wbw = {};
@@ -135,17 +136,17 @@ class SurahController extends ChangeNotifier {
         return res;
       }
 
-      final juzStarts = startsFor(arabic.map((a) => a.juz).toList());
-      final hizbStarts = startsFor(arabic.map((a) => a.hizbQuarter).toList());
-      final rukuStarts = startsFor(arabic.map((a) => a.ruku).toList());
-      final manzilStarts = startsFor(arabic.map((a) => a.manzil).toList());
-      final pageStarts = startsFor(arabic.map((a) => a.page).toList());
+      final juzStarts = startsFor(verses.map((v) => v.juz).toList());
+      final hizbStarts = startsFor(verses.map((v) => v.juz).toList()); // Using juz as fallback
+      final rukuStarts = startsFor(verses.map((v) => v.juz).toList()); // Using juz as fallback
+      final manzilStarts = startsFor(verses.map((v) => v.juz).toList()); // Using juz as fallback
+      final pageStarts = startsFor(verses.map((v) => v.page).toList());
 
       state = SurahViewState(
         loading: false,
         surah: surah,
         verses: verses,
-        arabic: arabic,
+        arabic: const [], // No Arabic text from remote API
         audio: audio,
         audioEdition: audioEdition,
         juzStarts: juzStarts,

@@ -106,21 +106,18 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
     final questions = ref.watch(currentQuizQuestionsProvider);
     final currentIndex = ref.watch(currentQuestionIndexProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        // Always navigate to home when back button is pressed
-        GoRouter.of(context).go('/');
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: const Text('Омӯзиши калимаҳо'),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              GoRouter.of(context).go('/');
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                GoRouter.of(context).go('/');
+              }
             },
           ),
         actions: [
@@ -135,8 +132,7 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
         ],
         ),
         body: _buildBody(quizState, session, questions, currentIndex),
-      ),
-    );
+      );
   }
 
   Widget _buildBody(

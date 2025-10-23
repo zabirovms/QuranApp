@@ -109,14 +109,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final versesAsync = ref.watch(versesProvider(widget.surahNumber));
     final controller = ref.watch(surahControllerProvider(widget.surahNumber));
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        // Always navigate to home when back button is pressed
-        context.go('/');
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: surahAsync.when(
             data: (surah) => Row(
@@ -150,7 +143,11 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              context.go('/');
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                context.go('/');
+              }
             },
           ),
         actions: [
@@ -516,7 +513,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           ),
         ],
         ),
-      ),
       ),
     );
   }

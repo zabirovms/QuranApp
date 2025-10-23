@@ -92,7 +92,7 @@ class TajikQuranApp extends ConsumerWidget {
 }
 
 class _BackHandler extends StatelessWidget {
-  final Widget child;
+final Widget child;
   const _BackHandler({required this.child});
 
   @override
@@ -108,28 +108,28 @@ class _BackHandler extends StatelessWidget {
         
         // Debug logging
         print('Back button pressed. Current location: $currentLocation');
+        print('Can pop: ${router.canPop()}');
         
-        // Define routes that should navigate back to home instead of exiting
-        // This includes tab routes and surah pages
+        // Define tab routes that should always go to home first
         final tabRoutes = ['/tasbeeh', '/learn-words', '/duas', '/search', '/bookmarks', '/settings'];
         
-        // Check if current location matches surah page pattern
-        final isSurahPage = currentLocation.startsWith('/surah/');
-        
-        print('Is tab route: ${tabRoutes.contains(currentLocation)}');
-        print('Is surah page: $isSurahPage');
-        
-        // If we're on a tab route or surah page, navigate to home instead of exiting
-        if (tabRoutes.contains(currentLocation) || isSurahPage) {
-          print('Navigating to home...');
+        if (tabRoutes.contains(currentLocation)) {
+          // User is on a tab route - always navigate to home first
+          print('On tab route - navigating to home (default tab)...');
           router.go('/');
         } else if (router.canPop()) {
+          // Check if we can pop (go back in navigation history)
           print('Popping route...');
-          // If we can pop in router, do it
           router.pop();
-        } else {
+        } else if (currentLocation == '/') {
+          // User is on home page (default tab) with no navigation history
+          // Allow app exit
           print('Allowing app exit...');
-          // On home or other routes, allow app exit
+          // Let the system handle app exit
+        } else {
+          // If we can't pop and we're not on a recognized route, go to home
+          print('Navigating to home...');
+          router.go('/');
         }
       },
       child: child,

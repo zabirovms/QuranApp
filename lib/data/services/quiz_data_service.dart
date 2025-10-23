@@ -1,8 +1,8 @@
 import 'dart:math';
+import 'package:dio/dio.dart';
 import '../datasources/remote/api_service.dart';
 import '../models/word_by_word_model.dart';
 import '../models/quiz_question_model.dart';
-import '../models/quiz_session_model.dart';
 import '../models/user_progress_model.dart';
 
 /// Service for efficiently fetching and managing WBW data for the quiz game
@@ -22,68 +22,89 @@ class QuizDataService {
     }
 
     try {
-      // Get verses for the surah
-      final versesResponse = await _apiService.getVersesBySurah(surahNumber);
-      final verses = (versesResponse.data as List?) ?? [];
+      print('Fetching word-by-word data for surah $surahNumber...');
       
-      if (verses.isEmpty) return [];
-
-      // Extract unique keys
-      final uniqueKeys = verses
-          .map((v) => v['unique_key'] as String?)
-          .where((key) => key != null)
-          .cast<String>()
-          .toList();
-
-      // Fetch WBW data in batches
-      final allWords = <WordByWordModel>[];
-      const batchSize = 50;
-      
-      for (int i = 0; i < uniqueKeys.length; i += batchSize) {
-        final batch = uniqueKeys.sublist(
-          i,
-          i + batchSize > uniqueKeys.length ? uniqueKeys.length : i + batchSize,
-        );
-        
-        try {
-          final wbwResponse = await _apiService.getWordByWordByKeys(batch);
-          final wbwData = (wbwResponse.data as List?) ?? [];
-          
-          allWords.addAll(
-            wbwData.map((item) => WordByWordModel.fromJson(item)),
+      // Direct fetch from word_by_word table for the surah
+      final wbwResponse = await _apiService.getWordByWordForSurah(surahNumber).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('Timeout fetching WBW data for surah $surahNumber');
+          return Response(
+            requestOptions: RequestOptions(),
+            data: [],
           );
-        } catch (e) {
-          // Continue with other batches
-          print('Error fetching WBW batch: $e');
-        }
+        },
+      );
+      
+      final wbwData = (wbwResponse.data as List?) ?? [];
+      print('Fetched ${wbwData.length} word-by-word entries for surah $surahNumber');
+      
+      if (wbwData.isEmpty) {
+        print('No word-by-word data found for surah $surahNumber');
+        return [];
       }
 
-      // Filter out words without translations
-      final validWords = allWords.where((w) => w.farsi != null && w.farsi!.isNotEmpty).toList();
+      // Convert to WordByWordModel and filter valid words
+      final allWords = wbwData
+          .map((item) => WordByWordModel.fromJson(item))
+          .where((w) => w.farsi != null && w.farsi!.isNotEmpty)
+          .toList();
+
+      print('Valid words with translations: ${allWords.length}');
       
-      _wbwCache[cacheKey] = validWords;
-      return validWords;
+      _wbwCache[cacheKey] = allWords;
+      return allWords;
     } catch (e) {
       print('Error fetching words for surah $surahNumber: $e');
       return [];
     }
   }
 
-  /// Fetch random words from all surahs
+  /// Fetch random words from all surahs (optimized with caching)
   Future<List<WordByWordModel>> getRandomWords({int count = 10}) async {
+    print('Fetching $count random words...');
+    
+    // Check if we have enough cached words
+    final allCachedWords = <WordByWordModel>[];
+    for (final words in _wbwCache.values) {
+      allCachedWords.addAll(words);
+    }
+    
+    if (allCachedWords.length >= count) {
+      print('Using ${allCachedWords.length} cached words');
+      allCachedWords.shuffle();
+      return allCachedWords.take(count).toList();
+    }
+    
+    // If not enough cached words, fetch from popular surahs
+    final popularSurahs = [1, 2, 3, 4, 5, 18, 19, 20, 21, 22, 55, 67, 78, 112, 113, 114];
     final allWords = <WordByWordModel>[];
     
-    // Fetch from multiple random surahs to get variety
-    final randomSurahs = _getRandomSurahNumbers(count: 5);
-    
-    for (final surahNumber in randomSurahs) {
-      final words = await getWordsForSurah(surahNumber);
-      allWords.addAll(words);
+    for (final surahNumber in popularSurahs) {
+      try {
+        final words = await getWordsForSurah(surahNumber);
+        allWords.addAll(words);
+        
+        print('Surah $surahNumber: ${words.length} words (total: ${allWords.length})');
+        
+        // If we have enough words, break early
+        if (allWords.length >= count * 3) break;
+      } catch (e) {
+        print('Error fetching surah $surahNumber: $e');
+        continue;
+      }
+    }
+
+    if (allWords.isEmpty) {
+      print('No words found! Check your database connection and data.');
+      return [];
     }
 
     // Shuffle and return requested count
     allWords.shuffle();
-    return allWords.take(count).toList();
+    final selectedWords = allWords.take(count).toList();
+    print('Selected ${selectedWords.length} random words');
+    return selectedWords;
   }
 
   /// Get words for daily quiz (mix of new and review words)
@@ -115,11 +136,22 @@ class QuizDataService {
   }) async {
     final questions = <QuizQuestionModel>[];
     
+    if (words.isEmpty) return questions;
+    
     // Get all available translations for wrong options
     final allTranslations = await _getAllTranslations();
     
     for (final word in words) {
-      if (word.farsi == null || word.farsi!.isEmpty) continue;
+      if (word.farsi == null || word.farsi!.isEmpty) {
+        print('Skipping word ${word.uniqueKey} - no translation');
+        continue;
+      }
+      
+      // Ensure we have enough wrong options
+      if (allTranslations.length < 3) {
+        print('Not enough translations for wrong options, skipping word ${word.uniqueKey}');
+        continue;
+      }
       
       // Generate wrong options (3 random translations excluding the correct one)
       final wrongOptions = _generateWrongOptions(
@@ -128,13 +160,24 @@ class QuizDataService {
         count: 3,
       );
       
-      final question = QuizQuestionModel.fromWordByWord(
-        wbw: word,
-        wrongOptions: wrongOptions,
-        surahReference: surahReference,
-      );
+      // Ensure we have exactly 4 options (1 correct + 3 wrong)
+      if (wrongOptions.length < 3) {
+        print('Not enough wrong options for word ${word.uniqueKey}, skipping');
+        continue;
+      }
       
-      questions.add(question);
+      try {
+        final question = QuizQuestionModel.fromWordByWord(
+          wbw: word,
+          wrongOptions: wrongOptions,
+          surahReference: surahReference,
+        );
+        
+        questions.add(question);
+      } catch (e) {
+        print('Error creating question for word ${word.uniqueKey}: $e');
+        continue;
+      }
     }
     
     return questions;
@@ -218,17 +261,6 @@ class QuizDataService {
     return wrongOptions;
   }
 
-  /// Get random surah numbers for variety
-  List<int> _getRandomSurahNumbers({int count = 5}) {
-    final random = Random();
-    final surahNumbers = <int>{};
-    
-    while (surahNumbers.length < count) {
-      surahNumbers.add(random.nextInt(114) + 1); // Surahs 1-114
-    }
-    
-    return surahNumbers.toList();
-  }
 
   /// Clear cache to free memory
   void clearCache() {

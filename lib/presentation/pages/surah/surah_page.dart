@@ -109,8 +109,10 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final versesAsync = ref.watch(versesProvider(widget.surahNumber));
     final controller = ref.watch(surahControllerProvider(widget.surahNumber));
 
-    return Scaffold(
-        appBar: AppBar(
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
           title: surahAsync.when(
             data: (surah) => Row(
               children: [
@@ -514,6 +516,11 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         ],
         ),
       ),
+        ),
+        // Word-by-word error popup
+        if (controller.state.showWordByWordError)
+          _buildWordByWordErrorPopup(context, controller),
+      ],
     );
   }
 
@@ -626,6 +633,11 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                       await s.init();
                       await s.setWordByWordMode(value);
                     });
+                    
+                    // Check if word-by-word is enabled but data is not available
+                    if (value && !controller.state.wordByWordAvailable) {
+                      controller.showWordByWordError();
+                    }
                   },
                 ),
                 
@@ -1203,6 +1215,97 @@ class _SurahPageState extends ConsumerState<SurahPage> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWordByWordErrorPopup(BuildContext context, dynamic controller) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.5),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.wifi_off,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ҳолати калима ба калима дастрас нест',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Интернет пайваст нест. Лутфан интернетро тафтиш кунед ва дубора кӯшиш кунед.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          controller.hideWordByWordError();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Тайёр'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          controller.hideWordByWordError();
+                          // Reload the surah to try fetching word-by-word data again
+                          controller.load(
+                            surahNumber: widget.surahNumber,
+                            audioEdition: controller.state.audioEdition,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Такрор кӯшиш'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

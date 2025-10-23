@@ -39,30 +39,57 @@ class IntegratedQuranRepository {
   }
 
   Future<Map<String, List<WordByWordModel>>> getWordByWordForSurah(int surahNumber) async {
-    final verses = await getSupabaseVerses(surahNumber);
-    final keys = verses.map((v) => v.uniqueKey).toList();
+    try {
+      final verses = await getSupabaseVerses(surahNumber);
+      final keys = verses.map((v) => v.uniqueKey).toList();
 
-    // Fetch in batches to avoid URL length limits and 414/empty responses
-    const int batchSize = 50;
-    final items = <WordByWordModel>[];
-    for (var i = 0; i < keys.length; i += batchSize) {
-      final batch = keys.sublist(i, i + batchSize > keys.length ? keys.length : i + batchSize);
-      try {
-        final res = await _apiService.getWordByWordByKeys(batch);
-        final list = (res.data as List?) ?? const [];
-        items.addAll(list.map((e) => WordByWordModel.fromJson(e)));
-      } catch (e) {
-        // Continue with other batches; optionally log
+      // Fetch in batches to avoid URL length limits and 414/empty responses
+      const int batchSize = 50;
+      final items = <WordByWordModel>[];
+      bool hasNetworkError = false;
+      
+      for (var i = 0; i < keys.length; i += batchSize) {
+        final batch = keys.sublist(i, i + batchSize > keys.length ? keys.length : i + batchSize);
+        try {
+          final res = await _apiService.getWordByWordByKeys(batch);
+          final list = (res.data as List?) ?? const [];
+          items.addAll(list.map((e) => WordByWordModel.fromJson(e)));
+        } on DioException catch (e) {
+          // Check if it's a network error
+          if (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.receiveTimeout) {
+            hasNetworkError = true;
+          }
+          // Continue with other batches; optionally log
+          print('Error fetching WBW batch: ${e.message}');
+        } catch (e) {
+          // Continue with other batches; optionally log
+          print('Error fetching WBW batch: $e');
+        }
       }
+      
+      // If we have network errors and no data, throw a specific exception
+      if (hasNetworkError && items.isEmpty) {
+        throw Exception('NETWORK_ERROR: Word-by-word data unavailable. Please check your internet connection.');
+      }
+      
+      final grouped = <String, List<WordByWordModel>>{};
+      for (final item in items) {
+        grouped.putIfAbsent(item.uniqueKey, () => []).add(item);
+      }
+      for (final key in grouped.keys) {
+        grouped[key]!.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
+      }
+      return grouped;
+    } catch (e) {
+      // Re-throw network errors to be handled by the controller
+      if (e.toString().contains('NETWORK_ERROR')) {
+        rethrow;
+      }
+      // For other errors, return empty map
+      return <String, List<WordByWordModel>>{};
     }
-    final grouped = <String, List<WordByWordModel>>{};
-    for (final item in items) {
-      grouped.putIfAbsent(item.uniqueKey, () => []).add(item);
-    }
-    for (final key in grouped.keys) {
-      grouped[key]!.sort((a, b) => a.wordNumber.compareTo(b.wordNumber));
-    }
-    return grouped;
   }
 
   Future<(List<AqcAyah>, List<AqcAyah>)> getArabicAndAudio(int surahNumber, String audioEdition) async {

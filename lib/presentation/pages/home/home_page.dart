@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 
 import '../../providers/quran_provider.dart';
 import '../../widgets/quran/surah_list_item.dart';
@@ -55,19 +56,19 @@ class _HomePageState extends ConsumerState<HomePage> {
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book),
+            icon: Icon(FlutterIslamicIcons.quran),
             label: 'Сураҳо',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
+            icon: Icon(FlutterIslamicIcons.tasbih),
             label: 'Тасбеҳ',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.school),
+            icon: Icon(FlutterIslamicIcons.mosque),
             label: 'Омӯзиш',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.handshake),
+            icon: Icon(FlutterIslamicIcons.prayer),
             label: 'Дуоҳо',
           ),
         ],

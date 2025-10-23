@@ -52,6 +52,7 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.0.10+1
+  flutter_islamic_icons: ^1.0.2
   hive_flutter: any
 dev_dependencies:
   flutter_test:

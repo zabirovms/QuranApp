@@ -184,7 +184,7 @@ class ApiService {
   Future<Response> getWordAnalysis(int surahNumber, int verseNumber) async {
     try {
       final verseKey = '$surahNumber:$verseNumber';
-      final response = await _supabaseDio.get('/rest/v1/word_by_word?unique_key=eq.$verseKey&order=word_number');
+      final response = await _apiDio.get('/word_by_word?unique_key=eq.$verseKey&order=word_number');
       return response;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -198,8 +198,8 @@ class ApiService {
         return Response(requestOptions: RequestOptions(), data: []);
       }
       final keys = uniqueKeys.map((k) => '"$k"').join(',');
-      final url = '/rest/v1/word_by_word?unique_key=in.($keys)&order=unique_key,word_number';
-      final response = await _supabaseDio.get(url);
+      final url = '/word_by_word?unique_key=in.($keys)&order=unique_key,word_number';
+      final response = await _apiDio.get(url);
       return response;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -262,6 +262,30 @@ class ApiService {
   // Get surah by number (alias for getSurah)
   Future<Response> getSurahByNumber(int number) async {
     return getSurah(number);
+  }
+
+  // Get word-by-word data for a specific surah
+  Future<Response> getWordByWordForSurah(int surahNumber) async {
+    try {
+      final response = await _apiDio.get('/word_by_word?unique_key=like.$surahNumber:%&order=unique_key,word_number');
+      return response;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Get word-by-word data for specific verses
+  Future<Response> getWordByWordForVerses(List<String> verseKeys) async {
+    try {
+      if (verseKeys.isEmpty) {
+        return Response(requestOptions: RequestOptions(), data: []);
+      }
+      final keys = verseKeys.map((k) => '"$k"').join(',');
+      final response = await _apiDio.get('/word_by_word?unique_key=in.($keys)&order=unique_key,word_number');
+      return response;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
   }
 
   // Search history operations

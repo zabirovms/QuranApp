@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/quiz_session_model.dart';
 
-/// Widget for quiz mode selection
+/// Widget for quiz mode selection - Action-focused design
 class QuizModeSelectorWidget extends StatelessWidget {
   final QuizMode selectedMode;
   final Function(QuizMode) onModeChanged;
@@ -19,148 +19,167 @@ class QuizModeSelectorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
-            _buildHeader(context),
-            const SizedBox(height: 16),
-            
-            // Mode selection
-            _buildModeSelection(context),
-            const SizedBox(height: 16),
+            // Quick mode selection buttons
+            _buildModeButtons(context),
             
             // Surah selection (if applicable)
-            if (selectedMode == QuizMode.surah && onSurahChanged != null)
-              _buildSurahSelection(context),
+            if (selectedMode == QuizMode.surah && onSurahChanged != null) ...[
+              const SizedBox(height: 12),
+              _buildSurahSelector(context),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          Icons.settings,
-          color: Theme.of(context).primaryColor,
-          size: 24,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Танзимоти бозӣ',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModeSelection(BuildContext context) {
+  Widget _buildModeButtons(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Намуди бозӣ',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        // First row
+        Row(
+          children: [
+            Expanded(
+              child: _buildModeButton(
+                context,
+                QuizMode.random,
+                'Тасодуфӣ',
+                Icons.shuffle,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildModeButton(
+                context,
+                QuizMode.daily,
+                'Рӯзона',
+                Icons.today,
+                Colors.green,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: QuizMode.values.map((mode) {
-            final isSelected = selectedMode == mode;
-            return _buildModeChip(context, mode, isSelected);
-          }).toList(),
+        const SizedBox(height: 12),
+        // Second row
+        Row(
+          children: [
+            Expanded(
+              child: _buildModeButton(
+                context,
+                QuizMode.surah,
+                'Аз сура',
+                Icons.book,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildModeButton(
+                context,
+                QuizMode.review,
+                'Такрорӣ',
+                Icons.refresh,
+                Colors.purple,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildModeChip(BuildContext context, QuizMode mode, bool isSelected) {
-    return FilterChip(
-      label: Text(_getModeLabel(mode)),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          onModeChanged(mode);
-        }
-      },
-      selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-      checkmarkColor: Theme.of(context).primaryColor,
-      avatar: Icon(
-        _getModeIcon(mode),
-        size: 18,
-        color: isSelected ? Theme.of(context).primaryColor : Colors.grey[600],
+  Widget _buildModeButton(
+    BuildContext context,
+    QuizMode mode,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
+    final isSelected = selectedMode == mode;
+    
+    return GestureDetector(
+      onTap: () => onModeChanged(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : color.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : color,
+              size: 20,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : color,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSurahSelection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Сураи интихобшуда',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+  Widget _buildSurahSelector(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.book,
+            color: Theme.of(context).primaryColor,
+            size: 20,
           ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          value: selectedSurahNumber,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Сураро интихоб кунед',
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: selectedSurahNumber,
+                isExpanded: true,
+                hint: const Text('Сураро интихоб кунед'),
+                items: List.generate(114, (index) {
+                  final surahNumber = index + 1;
+                  return DropdownMenuItem(
+                    value: surahNumber,
+                    child: Text('Сураи $surahNumber'),
+                  );
+                }),
+                onChanged: onSurahChanged,
+              ),
+            ),
           ),
-          items: List.generate(114, (index) {
-            final surahNumber = index + 1;
-            return DropdownMenuItem(
-              value: surahNumber,
-              child: Text('Сураи $surahNumber'),
-            );
-          }),
-          onChanged: onSurahChanged,
-        ),
-      ],
+        ],
+      ),
     );
-  }
-
-  String _getModeLabel(QuizMode mode) {
-    switch (mode) {
-      case QuizMode.random:
-        return 'Тасодуфӣ';
-      case QuizMode.surah:
-        return 'Аз сура';
-      case QuizMode.daily:
-        return 'Рӯзона';
-      case QuizMode.review:
-        return 'Такрорӣ';
-    }
-  }
-
-  IconData _getModeIcon(QuizMode mode) {
-    switch (mode) {
-      case QuizMode.random:
-        return Icons.shuffle;
-      case QuizMode.surah:
-        return Icons.book;
-      case QuizMode.daily:
-        return Icons.today;
-      case QuizMode.review:
-        return Icons.refresh;
-    }
   }
 }
 
-/// Widget for quiz settings and configuration
+/// Widget for quiz settings and configuration - Action-focused design
 class QuizSettingsWidget extends StatefulWidget {
   final int wordCount;
   final bool shuffleOptions;
@@ -187,99 +206,162 @@ class _QuizSettingsWidgetState extends State<QuizSettingsWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
-            Row(
-              children: [
-                Icon(
-                  Icons.tune,
-                  color: Theme.of(context).primaryColor,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Танзимоти иловагӣ',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            // Word count quick selector
+            _buildWordCountSelector(context),
+            const SizedBox(height: 12),
             
-            // Word count slider
-            _buildWordCountSlider(context),
-            const SizedBox(height: 16),
-            
-            // Toggle switches
-            _buildToggleSwitches(context),
+            // Quick toggle switches
+            _buildQuickToggles(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWordCountSlider(BuildContext context) {
+  Widget _buildWordCountSelector(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Миқдори калимаҳо: ${widget.wordCount}',
+          'Миқдори калимаҳо',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 8),
-        Slider(
-          value: widget.wordCount.toDouble(),
-          min: 5,
-          max: 50,
-          divisions: 9,
-          label: '${widget.wordCount}',
-          onChanged: (value) {
-            widget.onWordCountChanged(value.round());
-          },
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '5',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Text(
-              '50',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.numbers,
+                color: Theme.of(context).primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Slider(
+                  value: widget.wordCount.toDouble(),
+                  min: 5,
+                  max: 50,
+                  divisions: 9,
+                  onChanged: (value) {
+                    widget.onWordCountChanged(value.round());
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${widget.wordCount}',
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildToggleSwitches(BuildContext context) {
+  Widget _buildQuickToggles(BuildContext context) {
     return Column(
       children: [
-        SwitchListTile(
-          title: const Text('Гузаронидани ҷавобҳо'),
-          subtitle: const Text('Ҷавобҳоро ҳар як савол баъд аз ҷавобдиҳӣ тағйир диҳед'),
+        _buildQuickToggle(
+          context,
+          title: 'Гузаронидани ҷавобҳо',
           value: widget.shuffleOptions,
           onChanged: widget.onShuffleOptionsChanged,
-          secondary: const Icon(Icons.shuffle),
+          icon: Icons.shuffle,
+          color: Colors.blue,
         ),
-        SwitchListTile(
-          title: const Text('Нишон додани транслитератсия'),
-          subtitle: const Text('Транслитератсияи калимаҳоро нишон диҳед'),
+        const SizedBox(height: 12),
+        _buildQuickToggle(
+          context,
+          title: 'Транслитератсия',
           value: widget.showTransliteration,
           onChanged: widget.onShowTransliterationChanged,
-          secondary: const Icon(Icons.text_fields),
+          icon: Icons.text_fields,
+          color: Colors.green,
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickToggle(
+    BuildContext context, {
+    required String title,
+    required bool value,
+    required Function(bool) onChanged,
+    required IconData icon,
+    required Color color,
+  }) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: value ? color.withOpacity(0.1) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: value ? color : Colors.grey[300]!,
+            width: value ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: value ? color : Colors.grey[600],
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: value ? color : Colors.grey[700],
+                  fontWeight: value ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: value ? color : Colors.grey[300],
+                shape: BoxShape.circle,
+              ),
+              child: value
+                  ? const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

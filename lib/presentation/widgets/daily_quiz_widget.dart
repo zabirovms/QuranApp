@@ -27,27 +27,30 @@ class DailyQuizWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             _buildHeader(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
             // Motivational message
             _buildMotivationalMessage(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
             // Streak information
             _buildStreakInfo(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
             // Statistics
             _buildStatistics(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
-            // Recommendations
-            if (recommendations.isNotEmpty) _buildRecommendations(context),
-            const SizedBox(height: 16),
+            // Recommendations (only if not empty)
+            if (recommendations.isNotEmpty) ...[
+              _buildRecommendations(context),
+              const SizedBox(height: 12),
+            ],
             
             // Start quiz button
             _buildStartQuizButton(context),
@@ -161,7 +164,7 @@ class DailyQuizWidget extends StatelessWidget {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -170,27 +173,32 @@ class DailyQuizWidget extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
             color: color,
-            size: 32,
+            size: 24,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.grey[600],
+              fontSize: 11,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -242,18 +250,19 @@ class DailyQuizWidget extends StatelessWidget {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(right: 6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
             color: color,
-            size: 20,
+            size: 18,
           ),
           const SizedBox(height: 4),
           Text(
@@ -261,15 +270,20 @@ class DailyQuizWidget extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: color,
-              fontSize: 16,
+              fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.grey[600],
+              fontSize: 10,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

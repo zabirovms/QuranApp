@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../models/quiz_question_model.dart';
 import '../models/quiz_session_model.dart';
 import '../models/user_progress_model.dart';
@@ -7,59 +6,107 @@ import '../services/quiz_data_service.dart';
 /// Service for managing quiz mechanics and game logic
 class QuizMechanicsService {
   final QuizDataService _dataService;
-  final Random _random = Random();
 
   QuizMechanicsService({required QuizDataService dataService}) 
       : _dataService = dataService;
 
-  /// Create a new quiz session
+  /// Create a new quiz session with timeout
   Future<QuizSessionModel> createQuizSession({
     required String userId,
     required QuizMode mode,
     int? surahNumber,
     int wordCount = 10,
   }) async {
-    List<String> questionIds = [];
+    try {
+      List<String> questionIds = [];
 
-    switch (mode) {
-      case QuizMode.random:
-        questionIds = await _createRandomQuiz(wordCount);
-        break;
-      case QuizMode.surah:
-        if (surahNumber != null) {
-          questionIds = await _createSurahQuiz(surahNumber, wordCount);
-        }
-        break;
-      case QuizMode.daily:
-        questionIds = await _createDailyQuiz(userId, wordCount);
-        break;
-      case QuizMode.review:
-        questionIds = await _createReviewQuiz(userId, wordCount);
-        break;
+      switch (mode) {
+        case QuizMode.random:
+          questionIds = await _createRandomQuiz(wordCount).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              print('Timeout creating random quiz');
+              return <String>[];
+            },
+          );
+          break;
+        case QuizMode.surah:
+          if (surahNumber != null) {
+            questionIds = await _createSurahQuiz(surahNumber, wordCount).timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                print('Timeout creating surah quiz');
+                return <String>[];
+              },
+            );
+          }
+          break;
+        case QuizMode.daily:
+          questionIds = await _createDailyQuiz(userId, wordCount).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              print('Timeout creating daily quiz');
+              return <String>[];
+            },
+          );
+          break;
+        case QuizMode.review:
+          questionIds = await _createReviewQuiz(userId, wordCount).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              print('Timeout creating review quiz');
+              return <String>[];
+            },
+          );
+          break;
+      }
+
+      return QuizSessionModel.create(
+        userId: userId,
+        questionIds: questionIds,
+        mode: mode,
+        surahNumber: surahNumber,
+        dailyWordCount: mode == QuizMode.daily ? wordCount : null,
+      );
+    } catch (e) {
+      print('Error creating quiz session: $e');
+      // Return empty session on error
+      return QuizSessionModel.create(
+        userId: userId,
+        questionIds: [],
+        mode: mode,
+        surahNumber: surahNumber,
+        dailyWordCount: mode == QuizMode.daily ? wordCount : null,
+      );
     }
-
-    return QuizSessionModel.create(
-      userId: userId,
-      questionIds: questionIds,
-      mode: mode,
-      surahNumber: surahNumber,
-      dailyWordCount: mode == QuizMode.daily ? wordCount : null,
-    );
   }
 
   /// Generate quiz questions for a session
   Future<List<QuizQuestionModel>> generateQuestionsForSession(
     QuizSessionModel session,
   ) async {
+    print('Generating questions for session with ${session.questionIds.length} question IDs');
     final questions = <QuizQuestionModel>[];
     
-    for (final questionId in session.questionIds) {
-      final question = await _generateQuestionFromId(questionId, session);
-      if (question != null) {
-        questions.add(question);
+    for (int i = 0; i < session.questionIds.length; i++) {
+      final questionId = session.questionIds[i];
+      print('Processing question ${i + 1}/${session.questionIds.length}: $questionId');
+      
+      try {
+        final question = await _generateQuestionFromId(questionId, session);
+        if (question != null) {
+          questions.add(question);
+          print('Successfully created question ${questions.length}');
+        } else {
+          print('Failed to create question for ID: $questionId');
+        }
+      } catch (e) {
+        print('Error creating question for ID $questionId: $e');
+        continue;
       }
     }
 
+    print('Generated ${questions.length} questions out of ${session.questionIds.length} requested');
     return questions;
   }
 
@@ -202,37 +249,49 @@ class QuizMechanicsService {
     String questionId,
     QuizSessionModel session,
   ) async {
-    // Parse questionId to get WBW data
-    final parts = questionId.split('_');
-    if (parts.length < 2) return null;
+    try {
+      // Parse questionId to get WBW data
+      final parts = questionId.split('_');
+      if (parts.length < 2) return null;
 
-    final uniqueKey = parts[0];
-    final wordNumber = int.tryParse(parts[1]);
-    if (wordNumber == null) return null;
+      final uniqueKey = parts[0];
+      final wordNumber = int.tryParse(parts[1]);
+      if (wordNumber == null) return null;
 
-    final surahNumber = int.tryParse(uniqueKey.split(':')[0]);
-    if (surahNumber == null) return null;
+      final surahNumber = int.tryParse(uniqueKey.split(':')[0]);
+      if (surahNumber == null) return null;
 
-    final words = await _dataService.getWordsForSurah(surahNumber);
-    final word = words.firstWhere(
-      (w) => w.uniqueKey == uniqueKey && w.wordNumber == wordNumber,
-      orElse: () => throw StateError('Word not found'),
-    );
+      final words = await _dataService.getWordsForSurah(surahNumber);
+      final word = words.firstWhere(
+        (w) => w.uniqueKey == uniqueKey && w.wordNumber == wordNumber,
+        orElse: () => throw StateError('Word not found'),
+      );
 
-    final questions = await _dataService.generateQuizQuestions(
-      words: [word],
-      surahReference: 'Сураи $surahNumber',
-    );
+      // Ensure word has valid translation
+      if (word.farsi == null || word.farsi!.isEmpty) {
+        print('Word $questionId has no translation, skipping');
+        return null;
+      }
 
-    return questions.isNotEmpty ? questions.first : null;
+      final questions = await _dataService.generateQuizQuestions(
+        words: [word],
+        surahReference: 'Сураи $surahNumber',
+      );
+
+      return questions.isNotEmpty ? questions.first : null;
+    } catch (e) {
+      print('Error generating question for $questionId: $e');
+      return null;
+    }
   }
 
   QuizQuestionModel? _getQuestionFromSession(
     QuizSessionModel session,
     String questionId,
   ) {
-    // This would need to be implemented with proper question storage
-    // For now, return null
+    // This method would need to be implemented with proper question storage
+    // For now, we'll rely on the questions being passed to processAnswer
+    // In a full implementation, you might store questions in the session or cache them
     return null;
   }
 }

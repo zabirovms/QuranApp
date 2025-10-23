@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/quiz_session_model.dart';
 import '../../data/services/quiz_mechanics_service.dart';
 
-/// Widget for displaying quiz progress and statistics
+/// Widget for displaying quiz progress and statistics - Action-focused design
 class QuizProgressWidget extends StatelessWidget {
   final QuizSessionModel session;
   final QuizStats? stats;
@@ -16,183 +16,168 @@ class QuizProgressWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Progress header
-            _buildProgressHeader(context),
-            const SizedBox(height: 16),
+            // Progress indicator
+            _buildProgressIndicator(context),
+            const SizedBox(height: 12),
             
-            // Progress bar
-            _buildProgressBar(context),
-            const SizedBox(height: 16),
-            
-            // Statistics
-            if (stats != null) _buildStatistics(context),
+            // Quick stats
+            if (stats != null) _buildQuickStats(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProgressHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Раванди бозӣ',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            '${session.answers.length}/${session.totalQuestions}',
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressBar(BuildContext context) {
+  Widget _buildProgressIndicator(BuildContext context) {
     final progress = session.progress;
+    final currentQuestion = session.answers.length;
+    final totalQuestions = session.totalQuestions;
     
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Progress header with current question
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Савол ${currentQuestion + 1} аз $totalQuestions',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        // Progress bar
         LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.grey[300],
           valueColor: AlwaysStoppedAnimation<Color>(
             Theme.of(context).primaryColor,
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${(progress * 100).toStringAsFixed(0)}% тамом шуд',
-          style: Theme.of(context).textTheme.bodySmall,
+          minHeight: 6,
         ),
       ],
     );
   }
 
-  Widget _buildStatistics(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Divider(),
-        const SizedBox(height: 8),
-        Text(
-          'Омори бозӣ',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+  Widget _buildQuickStats(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildQuickStat(
+              context,
+              'Ҳисоб',
+              '${session.score}/${session.totalQuestions}',
+              Icons.score,
+              Colors.blue,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatItem(
-                context,
-                'Ҳисоб',
-                '${session.score}/${session.totalQuestions}',
-                Icons.score,
-                Colors.blue,
-              ),
+          Container(
+            width: 1,
+            height: 30,
+            color: Colors.grey[300],
+          ),
+          Expanded(
+            child: _buildQuickStat(
+              context,
+              'Дақиқат',
+              stats!.accuracyPercentage,
+              Icons.track_changes,
+              Colors.green,
             ),
-            Expanded(
-              child: _buildStatItem(
-                context,
-                'Дақиқат',
-                stats!.accuracyPercentage,
-                Icons.track_changes,
-                Colors.green,
-              ),
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: Colors.grey[300],
+          ),
+          Expanded(
+            child: _buildQuickStat(
+              context,
+              'Вақт',
+              _formatDuration(session.duration),
+              Icons.timer,
+              Colors.orange,
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatItem(
-                context,
-                'Вақти миёна',
-                stats!.averageTimeFormatted,
-                Icons.timer,
-                Colors.orange,
-              ),
-            ),
-            Expanded(
-              child: _buildStatItem(
-                context,
-                'Вақт',
-                _formatDuration(session.duration),
-                Icons.access_time,
-                Colors.purple,
-              ),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildStatItem(
+  Widget _buildQuickStat(
     BuildContext context,
     String label,
     String value,
     IconData icon,
     Color color,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(right: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          color: color,
+          size: 16,
         ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
             color: color,
-            size: 20,
+            fontSize: 12,
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontSize: 16,
-            ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.grey[600],
+            fontSize: 10,
           ),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+      ],
     );
   }
 

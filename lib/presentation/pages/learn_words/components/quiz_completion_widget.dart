@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/quiz_session_model.dart';
-import '../providers/learn_words_providers.dart';
 
 /// Enhanced quiz completion widget with better feedback and animations
 class QuizCompletionWidget extends ConsumerStatefulWidget {

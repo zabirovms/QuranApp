@@ -19,8 +19,20 @@ class MainMenuWidget extends ConsumerWidget {
   }
 
   Widget _buildQuickStartOptions(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return Card(
       margin: const EdgeInsets.all(16),
+      elevation: 0,
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -28,8 +40,9 @@ class MainMenuWidget extends ConsumerWidget {
           children: [
             Text(
               'Оғози зуд',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -37,18 +50,20 @@ class MainMenuWidget extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _buildQuickStartButton(
+                    context,
                     'Тасодуфӣ',
                     Icons.shuffle,
-                    Colors.blue,
+                    colorScheme.primary,
                     () => _startRandomQuiz(ref),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildQuickStartButton(
+                    context,
                     'Аз сура',
                     Icons.book,
-                    Colors.green,
+                    colorScheme.secondary,
                     () => _showSurahSelection(context, ref),
                   ),
                 ),
@@ -58,9 +73,10 @@ class MainMenuWidget extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: _buildQuickStartButton(
+                context,
                 'Такрорӣ',
                 Icons.refresh,
-                Colors.orange,
+                colorScheme.tertiary,
                 () => _startReviewQuiz(ref),
               ),
             ),
@@ -71,18 +87,22 @@ class MainMenuWidget extends ConsumerWidget {
   }
 
   Widget _buildQuickStartButton(
+    BuildContext context,
     String label,
     IconData icon,
     Color color,
     VoidCallback onPressed,
   ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return ElevatedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white, size: 18),
+      icon: Icon(icon, color: colorScheme.onPrimary, size: 18),
       label: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colorScheme.onPrimary,
           fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
@@ -123,10 +143,19 @@ class MainMenuWidget extends ConsumerWidget {
   }
 
   void _showSurahSelection(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Сураро интихоб кунед'),
+        backgroundColor: colorScheme.surface,
+        title: Text(
+          'Сураро интихоб кунед',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
+          ),
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -135,7 +164,10 @@ class MainMenuWidget extends ConsumerWidget {
             itemBuilder: (context, index) {
               final surahNumber = index + 1;
               return ListTile(
-                title: Text('Сураи $surahNumber'),
+                title: Text(
+                  'Сураи $surahNumber',
+                  style: TextStyle(color: colorScheme.onSurface),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _startSurahQuiz(ref, surahNumber);

@@ -51,10 +51,11 @@ android {
     signingConfigs {
         release {
             // Production signing configuration
+            // TODO: Replace with your actual keystore details
             keyAlias 'quran-app-key'
-            keyPassword 'quranapp123'
+            keyPassword 'YOUR_KEY_PASSWORD'
             storeFile file('quran-app-release-key.keystore')
-            storePassword 'quranapp123'
+            storePassword 'YOUR_KEYSTORE_PASSWORD'
         }
     }
 

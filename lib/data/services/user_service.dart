@@ -78,9 +78,6 @@ class UserService {
       // Remove all user-related data
       await prefs.remove(_currentUserIdKey);
       await prefs.remove('$_userPreferencesKey$userId');
-      await prefs.remove('user_progress$userId');
-      await prefs.remove('quiz_sessions$userId');
-      await prefs.remove('daily_streak$userId');
       
       return true;
     } catch (e) {
@@ -92,10 +89,6 @@ class UserService {
   /// Get default user preferences
   Map<String, dynamic> _getDefaultPreferences() {
     return {
-      'wordCount': 10,
-      'shuffleOptions': true,
-      'showTransliteration': true,
-      'preferredQuizMode': 'random',
       'soundEnabled': true,
       'hapticFeedback': true,
       'darkMode': false,

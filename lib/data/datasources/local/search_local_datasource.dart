@@ -1,11 +1,10 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/verse_model.dart';
+import '../../../core/utils/compressed_json_loader.dart';
 
 class SearchLocalDataSource {
-  static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json';
-  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
+  static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json.gz';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json.gz';
   static const String _recentTermsKey = 'recent_search_terms';
   
   List<VerseModel>? _cachedVerses;
@@ -20,13 +19,11 @@ class SearchLocalDataSource {
     }
     
     try {
-      // Load Arabic text from alquran_cloud_complete_quran.json
-      final String arabicResponse = await rootBundle.loadString(_arabicJsonPath);
-      final Map<String, dynamic> arabicData = json.decode(arabicResponse);
+      // Load Arabic text from compressed file
+      final Map<String, dynamic> arabicData = await CompressedJsonLoader.loadCompressedJsonAsMap(_arabicJsonPath);
       
-      // Load translations from quran_mirror_with_translations.json
-      final String translationsResponse = await rootBundle.loadString(_translationsJsonPath);
-      final Map<String, dynamic> translationsData = json.decode(translationsResponse);
+      // Load translations from compressed file
+      final Map<String, dynamic> translationsData = await CompressedJsonLoader.loadCompressedJsonAsMap(_translationsJsonPath);
       
       final List<VerseModel> allVerses = [];
       

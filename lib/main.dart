@@ -111,7 +111,7 @@ final Widget child;
         print('Can pop: ${router.canPop()}');
         
         // Define tab routes that should always go to home first
-        final tabRoutes = ['/tasbeeh', '/learn-words', '/duas', '/search', '/bookmarks', '/settings'];
+        final tabRoutes = ['/tasbeeh', '/duas', '/search', '/bookmarks', '/settings'];
         
         if (tabRoutes.contains(currentLocation)) {
           // User is on a tab route - always navigate to home first

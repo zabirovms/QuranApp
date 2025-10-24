@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../data/models/dua_model.dart';
@@ -11,11 +9,11 @@ import '../../../data/services/image_permission_service.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../widgets/image_permission_dialog.dart';
+import '../../../core/utils/compressed_json_loader.dart';
 
 // Providers
 final quranicDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
-  final String jsonString = await rootBundle.loadString('assets/data/quranic_duas.json');
-  final List<dynamic> jsonList = json.decode(jsonString);
+  final List<dynamic> jsonList = await CompressedJsonLoader.loadCompressedJsonAsList('assets/data/quranic_duas.json.gz');
   return jsonList.map((json) => DuaModel.fromJson(json)).toList();
 });
 

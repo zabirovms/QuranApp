@@ -20,10 +20,7 @@ void main() {
       // Test 2: Test Tasbeeh counter functionality
       await _testTasbeehCounter(tester);
 
-      // Test 3: Test Word Learning game
-      await _testWordLearningGame(tester);
-
-      // Test 4: Test Duas collection
+      // Test 3: Test Duas collection
       await _testDuasCollection(tester);
 
       // Test 5: Test Search functionality
@@ -44,9 +41,6 @@ void main() {
       await tester.tap(find.text('Тасбиҳ'));
       await tester.pumpAndSettle();
       
-      await tester.tap(find.text('Омӯзиши калимаҳо'));
-      await tester.pumpAndSettle();
-      
       await tester.tap(find.text('Дуъоҳо'));
       await tester.pumpAndSettle();
       
@@ -63,9 +57,6 @@ void main() {
       // Navigate through all sections multiple times
       for (int i = 0; i < 3; i++) {
         await tester.tap(find.text('Тасбиҳ'));
-        await tester.pumpAndSettle();
-        
-        await tester.tap(find.text('Омӯзиши калимаҳо'));
         await tester.pumpAndSettle();
         
         await tester.tap(find.text('Дуъоҳо'));
@@ -86,10 +77,6 @@ Future<void> _testNavigationFlow(WidgetTester tester) async {
   await tester.tap(find.text('Тасбиҳ'));
   await tester.pumpAndSettle();
   expect(find.text('Тасбиҳ'), findsOneWidget);
-
-  await tester.tap(find.text('Омӯзиши калимаҳо'));
-  await tester.pumpAndSettle();
-  expect(find.text('Омӯзиши калимаҳо'), findsOneWidget);
 
   await tester.tap(find.text('Дуъоҳо'));
   await tester.pumpAndSettle();
@@ -135,37 +122,6 @@ Future<void> _testTasbeehCounter(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _testWordLearningGame(WidgetTester tester) async {
-  // Navigate to Learn Words page
-  await tester.tap(find.text('Омӯзиши калимаҳо'));
-  await tester.pumpAndSettle();
-
-  // Test different game modes
-  await tester.tap(find.text('Саволи-ҷавоб'));
-  await tester.pumpAndSettle();
-  expect(find.text('Саволи-ҷавоб'), findsOneWidget);
-
-  await tester.tap(find.text('Ҷуфтсозӣ'));
-  await tester.pumpAndSettle();
-  expect(find.text('Ҷуфтсозӣ'), findsOneWidget);
-
-  await tester.tap(find.text('Флеш-картаҳо'));
-  await tester.pumpAndSettle();
-  expect(find.text('Флеш-картаҳо'), findsOneWidget);
-
-  // Test difficulty selection
-  await tester.tap(find.text('Осон'));
-  await tester.pumpAndSettle();
-  expect(find.text('Осон'), findsOneWidget);
-
-  await tester.tap(find.text('Мутавоссит'));
-  await tester.pumpAndSettle();
-  expect(find.text('Мутавоссит'), findsOneWidget);
-
-  await tester.tap(find.text('Душвор'));
-  await tester.pumpAndSettle();
-  expect(find.text('Душвор'), findsOneWidget);
-}
 
 Future<void> _testDuasCollection(WidgetTester tester) async {
   // Navigate to Duas page

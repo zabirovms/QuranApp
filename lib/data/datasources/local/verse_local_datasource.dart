@@ -1,20 +1,17 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import '../../models/verse_model.dart';
+import '../../../core/utils/compressed_json_loader.dart';
 
 class VerseLocalDataSource {
-  static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json';
-  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json';
+  static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json.gz';
+  static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json.gz';
   
   Future<List<VerseModel>> getVersesBySurah(int surahNumber) async {
     try {
-      // Load Arabic text from alquran_cloud_complete_quran.json
-      final String arabicResponse = await rootBundle.loadString(_arabicJsonPath);
-      final Map<String, dynamic> arabicData = json.decode(arabicResponse);
+      // Load Arabic text from compressed file
+      final Map<String, dynamic> arabicData = await CompressedJsonLoader.loadCompressedJsonAsMap(_arabicJsonPath);
       
-      // Load translations from quran_mirror_with_translations.json
-      final String translationsResponse = await rootBundle.loadString(_translationsJsonPath);
-      final Map<String, dynamic> translationsData = json.decode(translationsResponse);
+      // Load translations from compressed file
+      final Map<String, dynamic> translationsData = await CompressedJsonLoader.loadCompressedJsonAsMap(_translationsJsonPath);
       
       // Get Arabic verses
       final List<dynamic> arabicSurahs = arabicData['data']['surahs'];

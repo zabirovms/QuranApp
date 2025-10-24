@@ -21,7 +21,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   final List<Widget> _pages = [
     const _SurahsTab(),
     const _TasbeehTab(),
-    const _LearnWordsTab(),
     const _DuasTab(),
   ];
 
@@ -62,10 +61,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(FlutterIslamicIcons.tasbih),
             label: 'Тасбеҳ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(FlutterIslamicIcons.mosque),
-            label: 'Омӯзиш',
           ),
           BottomNavigationBarItem(
             icon: Icon(FlutterIslamicIcons.prayer),
@@ -147,20 +142,6 @@ class _TasbeehTab extends StatelessWidget {
   }
 }
 
-class _LearnWordsTab extends StatelessWidget {
-  const _LearnWordsTab();
-
-  @override
-  Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final loc = GoRouter.of(context).routerDelegate.currentConfiguration.fullPath;
-      if (loc != '/learn-words') {
-        context.go('/learn-words');
-      }
-    });
-    return const SizedBox.shrink();
-  }
-}
 
 class _DuasTab extends StatelessWidget {
   const _DuasTab();

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:quran_app/presentation/pages/home/home_page.dart';
 import 'package:quran_app/presentation/pages/tasbeeh/tasbeeh_page.dart';
-import 'package:quran_app/presentation/pages/learn_words/learn_words_page.dart';
 import 'package:quran_app/presentation/pages/duas/duas_page.dart';
 import 'package:quran_app/presentation/pages/search/search_page.dart';
 import 'package:quran_app/presentation/pages/bookmarks/bookmarks_page.dart';
@@ -46,24 +45,6 @@ void main() {
       expect(find.text('Ҷамъоварӣ'), findsOneWidget);
     });
 
-    testWidgets('Learn Words page displays correctly', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LearnWordsPage(),
-          ),
-        ),
-      );
-
-      // Wait for data to load
-      await tester.pumpAndSettle();
-
-      // Verify main elements are present
-      expect(find.text('Омӯзиши калимаҳо'), findsOneWidget);
-      expect(find.byType(TabBar), findsOneWidget);
-      expect(find.text('Флеш-картаҳо'), findsOneWidget);
-      expect(find.text('Саволи-ҷавоб'), findsOneWidget);
-    });
 
     testWidgets('Duas page displays correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
@@ -146,10 +127,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Тасбиҳ'), findsOneWidget);
 
-      await tester.tap(find.text('Омӯзиши калимаҳо'));
-      await tester.pumpAndSettle();
-      expect(find.text('Омӯзиши калимаҳо'), findsOneWidget);
-
       await tester.tap(find.text('Дуъоҳо'));
       await tester.pumpAndSettle();
       expect(find.text('Дуъоҳо'), findsOneWidget);
@@ -210,49 +187,6 @@ void main() {
     });
   });
 
-  group('Word Learning Game Tests', () {
-    testWidgets('Game mode selection works', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LearnWordsPage(),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Test different game modes
-      await tester.tap(find.text('Саволи-ҷавоб'));
-      await tester.pumpAndSettle();
-      expect(find.text('Саволи-ҷавоб'), findsOneWidget);
-
-      await tester.tap(find.text('Ҷуфтсозӣ'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ҷуфтсозӣ'), findsOneWidget);
-    });
-
-    testWidgets('Difficulty selection works', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LearnWordsPage(),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Test difficulty selection
-      await tester.tap(find.text('Осон'));
-      await tester.pumpAndSettle();
-      expect(find.text('Осон'), findsOneWidget);
-
-      await tester.tap(find.text('Мутавоссит'));
-      await tester.pumpAndSettle();
-      expect(find.text('Мутавоссит'), findsOneWidget);
-    });
-  });
 
   group('Search Functionality Tests', () {
     testWidgets('Search input works correctly', (WidgetTester tester) async {

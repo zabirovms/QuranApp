@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../presentation/pages/home/home_page.dart';
 import '../presentation/pages/surah/surah_page.dart';
-// import '../presentation/pages/surah/verse_page.dart'; // Not needed
 import '../presentation/pages/tasbeeh/tasbeeh_page.dart';
-import '../presentation/pages/learn_words/learn_words_page.dart';
 import '../presentation/pages/duas/duas_page.dart';
 import '../presentation/pages/settings/settings_page.dart';
 import '../presentation/pages/search/search_page.dart';
@@ -64,12 +62,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TasbeehPage(),
       ),
       
-      // Learn Words
-      GoRoute(
-        path: '/learn-words',
-        name: 'learn-words',
-        builder: (context, state) => const LearnWordsPage(),
-      ),
       
       // Duas
       GoRoute(

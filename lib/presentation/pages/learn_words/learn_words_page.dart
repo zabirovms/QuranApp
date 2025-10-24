@@ -52,30 +52,35 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
     final session = ref.watch(currentQuizSessionProvider);
     final questions = ref.watch(currentQuizQuestionsProvider);
     final currentIndex = ref.watch(currentQuestionIndexProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     // Initialize quiz controller
     _quizController = QuizController(ref);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: colorScheme.surface,
       appBar: _buildAppBar(context, quizState),
       body: _buildBody(quizState, session, questions, currentIndex),
     );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, QuizState quizState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.arrow_back, size: 20),
+          child: Icon(Icons.arrow_back, size: 20, color: colorScheme.onSurface),
         ),
         onPressed: () {
           if (GoRouter.of(context).canPop()) {
@@ -87,9 +92,9 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
       ),
       title: Text(
         _getAppBarTitle(quizState),
-        style: const TextStyle(
+        style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
-          fontSize: 18,
+          color: colorScheme.onSurface,
         ),
       ),
       centerTitle: true,
@@ -145,16 +150,19 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
     required IconData icon,
     required VoidCallback onPressed,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return Container(
       margin: const EdgeInsets.only(right: 8),
       child: IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20),
+          child: Icon(icon, size: 20, color: colorScheme.onSurface),
         ),
         onPressed: onPressed,
       ),
@@ -198,6 +206,9 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
   }
 
   Widget _buildLoadingState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -205,11 +216,11 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: colorScheme.shadow.withOpacity(0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -222,27 +233,27 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: const CircularProgressIndicator(
+                  child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   'Тайёр карда истода...',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Лутфан интизор шавед',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[500],
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -263,143 +274,4 @@ class _LearnWordsPageState extends ConsumerState<LearnWordsPage>
     _questionStartTime = DateTime.now();
   }
 
-  Widget _buildQuizResults(QuizSessionModel? session) {
-    if (session == null) {
-      return Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text('Хатогии бозӣ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final accuracy = session.totalQuestions > 0 
-        ? session.score / session.totalQuestions 
-        : 0.0;
-    final isGoodScore = accuracy >= 0.7;
-
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.all(20),
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Result icon and score
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: isGoodScore ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Icon(
-                isGoodScore ? Icons.emoji_events : Icons.psychology,
-                size: 40,
-                color: isGoodScore ? Colors.green : Colors.orange,
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Score display
-            Text(
-              '${session.score}/${session.totalQuestions}',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isGoodScore ? Colors.green : Colors.orange,
-              ),
-            ),
-            const SizedBox(height: 8),
-            
-            // Accuracy percentage
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isGoodScore ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${(accuracy * 100).toStringAsFixed(1)}% дақиқат',
-                style: TextStyle(
-                  color: isGoodScore ? Colors.green : Colors.orange,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Action buttons
-            Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _quizController.restartQuiz(),
-                    icon: const Icon(Icons.refresh, size: 20),
-                    label: const Text('Такрор кардан', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _quizController.goToMainMenu(),
-                    icon: const Icon(Icons.home, size: 20),
-                    label: const Text('Асосӣ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      side: BorderSide(color: Colors.grey[300]!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

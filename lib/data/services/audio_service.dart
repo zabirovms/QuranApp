@@ -13,6 +13,10 @@ class QuranAudioService {
   late AudioPlayer _audioPlayer;
   AudioHandler? _audioHandler;
   String? _currentUrl;
+  
+  // Track current playing verse
+  int? _currentSurahNumber;
+  int? _currentVerseNumber;
 
   // Number of verses per surah (1..114)
   static const List<int> _versesPerSurah = <int>[
@@ -48,6 +52,8 @@ class QuranAudioService {
         return; // already playing this track
       }
       _currentUrl = audioUrl;
+      _currentSurahNumber = surahNumber;
+      _currentVerseNumber = null; // Clear verse number for surah playback
       debugPrint('[Audio] Play surah $surahNumber edition=$edition -> $audioUrl');
       await _audioPlayer.setUrl(audioUrl);
       await _audioPlayer.play();
@@ -66,6 +72,8 @@ class QuranAudioService {
         return; // already playing this ayah
       }
       _currentUrl = audioUrl;
+      _currentSurahNumber = surahNumber;
+      _currentVerseNumber = verseNumber;
       debugPrint('[Audio] Play verse $surahNumber:$verseNumber edition=$edition -> $audioUrl');
       await _audioPlayer.setUrl(audioUrl);
       await _audioPlayer.play();
@@ -128,8 +136,56 @@ class QuranAudioService {
     await _audioPlayer.setSpeed(speed.clamp(0.25, 3.0));
   }
 
-  // Get current position
-  Duration? get position => _audioPlayer.position;
+  // Get current playing verse
+  int? get currentSurahNumber => _currentSurahNumber;
+  int? get currentVerseNumber => _currentVerseNumber;
+  
+  // Check if a specific verse is currently playing
+  bool isPlayingVerse(int surahNumber, int verseNumber) {
+    return _currentSurahNumber == surahNumber && 
+           _currentVerseNumber == verseNumber && 
+           _audioPlayer.playing;
+  }
+  
+  // Play previous verse
+  Future<void> playPreviousVerse({String edition = 'ar.alafasy'}) async {
+    if (_currentSurahNumber == null || _currentVerseNumber == null) return;
+    
+    int prevSurah = _currentSurahNumber!;
+    int prevVerse = _currentVerseNumber! - 1;
+    
+    if (prevVerse < 1) {
+      // Go to previous surah
+      if (prevSurah > 1) {
+        prevSurah--;
+        prevVerse = _versesPerSurah[prevSurah - 1];
+      } else {
+        return; // Already at first verse
+      }
+    }
+    
+    await playVerse(prevSurah, prevVerse, edition: edition);
+  }
+  
+  // Play next verse
+  Future<void> playNextVerse({String edition = 'ar.alafasy'}) async {
+    if (_currentSurahNumber == null || _currentVerseNumber == null) return;
+    
+    int nextSurah = _currentSurahNumber!;
+    int nextVerse = _currentVerseNumber! + 1;
+    
+    if (nextVerse > _versesPerSurah[nextSurah - 1]) {
+      // Go to next surah
+      if (nextSurah < 114) {
+        nextSurah++;
+        nextVerse = 1;
+      } else {
+        return; // Already at last verse
+      }
+    }
+    
+    await playVerse(nextSurah, nextVerse, edition: edition);
+  }
 
   // Get duration
   Duration? get duration => _audioPlayer.duration;

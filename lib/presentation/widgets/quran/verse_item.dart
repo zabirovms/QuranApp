@@ -19,6 +19,7 @@ class VerseItem extends ConsumerStatefulWidget {
   final bool isHighlighted;
   final bool? isTafsirOpen;
   final VoidCallback? onToggleTafsir;
+  final bool isPlaying;
 
   const VerseItem({
     super.key,
@@ -35,6 +36,7 @@ class VerseItem extends ConsumerStatefulWidget {
     this.isHighlighted = false,
     this.isTafsirOpen,
     this.onToggleTafsir,
+    this.isPlaying = false,
   });
 
   @override
@@ -265,13 +267,33 @@ class _VerseItemState extends ConsumerState<VerseItem> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Verse number at bottom-left
-                  Text(
-                    '${widget.verse.surahId}:${widget.verse.verseNumber}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                    ),
+                  // Verse number at bottom-left with playing indicator
+                  Row(
+                    children: [
+                      Text(
+                        '${widget.verse.surahId}:${widget.verse.verseNumber}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      if (widget.isPlaying) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.volume_up,
+                            size: 6,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(width: 6),
 

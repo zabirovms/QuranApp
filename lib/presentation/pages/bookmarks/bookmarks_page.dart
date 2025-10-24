@@ -20,7 +20,7 @@ class BookmarksPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Хатбаракҳо'),
+        title: const Text('Захирагоҳ'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -53,7 +53,7 @@ class BookmarksPage extends ConsumerWidget {
     if (bookmarkState.error != null) {
       return Center(
         child: CustomErrorWidget(
-          title: 'Хатоги дар хатбаракҳо',
+          title: 'Хатоги дар захирагоҳ',
           message: bookmarkState.error!,
           onRetry: () {
             ref.read(bookmarkNotifierProvider(userId).notifier).refreshBookmarks();
@@ -79,7 +79,7 @@ class BookmarksPage extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${bookmarkState.bookmarks.length} хатбарак',
+                '${bookmarkState.bookmarks.length} захира',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -207,14 +207,14 @@ class BookmarksPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Ҳеҷ хатбараке нест',
+            'Ҳеҷ захиаре нест',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Оёти дӯстдоштаро хатбарак кунед',
+            'Оёти дӯстдоштаро захира кунед',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
@@ -262,14 +262,14 @@ class BookmarksPage extends ConsumerWidget {
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Хатбарак хориҷ карда шуд'),
+          content: Text('Захира хориҷ карда шуд'),
           duration: Duration(seconds: 2),
         ),
       );
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Хатоги дар хориҷ кардани хатбарак'),
+          content: Text('Хатоги дар хориҷ кардани захира'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -280,8 +280,8 @@ class BookmarksPage extends ConsumerWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Хориҷ кардани ҳамаи хатбаракҳо'),
-        content: const Text('Оё шумо мехоҳед ҳамаи хатбаракҳоро хориҷ кунед?'),
+        title: const Text('Пок кардани ҳамаи захираҳо'),
+        content: const Text('Оё шумо мехоҳед ҳамаи захираҳоро пок кунед?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -289,7 +289,7 @@ class BookmarksPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Хориҷ кардан'),
+            child: const Text('Пок кардан'),
           ),
         ],
       ),
@@ -302,7 +302,7 @@ class BookmarksPage extends ConsumerWidget {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ҳамаи хатбаракҳо хориҷ карда шуданд'),
+            content: Text('Ҳамаи захираҳо пок карда шуданд'),
             duration: Duration(seconds: 2),
           ),
         );

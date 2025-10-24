@@ -48,8 +48,23 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        release {
+            // Production signing configuration
+            keyAlias 'quran-app-key'
+            keyPassword 'quranapp123'
+            storeFile file('quran-app-release-key.keystore')
+            storePassword 'quranapp123'
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+        debug {
             signingConfig signingConfigs.debug
         }
     }

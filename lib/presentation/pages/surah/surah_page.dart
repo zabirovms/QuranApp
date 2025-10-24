@@ -718,7 +718,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                   SnackBar(
                                     content: Text(
                                       success 
-                                        ? (isBookmarked ? 'Хатбарак хориҷ карда шуд' : 'Оят ба захираҳо илова карда шуд')
+                                        ? (isBookmarked ? 'Захира пок карда шуд' : 'Оят ба захирагоҳ илова карда шуд')
                                         : 'Хатоги дар захира кардан'
                                     ),
                                     duration: const Duration(seconds: 2),
@@ -822,7 +822,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                 _buildModernSettingTile(
                   context,
                   Icons.record_voice_over,
-                  'Қориъ',
+                  'Қори',
                   _getQariName(controller.state.audioEdition),
                   () => _showQariDialog(context, setModalState, controller),
                 ),
@@ -895,7 +895,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Тайёр'),
+                    child: const Text('Тасдиқ кардан'),
                   ),
                 ),
                   ],
@@ -1472,7 +1472,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Тайёр'),
+                        child: const Text('Тасдиқ кардан'),
                       ),
                     ),
                     const SizedBox(width: 12),

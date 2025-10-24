@@ -83,63 +83,67 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
         ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+            color: colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
         ],
       ),
       child: Padding(
         padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          left: 16,
+          right: 16,
+          top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
+            // Handle bar - smaller
             Container(
-              width: 40,
-              height: 4,
+              width: 32,
+              height: 3,
               decoration: BoxDecoration(
                 color: colorScheme.outline.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
-            // Verse info - minimal
+            // Verse info - compact
             Row(
               children: [
                 Text(
                   'Ояти ${verseNumber}',
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
+                    fontSize: 16,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
+                  iconSize: 18,
                   style: IconButton.styleFrom(
                     backgroundColor: colorScheme.surfaceContainerHighest,
+                    minimumSize: const Size(32, 32),
+                    padding: EdgeInsets.zero,
                   ),
                 ),
               ],
             ),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
-            // Standard audio controls using just_audio
+            // Compact audio controls
             StreamBuilder<PlayerState>(
               stream: audioService.playerStateStream,
               builder: (context, playerStateSnapshot) {
@@ -157,7 +161,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         
                         return Column(
                           children: [
-                            // Progress bar using audio_video_progress_bar
+                            // Compact progress bar
                             ProgressBar(
                               progress: position,
                               total: duration,
@@ -165,63 +169,67 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                 await audioService.seekTo(duration);
                               },
                               progressBarColor: colorScheme.primary,
-                              baseBarColor: colorScheme.outline.withOpacity(0.3),
+                              baseBarColor: colorScheme.outline.withOpacity(0.2),
                               thumbColor: colorScheme.primary,
-                              barHeight: 4.0,
-                              thumbRadius: 8.0,
+                              barHeight: 3.0,
+                              thumbRadius: 6.0,
                             ),
                             
-                            // Time display
+                            // Compact time display
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     _formatDuration(position),
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurface.withOpacity(0.7),
+                                      color: colorScheme.onSurface.withOpacity(0.6),
+                                      fontSize: 11,
                                     ),
                                   ),
                                   Text(
                                     _formatDuration(duration),
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurface.withOpacity(0.7),
+                                      color: colorScheme.onSurface.withOpacity(0.6),
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             
-                            // Control buttons
+                            // Compact control buttons
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Previous button
+                                // Previous button - smaller
                                 IconButton(
                                   onPressed: () async {
                                     await audioService.playPreviousVerse(edition: currentEdition);
                                   },
                                   icon: const Icon(Icons.skip_previous),
-                                  iconSize: 32,
+                                  iconSize: 20,
                                   style: IconButton.styleFrom(
                                     backgroundColor: colorScheme.surfaceContainerHighest,
+                                    minimumSize: const Size(36, 36),
+                                    padding: EdgeInsets.zero,
                                   ),
                                 ),
                                 
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 
-                                // Play/Pause button
+                                // Play/Pause button - smaller
                                 Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(10),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: colorScheme.primary.withOpacity(0.3),
-                                        blurRadius: 8,
+                                        color: colorScheme.primary.withOpacity(0.2),
+                                        blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
                                     ],
@@ -237,29 +245,35 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                                     icon: Icon(
                                       isCurrentVersePlaying ? Icons.pause : Icons.play_arrow,
                                       color: colorScheme.onPrimary,
-                                      size: 32,
+                                      size: 20,
                                     ),
-                                    iconSize: 32,
+                                    iconSize: 20,
+                                    style: IconButton.styleFrom(
+                                      minimumSize: const Size(40, 40),
+                                      padding: EdgeInsets.zero,
+                                    ),
                                   ),
                                 ),
                                 
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 
-                                // Next button
+                                // Next button - smaller
                                 IconButton(
                                   onPressed: () async {
                                     await audioService.playNextVerse(edition: currentEdition);
                                   },
                                   icon: const Icon(Icons.skip_next),
-                                  iconSize: 32,
+                                  iconSize: 20,
                                   style: IconButton.styleFrom(
                                     backgroundColor: colorScheme.surfaceContainerHighest,
+                                    minimumSize: const Size(36, 36),
+                                    padding: EdgeInsets.zero,
                                   ),
                                 ),
                               ],
                             ),
                             
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                           ],
                         );
                       },

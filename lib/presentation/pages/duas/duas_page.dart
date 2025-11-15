@@ -1,20 +1,161 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../data/models/dua_model.dart';
+import '../../../data/models/verse_model.dart';
+import '../../../data/models/image_data.dart';
 import '../../../data/services/image_api_service.dart';
 import '../../../data/services/image_permission_service.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../widgets/image_permission_dialog.dart';
 import '../../../core/utils/compressed_json_loader.dart';
+import '../../../data/datasources/local/verse_local_datasource.dart';
+
+// Helper function to check if a dua has empty fields
+bool _hasEmptyFields(DuaModel dua) {
+  return (dua.arabic.isEmpty || dua.arabic.trim().isEmpty) ||
+         (dua.tajik.isEmpty || dua.tajik.trim().isEmpty) ||
+         (dua.transliteration.isEmpty || dua.transliteration.trim().isEmpty);
+}
 
 // Providers
 final quranicDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
-  final List<dynamic> jsonList = await CompressedJsonLoader.loadCompressedJsonAsList('assets/data/quranic_duas.json.gz');
-  return jsonList.map((json) => DuaModel.fromJson(json)).toList();
+  final verseDataSource = VerseLocalDataSource();
+  
+  // Load from raw JSON file
+  List<DuaModel> allDuas = [];
+  try {
+    final List<dynamic> jsonList = await CompressedJsonLoader.loadJsonAsList('assets/data/quranic_duas.json');
+    if (jsonList.isEmpty) {
+      throw Exception('Duas JSON file is empty or has no data');
+    }
+    allDuas = jsonList.map((json) {
+      try {
+        return DuaModel.fromJson(json);
+      } catch (e) {
+        // Skip invalid entries
+        return null;
+      }
+    }).whereType<DuaModel>().toList();
+    
+    if (allDuas.isEmpty) {
+      throw Exception('No valid duas found in JSON file after parsing');
+    }
+  } catch (e) {
+    // Provide more specific error message
+    if (e.toString().contains('does not exist') || e.toString().contains('empty')) {
+      throw Exception('Duas JSON file does not exist or has empty data. Please ensure assets/data/quranic_duas.json exists.');
+    }
+    throw Exception('Failed to load duas JSON file: $e');
+  }
+  
+  // Group duas by surah to optimize verse loading
+  final Map<int, List<DuaModel>> duasBySurah = {};
+  for (final dua in allDuas) {
+    if (!duasBySurah.containsKey(dua.surah)) {
+      duasBySurah[dua.surah] = [];
+    }
+    duasBySurah[dua.surah]!.add(dua);
+  }
+  
+  // Fill in empty entries from verse data
+  final List<DuaModel> filledDuas = [];
+  
+  for (final entry in duasBySurah.entries) {
+    final surahNumber = entry.key;
+    final duasInSurah = entry.value;
+    
+    // Check if any dua in this surah needs verse data
+    final needsVerseData = duasInSurah.any((dua) => _hasEmptyFields(dua));
+    
+    // Load all verses for this surah if needed
+    Map<int, VerseModel>? verseMap;
+    if (needsVerseData) {
+      try {
+        final verses = await verseDataSource.getVersesBySurah(surahNumber);
+        if (verses.isEmpty) {
+          // If no verses found, we can't fill the duas, but continue with what we have
+          verseMap = null;
+        } else {
+          // Create a map for quick lookup by verse number
+          verseMap = {for (var v in verses) v.verseNumber: v};
+        }
+      } catch (e) {
+        // If error loading verses, we'll skip filling those duas but continue
+        verseMap = null;
+      }
+    }
+    
+    // Process each dua in this surah
+    for (final dua in duasInSurah) {
+      if (_hasEmptyFields(dua)) {
+        // Try to fill from verse data
+        if (verseMap != null && verseMap.containsKey(dua.verse)) {
+          final verse = verseMap[dua.verse]!;
+          filledDuas.add(DuaModel(
+            surah: dua.surah,
+            verse: dua.verse,
+            arabic: (dua.arabic.isEmpty || dua.arabic.trim().isEmpty) ? verse.arabicText : dua.arabic,
+            transliteration: (dua.transliteration.isEmpty || dua.transliteration.trim().isEmpty) 
+                ? (verse.transliteration ?? '') 
+                : dua.transliteration,
+            tajik: (dua.tajik.isEmpty || dua.tajik.trim().isEmpty) ? verse.tajikText : dua.tajik,
+            reference: dua.reference,
+            category: dua.category,
+            description: dua.description,
+            isFavorite: dua.isFavorite,
+            prophet: dua.prophet,
+            prophetArabic: dua.prophetArabic,
+          ));
+        } else {
+          // If verse not found or verseMap is null, still add the dua with empty fields
+          // This way all duas are shown, even if we couldn't fill them
+          filledDuas.add(dua);
+        }
+      } else {
+        // Keep the original dua if it has all fields
+        filledDuas.add(dua);
+      }
+    }
+  }
+  
+  return filledDuas;
+});
+
+// Provider for prophets duas - simplified to only use pre-populated JSON data
+final prophetsDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
+  // Load directly from pre-populated JSON file (all data is already there)
+  try {
+    final List<dynamic> jsonList = await CompressedJsonLoader.loadJsonAsList('assets/data/prophets_duas.json');
+    if (jsonList.isEmpty) {
+      throw Exception('Prophets duas JSON file is empty or has no data');
+    }
+    
+    final allDuas = jsonList.map((json) {
+      try {
+        return DuaModel.fromJson(json);
+      } catch (e) {
+        return null;
+      }
+    }).whereType<DuaModel>().toList();
+    
+    if (allDuas.isEmpty) {
+      throw Exception('No valid duas found in prophets JSON file after parsing');
+    }
+    
+    return allDuas;
+  } catch (e) {
+    if (e.toString().contains('does not exist') || e.toString().contains('empty')) {
+      throw Exception('Prophets duas JSON file does not exist or has empty data. Please ensure assets/data/prophets_duas.json exists.');
+    }
+    throw Exception('Failed to load prophets duas JSON file: $e');
+  }
 });
 
 // Removed duaImagesProvider - using permission-aware cachedImagesProvider instead
@@ -23,7 +164,7 @@ final quranicDuasProvider = FutureProvider<List<DuaModel>>((ref) async {
 final cachedImagesProvider = StateNotifierProvider<CachedImagesNotifier, CachedImagesState>((ref) => CachedImagesNotifier());
 
 class CachedImagesState {
-  final List<String> imageUrls;
+  final List<ImageData> imageData;
   final bool isLoading;
   final String? error;
   final bool hasPermission;
@@ -32,7 +173,7 @@ class CachedImagesState {
   final bool hasAttemptedLoad;
 
   CachedImagesState({
-    this.imageUrls = const [],
+    this.imageData = const [],
     this.isLoading = false,
     this.error,
     this.hasPermission = false,
@@ -41,8 +182,11 @@ class CachedImagesState {
     this.hasAttemptedLoad = false,
   });
 
+  // Backward compatibility: get URLs from imageData
+  List<String> get imageUrls => imageData.map((data) => data.url).toList();
+
   CachedImagesState copyWith({
-    List<String>? imageUrls,
+    List<ImageData>? imageData,
     bool? isLoading,
     String? error,
     bool? hasPermission,
@@ -51,7 +195,7 @@ class CachedImagesState {
     bool? hasAttemptedLoad,
   }) {
     return CachedImagesState(
-      imageUrls: imageUrls ?? this.imageUrls,
+      imageData: imageData ?? this.imageData,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       hasPermission: hasPermission ?? this.hasPermission,
@@ -85,7 +229,7 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
 
   Future<void> loadImages() async {
     // If already loaded, don't reload
-    if (state.imageUrls.isNotEmpty) return;
+    if (state.imageData.isNotEmpty) return;
 
     // If no permission, don't load images
     if (!state.hasPermission) return;
@@ -101,9 +245,13 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
 
     try {
       final imageApiService = ImageApiService();
-      final urls = await imageApiService.fetchImageUrls();
+      final imageDataList = await imageApiService.fetchImageData();
+      
+      // Download images to device storage in the background
+      _downloadImagesToDevice(imageDataList);
+      
       state = state.copyWith(
-        imageUrls: urls,
+        imageData: imageDataList,
         isLoading: false,
         error: null,
         isNetworkError: false,
@@ -125,6 +273,64 @@ class CachedImagesNotifier extends StateNotifier<CachedImagesState> {
         isNetworkError: false,
       );
     }
+  }
+
+  /// Downloads images to device storage for offline use
+  Future<void> _downloadImagesToDevice(List<ImageData> imageDataList) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/dua_images');
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+
+      for (final imageData in imageDataList) {
+        try {
+          // Extract filename from URL
+          final uri = Uri.parse(imageData.url);
+          final fileName = uri.pathSegments.last;
+          final filePath = '${imagesDir.path}/$fileName';
+          final file = File(filePath);
+
+          // Skip if already downloaded
+          if (await file.exists()) {
+            continue;
+          }
+
+          // Download the image
+          final response = await http.get(Uri.parse(imageData.url));
+          if (response.statusCode == 200) {
+            await file.writeAsBytes(response.bodyBytes);
+          }
+        } catch (e) {
+          // Continue with other images if one fails
+          print('Failed to download image ${imageData.url}: $e');
+        }
+      }
+    } catch (e) {
+      // Don't fail the whole operation if directory creation fails
+      print('Failed to create images directory: $e');
+    }
+  }
+
+  /// Gets the local file path for an image if it exists
+  Future<String?> getLocalImagePath(String imageUrl) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/dua_images');
+      
+      final uri = Uri.parse(imageUrl);
+      final fileName = uri.pathSegments.last;
+      final filePath = '${imagesDir.path}/$fileName';
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        return filePath;
+      }
+    } catch (e) {
+      // Return null if file doesn't exist or error occurs
+    }
+    return null;
   }
 
   Future<void> requestPermission() async {
@@ -172,7 +378,7 @@ final duasSearchProvider = StateNotifierProvider<DuasSearchNotifier, DuasSearchS
 class DuasSearchState {
   final String query;
   final List<DuaModel> filteredDuas;
-  final List<String> filteredImages;
+  final List<ImageData> filteredImages;
   final bool isSearching;
   final bool isQuranicInitialized;
   final bool isImagesInitialized;
@@ -189,7 +395,7 @@ class DuasSearchState {
   DuasSearchState copyWith({
     String? query,
     List<DuaModel>? filteredDuas,
-    List<String>? filteredImages,
+    List<ImageData>? filteredImages,
     bool? isSearching,
     bool? isQuranicInitialized,
     bool? isImagesInitialized,
@@ -218,7 +424,7 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
     }
   }
 
-  void initializeImages(List<String> allImages) {
+  void initializeImages(List<ImageData> allImages) {
     if (!state.isImagesInitialized) {
       state = state.copyWith(
         filteredImages: allImages,
@@ -254,7 +460,7 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
     );
   }
 
-  void searchImages(String query, List<String> allImages) {
+  void searchImages(String query, List<ImageData> allImages) {
     if (query.isEmpty) {
       state = state.copyWith(
         query: query,
@@ -266,10 +472,10 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
 
     state = state.copyWith(isSearching: true);
 
-    final filtered = allImages.where((imageUrl) {
+    final filtered = allImages.where((imageData) {
       final lowerQuery = query.toLowerCase();
-      final title = _getImageTitle(imageUrl).toLowerCase();
-      return title.contains(lowerQuery) || imageUrl.toLowerCase().contains(lowerQuery);
+      return imageData.name.toLowerCase().contains(lowerQuery) ||
+          imageData.url.toLowerCase().contains(lowerQuery);
     }).toList();
 
     state = state.copyWith(
@@ -279,18 +485,13 @@ class DuasSearchNotifier extends StateNotifier<DuasSearchState> {
     );
   }
 
-  void clearSearch(List<DuaModel> allDuas, List<String> allImages) {
+  void clearSearch(List<DuaModel> allDuas, List<ImageData> allImages) {
     state = state.copyWith(
       query: '',
       filteredDuas: allDuas,
       filteredImages: allImages,
       isSearching: false,
     );
-  }
-
-  String _getImageTitle(String imageUrl) {
-    final imageApiService = ImageApiService();
-    return imageApiService.getImageTitle(imageUrl);
   }
 }
 
@@ -305,19 +506,24 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   late TabController _tabController;
+  late TabController _surahTabController;
   bool _isSearchExpanded = false;
+  List<int> _surahNumbers = [];
+  Map<int, List<DuaModel>> _duasBySurah = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
     _tabController.addListener(_onTabChangedForSearch);
+    // Initialize surah tab controller with placeholder length, will be updated when data loads
+    _surahTabController = TabController(length: 1, vsync: this);
   }
 
   void _onTabChanged() {
-    // Show permission dialog when switching to Дигар tab
-    if (_tabController.index == 1) {
+    // Show permission dialog when switching to Дигар tab (index 2)
+    if (_tabController.index == 2) {
       final cachedImagesState = ref.read(cachedImagesProvider);
       
       if (!cachedImagesState.permissionAsked) {
@@ -350,33 +556,51 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     _tabController.removeListener(_onTabChanged);
     _tabController.removeListener(_onTabChangedForSearch);
     _tabController.dispose();
+    _surahTabController.dispose();
     super.dispose();
   }
 
   void _handleSearch(String value) {
     final quranicDuasAsync = ref.read(quranicDuasProvider);
+    final prophetsDuasAsync = ref.read(prophetsDuasProvider);
     final cachedImagesState = ref.read(cachedImagesProvider);
     
-    quranicDuasAsync.whenData((quranicDuas) {
-      if (_tabController.index == 0) {
-        // Search in Quranic duas
+    if (_tabController.index == 0) {
+      // Search in Quranic duas
+      quranicDuasAsync.whenData((quranicDuas) {
         ref.read(duasSearchProvider.notifier).searchQuranicDuas(value, quranicDuas);
-      } else {
-        // Search in images
-        if (cachedImagesState.imageUrls.isNotEmpty) {
-          ref.read(duasSearchProvider.notifier).searchImages(value, cachedImagesState.imageUrls);
-        }
+      });
+    } else if (_tabController.index == 1) {
+      // Search in Prophets duas
+      prophetsDuasAsync.whenData((prophetsDuas) {
+        ref.read(duasSearchProvider.notifier).searchQuranicDuas(value, prophetsDuas);
+      });
+    } else {
+      // Search in images
+      if (cachedImagesState.imageData.isNotEmpty) {
+        ref.read(duasSearchProvider.notifier).searchImages(value, cachedImagesState.imageData);
       }
-    });
+    }
   }
 
   void _clearSearch() {
     final quranicDuasAsync = ref.read(quranicDuasProvider);
+    final prophetsDuasAsync = ref.read(prophetsDuasProvider);
     final cachedImagesState = ref.read(cachedImagesProvider);
     
-    quranicDuasAsync.whenData((quranicDuas) {
-      ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, cachedImagesState.imageUrls);
-    });
+    if (_tabController.index == 0) {
+      quranicDuasAsync.whenData((quranicDuas) {
+        ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, cachedImagesState.imageData);
+      });
+    } else if (_tabController.index == 1) {
+      prophetsDuasAsync.whenData((prophetsDuas) {
+        ref.read(duasSearchProvider.notifier).clearSearch(prophetsDuas, cachedImagesState.imageData);
+      });
+    } else {
+      quranicDuasAsync.whenData((quranicDuas) {
+        ref.read(duasSearchProvider.notifier).clearSearch(quranicDuas, cachedImagesState.imageData);
+      });
+    }
   }
 
   @override
@@ -389,22 +613,18 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           title: LayoutBuilder(
             builder: (context, constraints) {
               final availableWidth = constraints.maxWidth;
-              final searchWidth = _isSearchExpanded ? (availableWidth * 0.6).clamp(200.0, 300.0) : 40.0;
+              // When expanded, search should span from after back button to the edge
+              // The availableWidth already excludes the back button, so we can use most of it
+              final searchWidth = _isSearchExpanded 
+                  ? availableWidth - 8  // Small padding for edge
+                  : 40.0;
               
               return Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      if (GoRouter.of(context).canPop()) {
-                        GoRouter.of(context).pop();
-                      } else {
-                        GoRouter.of(context).go('/');
-                      }
-                    },
-                  ),
-                  const Text('Дуоҳо'),
-                  const Spacer(),
+                  if (!_isSearchExpanded)
+                    const Text('Дуоҳо'),
+                  if (!_isSearchExpanded)
+                    const Spacer(),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     width: searchWidth,
@@ -413,7 +633,11 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
                             controller: _searchController,
                             focusNode: _searchFocusNode,
                             decoration: InputDecoration(
-                              hintText: _tabController.index == 0 ? 'Ҷустуҷӯи дуоҳои Қуръонӣ...' : 'Ҷустуҷӯи дуо...',
+                              hintText: _tabController.index == 0 
+                                  ? 'Ҷустуҷӯи дуоҳои Раббано...' 
+                                  : _tabController.index == 1
+                                      ? 'Ҷустуҷӯи дуоҳои Пайғамбарон...'
+                                      : 'Ҷустуҷӯи дуо...',
                               prefixIcon: const Icon(Icons.search, size: 18),
                               suffixIcon: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -468,10 +692,21 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             },
           ),
           centerTitle: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                GoRouter.of(context).go('/');
+              }
+            },
+          ),
           bottom: TabBar(
             controller: _tabController,
             tabs: const [
-              Tab(text: 'Қуръонӣ'),
+              Tab(text: 'Раббано'),
+              Tab(text: 'Пайғамбарон'),
               Tab(text: 'Дигар'),
             ],
           ),
@@ -481,6 +716,8 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
         children: [
           // Qur'anic Duas Tab
           _buildQuranicTab(quranicDuasAsync, searchState),
+          // Prophets Duas Tab
+          _buildProphetsTab(ref.watch(prophetsDuasProvider), searchState),
           // Other Duas Tab (Images)
           _buildOtherTab(searchState),
         ],
@@ -498,11 +735,11 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           });
         }
 
-        return searchState.isSearching
-            ? const Center(child: CircularProgressIndicator())
-            : searchState.filteredDuas.isEmpty
-                ? _buildEmptyState(true)
-                : _buildQuranicDuasList(searchState.filteredDuas);
+        // Group duas by surah and update surah tab controller
+        _updateSurahTabs(quranicDuas);
+
+        // Build the tab structure with surah tabs
+        return _buildRabbanoTabWithSurahTabs(quranicDuas, searchState);
       },
       loading: () => const Center(
         child: LoadingCircularWidget(
@@ -518,6 +755,158 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     );
   }
 
+  Widget _buildProphetsTab(AsyncValue<List<DuaModel>> prophetsDuasAsync, DuasSearchState searchState) {
+    return prophetsDuasAsync.when(
+      data: (prophetsDuas) {
+        // Initialize search only once
+        if (!searchState.isQuranicInitialized) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(duasSearchProvider.notifier).initializeQuranicDuas(prophetsDuas);
+          });
+        }
+
+        return searchState.isSearching
+            ? const Center(child: CircularProgressIndicator())
+            : searchState.filteredDuas.isEmpty
+                ? _buildEmptyState(true)
+                : _buildQuranicDuasList(searchState.filteredDuas);
+      },
+      loading: () => const Center(
+        child: LoadingCircularWidget(
+          size: 50, // optional, adjust as needed
+        ),
+      ),
+      error: (error, stack) => Center(
+        child: CustomErrorWidget(
+          message: 'Хатогии зеркашӣ: $error',
+          onRetry: () => ref.refresh(prophetsDuasProvider),
+        ),
+      ),
+    );
+  }
+
+  void _updateSurahTabs(List<DuaModel> duas) {
+    // Group duas by surah
+    final duasBySurah = <int, List<DuaModel>>{};
+    for (final dua in duas) {
+      if (!duasBySurah.containsKey(dua.surah)) {
+        duasBySurah[dua.surah] = [];
+      }
+      duasBySurah[dua.surah]!.add(dua);
+    }
+    
+    // Get sorted surah numbers
+    final surahNumbers = duasBySurah.keys.toList()..sort();
+    
+    // Update state and tab controller if changed
+    if (surahNumbers != _surahNumbers) {
+      final newLength = surahNumbers.length + 1; // +1 for "All" tab
+      
+      // Update tab controller length if needed
+      if (_surahTabController.length != newLength) {
+        final oldIndex = _surahTabController.index;
+        _surahTabController.dispose();
+        _surahTabController = TabController(length: newLength, vsync: this);
+        // Restore previous index if still valid
+        if (oldIndex < newLength) {
+          _surahTabController.index = oldIndex;
+        }
+      }
+      
+      setState(() {
+        _surahNumbers = surahNumbers;
+        _duasBySurah = duasBySurah;
+      });
+    }
+  }
+
+  String _getSurahName(int surahNumber) {
+    final surahNames = {
+      1: 'Ал-Фотиҳа', 2: 'Ал-Бақара', 3: 'Оли Имрон', 4: 'Ан-Нисо', 5: 'Ал-Маида',
+      6: 'Ал-Анъом', 7: 'Ал-Аъроф', 8: 'Ал-Анфол', 9: 'Ат-Тавба', 10: 'Юнус',
+      11: 'Ҳуд', 12: 'Юсуф', 13: 'Ар-Раъд', 14: 'Иброҳим', 15: 'Ал-Ҳиҷр',
+      16: 'Ан-Наҳл', 17: 'Ал-Исро', 18: 'Ал-Каҳф', 19: 'Марям', 20: 'Тоҳо',
+      21: 'Ал-Анбиё', 22: 'Ал-Ҳаҷҷ', 23: 'Ал-Муъминун', 24: 'Ан-Нур', 25: 'Ал-Фурқон',
+      26: 'Аш-Шуъаро', 27: 'Ан-Намл', 28: 'Ал-Қасас', 29: 'Ал-Анкабут', 30: 'Ар-Рум',
+      31: 'Луқмон', 32: 'Ас-Саҷда', 33: 'Ал-Аҳзоб', 34: 'Сабаъ', 35: 'Фотир',
+      36: 'Ясин', 37: 'Ас-Соффот', 38: 'Сод', 39: 'Аз-Зумар', 40: 'Ғофир',
+      41: 'Фуссилат', 42: 'Аш-Шуро', 43: 'Аз-Зухруф', 44: 'Ад-Духон', 45: 'Ал-Ҷосия',
+      46: 'Ал-Аҳқоф', 47: 'Муҳаммад', 48: 'Ал-Фатҳ', 49: 'Ал-Ҳуҷурот', 50: 'Қоф',
+      51: 'Аз-Зориёт', 52: 'Ат-Тур', 53: 'Ан-Наҷм', 54: 'Ал-Қамар', 55: 'Ар-Раҳмон',
+      56: 'Ал-Воқиа', 57: 'Ал-Ҳадид', 58: 'Ал-Муҷодала', 59: 'Ал-Ҳашр', 60: 'Ал-Мумтаҳана',
+      61: 'Ас-Сафф', 62: 'Ал-Ҷумъа', 63: 'Ал-Мунофиқун', 64: 'Ат-Тағобун', 65: 'Ат-Талақ',
+      66: 'Ат-Таҳрим', 67: 'Ал-Мулк', 68: 'Ал-Қалам', 69: 'Ал-Ҳоққа', 70: 'Ал-Маъориҷ',
+      71: 'Нуҳ', 72: 'Ал-Ҷинн', 73: 'Ал-Муззаммил', 74: 'Ал-Муддассир', 75: 'Ал-Қиёма',
+      76: 'Ал-Инсон', 77: 'Ал-Мурсалот', 78: 'Ан-Набоъ', 79: 'Ан-Назиъот', 80: 'Абаса',
+      81: 'Ат-Таквир', 82: 'Ал-Инфитор', 83: 'Ал-Мутоффифин', 84: 'Ал-Иншиқоқ', 85: 'Ал-Буруҷ',
+      86: 'Ат-Ториқ', 87: 'Ал-Аъло', 88: 'Ал-Ғошия', 89: 'Ал-Фаҷр', 90: 'Ал-Балад',
+      91: 'Аш-Шамс', 92: 'Ал-Лайл', 93: 'Аз-Зуҳо', 94: 'Ал-Иншироҳ', 95: 'Ат-Тин',
+      96: 'Ал-Алақ', 97: 'Ал-Қадр', 98: 'Ал-Байина', 99: 'Аз-Залзала', 100: 'Ал-Одиёт',
+      101: 'Ал-Қориа', 102: 'Ат-Такосур', 103: 'Ал-Аср', 104: 'Ал-Ҳумаза', 105: 'Ал-Фил',
+      106: 'Қурайш', 107: 'Ал-Маъун', 108: 'Ал-Кавсар', 109: 'Ал-Кофирун', 110: 'Ан-Наср',
+      111: 'Ал-Масад', 112: 'Ал-Ихлос', 113: 'Ал-Фалақ', 114: 'Ан-Нас',
+    };
+    return surahNames[surahNumber] ?? 'Сураи $surahNumber';
+  }
+
+  Widget _buildRabbanoTabWithSurahTabs(List<DuaModel> allDuas, DuasSearchState searchState) {
+    if (_surahNumbers.isEmpty) {
+      return const Center(child: LoadingCircularWidget());
+    }
+
+    return Column(
+      children: [
+        // TabBarView for surah content (at top)
+        Expanded(
+          child: TabBarView(
+            controller: _surahTabController,
+            children: [
+              // "All" tab
+              _buildDuasListForSurah(null, allDuas, searchState),
+              // Individual surah tabs
+              ..._surahNumbers.map((surahNum) {
+                final duas = _duasBySurah[surahNum] ?? [];
+                return _buildDuasListForSurah(surahNum, duas, searchState);
+              }),
+            ],
+          ),
+        ),
+        // TabBar for surahs (at bottom)
+        TabBar(
+          controller: _surahTabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          padding: EdgeInsets.zero,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+          tabs: [
+            const Tab(text: 'Ҳама'),
+            ..._surahNumbers.map((surahNum) => Tab(text: _getSurahName(surahNum))),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDuasListForSurah(int? surahNumber, List<DuaModel> duas, DuasSearchState searchState) {
+    // Apply search filter if active
+    List<DuaModel> displayDuas = duas;
+    if (searchState.query.isNotEmpty && searchState.isQuranicInitialized) {
+      displayDuas = duas.where((dua) {
+        final lowerQuery = searchState.query.toLowerCase();
+        return dua.arabic.toLowerCase().contains(lowerQuery) ||
+            dua.transliteration.toLowerCase().contains(lowerQuery) ||
+            dua.tajik.toLowerCase().contains(lowerQuery) ||
+            '${dua.surah}:${dua.verse}'.contains(lowerQuery);
+      }).toList();
+    }
+
+    if (displayDuas.isEmpty) {
+      return _buildEmptyState(true);
+    }
+
+    return _buildQuranicDuasList(displayDuas);
+  }
+
   Widget _buildOtherTab(DuasSearchState searchState) {
     final cachedImagesState = ref.watch(cachedImagesProvider);
 
@@ -531,9 +920,9 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     }
 
     // Initialize search with cached images
-    if (cachedImagesState.imageUrls.isNotEmpty && !searchState.isImagesInitialized) {
+    if (cachedImagesState.imageData.isNotEmpty && !searchState.isImagesInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(duasSearchProvider.notifier).initializeImages(cachedImagesState.imageUrls);
+        ref.read(duasSearchProvider.notifier).initializeImages(cachedImagesState.imageData);
       });
     }
 
@@ -777,18 +1166,18 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildImageGallery(List<String> imageNames) {
+  Widget _buildImageGallery(List<ImageData> imageDataList) {
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: imageNames.length,
+      itemCount: imageDataList.length,
       itemBuilder: (context, index) {
-        final imageName = imageNames[index];
-        return _buildImageCard(imageName);
+        final imageData = imageDataList[index];
+        return _buildImageCard(imageData);
       },
     );
   }
 
-  Widget _buildImageCard(String imageUrl) {
+  Widget _buildImageCard(ImageData imageData) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       elevation: 4,
@@ -802,7 +1191,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
           children: [
             // Cached network image with natural size
             CachedNetworkImage(
-              imageUrl: imageUrl,
+              imageUrl: imageData.url,
               fit: BoxFit.contain, // Maintain aspect ratio
               width: double.infinity, // Take full width
               placeholder: (context, url) => Container(
@@ -857,7 +1246,7 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                _getImageTitle(imageUrl),
+                imageData.name,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -870,11 +1259,6 @@ class _DuasPageState extends ConsumerState<DuasPage> with TickerProviderStateMix
         ),
       ),
     );
-  }
-
-  String _getImageTitle(String imageUrl) {
-    final imageApiService = ImageApiService();
-    return imageApiService.getImageTitle(imageUrl);
   }
 
   Widget _buildEmptyState(bool isQuranic) {
@@ -987,14 +1371,18 @@ class QuranicDuaCard extends StatelessWidget {
               // Arabic text (RTL)
               Directionality(
                 textDirection: TextDirection.rtl,
-                child: Text(
-                  dua.arabic,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    height: 1.8,
-                    fontWeight: FontWeight.w500,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    dua.arabic,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      height: 1.8,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.right,
+                    textDirection: TextDirection.rtl,
                   ),
-                  textAlign: TextAlign.right,
                 ),
               ),
               const SizedBox(height: 12),

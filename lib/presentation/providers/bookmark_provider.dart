@@ -48,14 +48,22 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
     
     try {
       final bookmarks = await _bookmarkUseCase.getBookmarksByUser(_userId);
+      
+      // Filter out any bookmarks with invalid IDs (shouldn't happen, but safety check)
+      final validBookmarks = bookmarks.where((b) => b.id > 0 && b.verseKey.isNotEmpty).toList();
+      
+      if (validBookmarks.length != bookmarks.length) {
+        print('Warning: Filtered out ${bookmarks.length - validBookmarks.length} invalid bookmarks');
+      }
+      
       final bookmarkStatus = <String, bool>{};
       
-      for (final bookmark in bookmarks) {
+      for (final bookmark in validBookmarks) {
         bookmarkStatus[bookmark.verseKey] = true;
       }
       
       state = state.copyWith(
-        bookmarks: bookmarks,
+        bookmarks: validBookmarks,
         isLoading: false,
         bookmarkStatus: bookmarkStatus,
       );
@@ -75,9 +83,56 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
   // Add bookmark from verse
   Future<bool> addBookmark(VerseModel verse, String surahName) async {
     try {
+      // Check if bookmark already exists
+      final existingBookmark = await _bookmarkUseCase.getBookmarkByVerseKey(_userId, verse.uniqueKey);
+      
+      if (existingBookmark != null) {
+        // Bookmark already exists, just update the status
+        final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
+        updatedStatus[verse.uniqueKey] = true;
+        
+        // Ensure bookmark is in the list
+        final bookmarkExists = state.bookmarks.any((b) => b.verseKey == verse.uniqueKey);
+        final updatedBookmarks = bookmarkExists 
+            ? state.bookmarks 
+            : [...state.bookmarks, existingBookmark];
+        
+        state = state.copyWith(
+          bookmarks: updatedBookmarks,
+          bookmarkStatus: updatedStatus,
+        );
+        
+        return true;
+      }
+      
       final bookmarkId = await _bookmarkUseCase.addBookmarkFromVerse(verse, _userId, surahName);
       
-      // Update local state
+      // Validate that we got a valid bookmark ID
+      if (bookmarkId <= 0) {
+        // If ID is invalid, try to fetch the existing bookmark
+        final fetchedBookmark = await _bookmarkUseCase.getBookmarkByVerseKey(_userId, verse.uniqueKey);
+        if (fetchedBookmark != null && fetchedBookmark.id > 0) {
+          // Use the fetched bookmark with valid ID
+          final bookmarkExists = state.bookmarks.any((b) => b.verseKey == verse.uniqueKey);
+          final updatedBookmarks = bookmarkExists 
+              ? state.bookmarks.map((b) => b.verseKey == verse.uniqueKey ? fetchedBookmark : b).toList()
+              : [...state.bookmarks, fetchedBookmark];
+          
+          final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
+          updatedStatus[verse.uniqueKey] = true;
+          
+          state = state.copyWith(
+            bookmarks: updatedBookmarks,
+            bookmarkStatus: updatedStatus,
+          );
+          return true;
+        } else {
+          // This shouldn't happen, but if it does, throw an error
+          throw Exception('Failed to create bookmark: invalid ID returned ($bookmarkId)');
+        }
+      }
+      
+      // New bookmark was created with valid ID
       final newBookmark = BookmarkModel(
         id: bookmarkId,
         userId: _userId,
@@ -91,7 +146,12 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
         createdAt: DateTime.now(),
       );
       
-      final updatedBookmarks = [...state.bookmarks, newBookmark];
+      // Check if bookmark already exists in state to avoid duplicates
+      final bookmarkExists = state.bookmarks.any((b) => b.verseKey == verse.uniqueKey);
+      final updatedBookmarks = bookmarkExists 
+          ? state.bookmarks.map((b) => b.verseKey == verse.uniqueKey ? newBookmark : b).toList()
+          : [...state.bookmarks, newBookmark];
+      
       final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
       updatedStatus[verse.uniqueKey] = true;
       
@@ -115,19 +175,34 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
         throw Exception('Invalid bookmark ID: $bookmarkId');
       }
       
-      // Find the bookmark to remove first
+      // Find the bookmark to remove first (if it exists in state)
       final bookmarkToRemove = state.bookmarks.firstWhere(
         (b) => b.id == bookmarkId,
-        orElse: () => throw Exception('Bookmark not found with ID: $bookmarkId'),
+        orElse: () => BookmarkModel(
+          id: bookmarkId,
+          userId: _userId,
+          verseId: 0,
+          verseKey: '',
+          surahNumber: 0,
+          verseNumber: 0,
+          arabicText: '',
+          tajikText: '',
+          surahName: '',
+          createdAt: DateTime.now(),
+        ),
       );
       
       final success = await _bookmarkUseCase.removeBookmark(bookmarkId);
       
       if (success) {
-        // Update local state
+        // Update local state - remove bookmark and update status
         final updatedBookmarks = state.bookmarks.where((b) => b.id != bookmarkId).toList();
         final updatedStatus = Map<String, bool>.from(state.bookmarkStatus);
-        updatedStatus[bookmarkToRemove.verseKey] = false;
+        
+        // Only update status if we found the bookmark in state
+        if (bookmarkToRemove.verseKey.isNotEmpty) {
+          updatedStatus[bookmarkToRemove.verseKey] = false;
+        }
         
         state = state.copyWith(
           bookmarks: updatedBookmarks,
@@ -222,16 +297,35 @@ class BookmarkNotifier extends StateNotifier<BookmarkState> {
   // Clear all bookmarks
   Future<bool> clearAllBookmarks() async {
     try {
-      for (final bookmark in state.bookmarks) {
-        await _bookmarkUseCase.removeBookmark(bookmark.id);
+      // Create a copy of bookmarks list to avoid modification during iteration
+      final bookmarksToRemove = List<BookmarkModel>.from(state.bookmarks);
+      int failCount = 0;
+      
+      for (final bookmark in bookmarksToRemove) {
+        try {
+          final success = await _bookmarkUseCase.removeBookmark(bookmark.id);
+          if (!success) {
+            failCount++;
+          }
+        } catch (e) {
+          failCount++;
+          print('Error removing bookmark ${bookmark.id}: $e');
+        }
       }
       
-      state = state.copyWith(
-        bookmarks: [],
-        bookmarkStatus: {},
-      );
+      // Update state regardless of individual failures
+      // If all succeeded, clear everything; otherwise, refresh from database
+      if (failCount == 0) {
+        state = state.copyWith(
+          bookmarks: [],
+          bookmarkStatus: {},
+        );
+      } else {
+        // If some failed, refresh from database to get accurate state
+        await _loadBookmarks();
+      }
       
-      return true;
+      return failCount == 0;
     } catch (e) {
       state = state.copyWith(error: e.toString());
       return false;

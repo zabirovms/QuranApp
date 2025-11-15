@@ -7,6 +7,9 @@ import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/highlighted_text.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/quran_provider.dart';
+import '../../../data/services/settings_service.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../data/models/verse_model.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -20,10 +23,14 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  String _currentTranslation = AppConstants.defaultLanguage;
 
   @override
   void initState() {
     super.initState();
+    
+    // Load current translation language
+    _loadTranslationLanguage();
     
     // Set initial query if provided
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
@@ -40,6 +47,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       }
     });
   }
+  
+  Future<void> _loadTranslationLanguage() async {
+    final s = SettingsService();
+    await s.init();
+    setState(() {
+      _currentTranslation = s.getTranslationLanguage();
+    });
+  }
 
   @override
   void dispose() {
@@ -52,6 +67,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchNotifierProvider);
     final surahsAsync = ref.watch(surahsProvider);
+    
+    // Sync controller with search state
+    if (_searchController.text != searchState.query) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_searchController.text != searchState.query) {
+          _searchController.text = searchState.query;
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -160,8 +184,36 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
             const SizedBox(width: 8),
             _buildFilterChip(
-              'Тоҷикӣ',
+              'Оятӣ',
               'tajik',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Абуаломуддин',
+              'tj_2',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Pioneers',
+              'tj_3',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Форсӣ',
+              'farsi',
+              searchState.selectedFilter,
+              Icons.translate,
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              'Русӣ',
+              'russian',
               searchState.selectedFilter,
               Icons.translate,
             ),
@@ -363,19 +415,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           
                           const SizedBox(height: 8),
                           
-                          // Tajik translation
-                          HighlightedText(
-                            text: verse.tajikText,
-                            highlight: searchState.query,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              height: 1.4,
-                            ),
-                            highlightStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              height: 1.4,
-                              backgroundColor: Colors.yellow.withOpacity(0.3),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          // Translation (based on search filter or current setting)
+                          _buildTranslationText(verse, searchState.query, searchState.selectedFilter),
                         ],
                       ),
                     ),
@@ -418,5 +459,54 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  // Quick search chips removed as requested
+  // Get translation text based on search filter or current language setting
+  String _getTranslationText(VerseModel verse, String? filter) {
+    // If a specific filter is selected, use that translation
+    // Otherwise, use the current translation setting
+    final translationToUse = (filter != null && filter != 'both' && filter != 'arabic' && filter != 'transliteration') 
+        ? filter 
+        : _currentTranslation;
+    
+    switch (translationToUse) {
+      case 'tajik':
+        return verse.tajikText;
+      case 'tj_2':
+        return verse.tj2 ?? verse.tajikText;
+      case 'tj_3':
+        return verse.tj3 ?? verse.tajikText;
+      case 'farsi':
+        return verse.farsi ?? verse.tajikText;
+      case 'russian':
+        return verse.russian ?? verse.tajikText;
+      default:
+        return verse.tajikText;
+    }
+  }
+  
+  Widget _buildTranslationText(VerseModel verse, String query, String filter) {
+    final translationText = _getTranslationText(verse, filter);
+    
+    if (translationText.isEmpty) {
+      return Text(
+        'Тарҷума мавҷуд нест',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+    
+    return HighlightedText(
+      text: translationText,
+      highlight: query,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        height: 1.4,
+      ),
+      highlightStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        height: 1.4,
+        backgroundColor: Colors.yellow.withOpacity(0.3),
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
 }

@@ -82,11 +82,39 @@ class BookmarkLocalDataSource {
       }
       
       // Insert new bookmark
+      // Remove id from JSON since it's auto-increment
+      final bookmarkJson = bookmark.toJson();
+      bookmarkJson.remove('id'); // Let database assign the ID
+      
       final id = await db.insert(
         _tableName,
-        bookmark.toJson(),
+        bookmarkJson,
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
+      
+      print('Insert result: id=$id');
+      
+      // If insert returns 0 (conflict or error), try to get the existing bookmark ID
+      if (id == 0) {
+        print('Insert returned 0, checking for existing bookmark...');
+        // Try to get the existing bookmark ID
+        final existing = await db.query(
+          _tableName,
+          where: 'user_id = ? AND verse_key = ?',
+          whereArgs: [bookmark.userId, bookmark.verseKey],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          final existingId = existing.first['id'] as int;
+          print('Found existing bookmark with ID: $existingId');
+          return existingId;
+        } else {
+          // This shouldn't happen, but if it does, throw an error
+          throw Exception('Failed to insert bookmark and no existing bookmark found');
+        }
+      }
+      
+      print('Successfully inserted bookmark with ID: $id');
       return id;
     } catch (e) {
       throw Exception('Failed to add bookmark: $e');
@@ -116,13 +144,48 @@ class BookmarkLocalDataSource {
     final db = await database;
     
     try {
+      if (bookmarkId <= 0) {
+        print('Invalid bookmark ID: $bookmarkId');
+        return false;
+      }
+      
+      // First check if the bookmark exists
+      final existing = await db.query(
+        _tableName,
+        where: 'id = ?',
+        whereArgs: [bookmarkId],
+        limit: 1,
+      );
+      
+      if (existing.isEmpty) {
+        print('No bookmark found with ID: $bookmarkId');
+        return false;
+      }
+      
+      print('Removing bookmark with ID: $bookmarkId');
       final result = await db.delete(
         _tableName,
         where: 'id = ?',
         whereArgs: [bookmarkId],
       );
-      return result > 0;
-    } catch (e) {
+      
+      print('Delete result: $result rows affected');
+      
+      if (result > 0) {
+        // Verify deletion
+        final verify = await db.query(
+          _tableName,
+          where: 'id = ?',
+          whereArgs: [bookmarkId],
+          limit: 1,
+        );
+        return verify.isEmpty;
+      }
+      
+      return false;
+    } catch (e, stackTrace) {
+      print('Error removing bookmark by ID: $e');
+      print('Stack trace: $stackTrace');
       throw Exception('Failed to remove bookmark: $e');
     }
   }
@@ -133,6 +196,12 @@ class BookmarkLocalDataSource {
     
     try {
       print('Database: Removing bookmark with user_id: $userId, verse_key: $verseKey');
+      
+      // Validate inputs
+      if (userId.isEmpty || verseKey.isEmpty) {
+        print('Invalid input: userId or verseKey is empty');
+        return false;
+      }
       
       // First check if the bookmark exists
       final existing = await db.query(
@@ -145,9 +214,24 @@ class BookmarkLocalDataSource {
       print('Found ${existing.length} bookmarks to remove');
       
       if (existing.isEmpty) {
-        print('No bookmark found to remove');
+        print('No bookmark found to remove with user_id: $userId, verse_key: $verseKey');
+        // Check if there are any bookmarks for this user at all
+        final userBookmarks = await db.query(
+          _tableName,
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          limit: 5,
+        );
+        print('Total bookmarks for user: ${userBookmarks.length}');
+        if (userBookmarks.isNotEmpty) {
+          print('Sample verse keys: ${userBookmarks.map((b) => b['verse_key']).join(', ')}');
+        }
         return false;
       }
+      
+      // Get the bookmark ID for logging
+      final bookmarkId = existing.first['id'];
+      print('Removing bookmark with ID: $bookmarkId');
       
       final result = await db.delete(
         _tableName,
@@ -156,9 +240,23 @@ class BookmarkLocalDataSource {
       );
       
       print('Delete result: $result rows affected');
-      return result > 0;
-    } catch (e) {
+      
+      if (result > 0) {
+        // Verify deletion
+        final verify = await db.query(
+          _tableName,
+          where: 'user_id = ? AND verse_key = ?',
+          whereArgs: [userId, verseKey],
+          limit: 1,
+        );
+        print('Verification: bookmark still exists: ${verify.isNotEmpty}');
+        return verify.isEmpty;
+      }
+      
+      return false;
+    } catch (e, stackTrace) {
       print('Database error: $e');
+      print('Stack trace: $stackTrace');
       throw Exception('Failed to remove bookmark by verse key: $e');
     }
   }

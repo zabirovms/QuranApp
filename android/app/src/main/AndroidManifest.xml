@@ -6,6 +6,10 @@
     <!-- Audio permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14+ explicit media playback foreground service permission -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Android 13+ notifications permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
     <!-- Storage permissions for offline data -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -15,9 +19,14 @@
         android:label="Қуръон"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- AudioService for media notification -->
+        <service
+            android:name="com.ryanheise.audioservice.AudioService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
         
         <activity
-            android:name="com.example.quranapp.MainActivity"
+            android:name="com.quran.tj.quranapp.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"

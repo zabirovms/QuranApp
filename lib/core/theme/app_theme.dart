@@ -28,6 +28,20 @@ class AppTheme {
   static const Color arabicTextColor = Color(0xFF1A1A1A);
   static const Color arabicTextColorDark = Color(0xFFE0E0E0);
   
+  // Custom Themes Palettes
+  // Soft Beige
+  static const Color softBeigeBackground = Color(0xFFF5F0E1);
+  static const Color softBeigeOnBackground = Color(0xFF5A4D3F);
+  // Elegant Marble
+  static const Color elegantMarbleBackground = Color(0xFFF8F4F0);
+  static const Color elegantMarbleOnBackground = Color(0xFF5A4033);
+  // Night Sky (dark)
+  static const Color nightSkyBackground = Color(0xFF2C3E50);
+  static const Color nightSkyOnBackground = Color(0xFFF5F3E7);
+  // Silver Light
+  static const Color silverLightBackground = Color(0xFFC0C0C0);
+  static const Color silverLightOnBackground = Color(0xFF333333);
+  
   // Light Theme
   static ThemeData get lightTheme {
     return ThemeData(
@@ -394,6 +408,138 @@ class AppTheme {
       ),
       
       // Font Family
+      fontFamily: AppConstants.arabicFontFamily,
+    );
+  }
+
+  // Soft Beige Theme (light)
+  static ThemeData get softBeigeTheme {
+    const Color primary = Color(0xFF8D6E63); // warm brown accent
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: primary,
+        primaryContainer: Color(0xFF6D4C41),
+        secondary: Color(0xFFA1887F),
+        surface: softBeigeBackground,
+        error: errorColor,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: softBeigeOnBackground,
+        onError: Colors.white,
+      ),
+      scaffoldBackgroundColor: softBeigeBackground,
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: softBeigeOnBackground,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
+      textTheme: AppTheme.lightTheme.textTheme.apply(
+        bodyColor: softBeigeOnBackground,
+        displayColor: softBeigeOnBackground,
+      ),
+      fontFamily: AppConstants.arabicFontFamily,
+    );
+  }
+
+  // Elegant Marble Theme (light)
+  static ThemeData get elegantMarbleTheme {
+    const Color primary = Color(0xFF6D4C41); // rich brown
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: primary,
+        primaryContainer: Color(0xFF5D4037),
+        secondary: Color(0xFF8D6E63),
+        surface: elegantMarbleBackground,
+        error: errorColor,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: elegantMarbleOnBackground,
+        onError: Colors.white,
+      ),
+      scaffoldBackgroundColor: elegantMarbleBackground,
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: elegantMarbleOnBackground,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
+      textTheme: AppTheme.lightTheme.textTheme.apply(
+        bodyColor: elegantMarbleOnBackground,
+        displayColor: elegantMarbleOnBackground,
+      ),
+      fontFamily: AppConstants.arabicFontFamily,
+    );
+  }
+
+  // Night Sky Theme (dark)
+  static ThemeData get nightSkyTheme {
+    const Color primary = Color(0xFFF5F3E7); // light sand on dark
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: primary,
+        primaryContainer: Color(0xFF1B2836),
+        secondary: Color(0xFFB0AFA6),
+        surface: nightSkyBackground,
+        error: errorColor,
+        onPrimary: Colors.black,
+        onSecondary: Colors.black,
+        onSurface: nightSkyOnBackground,
+        onError: Colors.white,
+      ),
+      scaffoldBackgroundColor: nightSkyBackground,
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: nightSkyOnBackground,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
+      textTheme: AppTheme.darkTheme.textTheme.apply(
+        bodyColor: nightSkyOnBackground,
+        displayColor: nightSkyOnBackground,
+      ),
+      fontFamily: AppConstants.arabicFontFamily,
+    );
+  }
+
+  // Silver Light Theme (light)
+  static ThemeData get silverLightTheme {
+    const Color primary = Color(0xFF455A64); // blue-grey accent for contrast
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: primary,
+        primaryContainer: Color(0xFF37474F),
+        secondary: Color(0xFF90A4AE),
+        surface: silverLightBackground,
+        error: errorColor,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: silverLightOnBackground,
+        onError: Colors.white,
+      ),
+      scaffoldBackgroundColor: silverLightBackground,
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: silverLightOnBackground,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
+      textTheme: AppTheme.lightTheme.textTheme.apply(
+        bodyColor: silverLightOnBackground,
+        displayColor: silverLightOnBackground,
+      ),
       fontFamily: AppConstants.arabicFontFamily,
     );
   }

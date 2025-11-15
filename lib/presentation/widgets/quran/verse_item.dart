@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../data/models/verse_model.dart';
+import '../../../data/services/settings_service.dart';
+import '../translation_selection_dialog.dart';
+import '../../providers/quran_provider.dart';
 
 class VerseItem extends ConsumerStatefulWidget {
   final VerseModel verse;
@@ -12,14 +15,18 @@ class VerseItem extends ConsumerStatefulWidget {
   final bool isWordByWordMode;
   final List<Map<String, String>>? wordByWordTokens; // [{arabic, meaning}]
   final String? translationTextOverride;
+  final ValueChanged<String>? onTranslationChanged;
   final VoidCallback? onTap;
   final VoidCallback? onBookmark;
   final VoidCallback? onPlayAudio;
+  final VoidCallback? onToggleActions;
   final bool isBookmarked;
   final bool isHighlighted;
   final bool? isTafsirOpen;
   final VoidCallback? onToggleTafsir;
   final bool isPlaying;
+  final bool showExtraActions;
+  final bool showOnlyArabic;
 
   const VerseItem({
     super.key,
@@ -29,14 +36,18 @@ class VerseItem extends ConsumerStatefulWidget {
     this.isWordByWordMode = false,
     this.wordByWordTokens,
     this.translationTextOverride,
+    this.onTranslationChanged,
     this.onTap,
     this.onBookmark,
     this.onPlayAudio,
+    this.onToggleActions,
     this.isBookmarked = false,
     this.isHighlighted = false,
     this.isTafsirOpen,
     this.onToggleTafsir,
     this.isPlaying = false,
+    this.showExtraActions = false,
+    this.showOnlyArabic = false,
   });
 
   @override
@@ -51,6 +62,15 @@ class _VerseItemState extends ConsumerState<VerseItem> {
   void initState() {
     super.initState();
     _isBookmarked = widget.isBookmarked;
+  }
+
+  @override
+  void didUpdateWidget(VerseItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync bookmark state when widget prop changes
+    if (oldWidget.isBookmarked != widget.isBookmarked) {
+      _isBookmarked = widget.isBookmarked;
+    }
   }
 
   void _toggleBookmark() {
@@ -93,23 +113,30 @@ class _VerseItemState extends ConsumerState<VerseItem> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.isHighlighted
-            ? colorScheme.primaryContainer.withOpacity(0.2)
+        color: (widget.isPlaying || widget.isHighlighted)
+            ? colorScheme.primaryContainer.withOpacity(0.25)
             : colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: widget.isHighlighted
-            ? Border.all(color: colorScheme.primary.withOpacity(0.5), width: 2)
+        border: (widget.isPlaying || widget.isHighlighted)
+            ? Border.all(color: colorScheme.primary.withOpacity(0.6), width: 2)
             : Border.all(color: colorScheme.outline.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.05),
-            blurRadius: 6,
+            color: (widget.isPlaying || widget.isHighlighted)
+                ? colorScheme.primary.withOpacity(0.12)
+                : colorScheme.shadow.withOpacity(0.05),
+            blurRadius: (widget.isPlaying || widget.isHighlighted) ? 10 : 6,
             offset: const Offset(0, 1),
           ),
         ],
       ),
       child: InkWell(
         onTap: widget.onTap,
+        onLongPress: () {
+          if (widget.onToggleActions != null) {
+            widget.onToggleActions!();
+          }
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -135,12 +162,8 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: colorScheme.primaryContainer.withOpacity(0.1),
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: colorScheme.primary.withOpacity(0.3),
-                                width: 1,
-                              ),
                             ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -184,10 +207,10 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                     child: Text(
                       _getArabicTextWithEndSymbol(),
                       style: theme.textTheme.titleLarge?.copyWith(
-                        height: 1.5, // reduced line height
+                        height: 1.4,
                         fontSize: 22,
                         fontFamily: 'Amiri',
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.0,
                       ),
                       textAlign: TextAlign.right,
                     ),
@@ -208,16 +231,17 @@ class _VerseItemState extends ConsumerState<VerseItem> {
 
               const SizedBox(height: 6),
 
-              // Translation
-              Text(
-                widget.translationTextOverride ?? widget.verse.tajikText,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  height: 1.6,
-                  fontSize: 16,
-                  letterSpacing: 0.3,
+              // Translation (hidden if showOnlyArabic is true)
+              if (!widget.showOnlyArabic)
+                Text(
+                  widget.translationTextOverride ?? widget.verse.tajikText,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    height: 1.6,
+                    fontSize: 16,
+                    letterSpacing: 0.3,
+                  ),
+                  textAlign: TextAlign.left,
                 ),
-                textAlign: TextAlign.justify,
-              ),
 
 
               // Tafsir
@@ -277,45 +301,29 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                           color: colorScheme.primary,
                         ),
                       ),
-                      if (widget.isPlaying) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.volume_up,
-                            size: 6,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                   const SizedBox(width: 6),
 
-                  // Play audio
+                  // Play/Pause audio (always visible)
                   _buildActionButton(
-                    icon: Icons.play_arrow,
-                    tooltip: 'Play Audio',
+                    icon: widget.isPlaying ? Icons.pause : Icons.play_arrow,
+                    tooltip: widget.isPlaying ? 'Пауза' : 'Play Audio',
                     onPressed: widget.onPlayAudio,
-                    color: colorScheme.primary,
+                    color: colorScheme.onSurface,
                   ),
                   const SizedBox(width: 6),
 
-                  // Bookmark
+                  // Bookmark (always visible)
                   _buildActionButton(
                     icon: _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                     tooltip: _isBookmarked ? 'Remove Bookmark' : 'Add Bookmark',
                     onPressed: _toggleBookmark,
-                    color: _isBookmarked ? colorScheme.primary : colorScheme.onSurface,
+                    color: colorScheme.onSurface,
                   ),
                   const SizedBox(width: 6),
 
-                  // Copy
+                  // Copy (always visible)
                   _buildActionButton(
                     icon: Icons.copy,
                     tooltip: 'Нусхабардорӣ',
@@ -337,7 +345,7 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                   ),
                   const SizedBox(width: 6),
 
-                  // Share
+                  // Share (always visible)
                   _buildActionButton(
                     icon: Icons.share,
                     tooltip: 'Мубодила',
@@ -357,17 +365,45 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                     },
                     color: colorScheme.onSurface,
                   ),
+                  const SizedBox(width: 6),
+
+                  // Translation Switch (always visible)
+                  _buildActionButton(
+                    icon: Icons.translate,
+                    tooltip: 'Интихоби тарҷума',
+                    onPressed: () async {
+                      final s = SettingsService();
+                      await s.init();
+                      final currentLang = s.getTranslationLanguage();
+
+                      if (!context.mounted) return;
+                      final selectedLang = await showDialog<String>(
+                        context: context,
+                        builder: (context) => TranslationSelectionDialog(
+                          currentTranslation: currentLang,
+                          surahNumber: widget.verse.surahId,
+                        ),
+                      );
+
+                      if (!context.mounted) return;
+                      if (selectedLang != null) {
+                        if (widget.onTranslationChanged != null) {
+                          widget.onTranslationChanged!(selectedLang);
+                        } else {
+                          // Fallback to ensure verses reload with new translation
+                          ref.invalidate(versesProvider(widget.verse.surahId));
+                        }
+                      }
+                    },
+                    color: colorScheme.onSurface,
+                  ),
 
                   const Spacer(),
 
-                  // Tafsir toggle
+                  // Tafsir toggle - replaced icon with text
                   if (widget.verse.tafsir != null)
-                    _buildActionButton(
-                      icon: (widget.isTafsirOpen ?? _isExpanded)
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      tooltip: 'Тафсир',
-                      onPressed: () {
+                    InkWell(
+                      onTap: () {
                         if (widget.onToggleTafsir != null) {
                           widget.onToggleTafsir!();
                         } else {
@@ -376,7 +412,17 @@ class _VerseItemState extends ConsumerState<VerseItem> {
                           });
                         }
                       },
-                      color: colorScheme.onSurface,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'тафсир',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -398,12 +444,8 @@ class _VerseItemState extends ConsumerState<VerseItem> {
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(6), // reduced padding
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
           child: Icon(
             icon,
             size: 20,

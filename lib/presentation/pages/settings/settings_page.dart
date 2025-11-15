@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
+import '../../../data/services/settings_service.dart';
+import '../../../data/services/audio_service.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../widgets/translation_selection_dialog.dart';
 
 
 // Settings providers
@@ -245,15 +249,13 @@ class SettingsPage extends ConsumerWidget {
           // Display Settings
           _buildSectionHeader('Намоиш'),
           _buildThemeSetting(settings, ref, context),
-          _buildFontSizeSetting(settings, ref, context),
-          _buildFontFamilySetting(settings, ref, context),
+          // removed unused font size and font family settings
           
           const Divider(),
           
-          // Audio Settings
-          _buildSectionHeader('Аудио'),
-          _buildAudioEnabledSetting(settings, ref),
-          _buildReciterSetting(settings, ref, context),
+          // Quran Settings (inline)
+          _buildSectionHeader('Қуръон'),
+          _buildQuranInlineSettings(context),
           
           const Divider(),
           
@@ -292,47 +294,126 @@ class SettingsPage extends ConsumerWidget {
   }
 
 
-  Widget _buildFontSizeSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.text_fields),
-      title: const Text('Андозаи ҳарф'),
-      subtitle: Text('${settings.fontSize.toInt()}px'),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _showFontSizeDialog(context, ref),
+  // Removed font size setting
+
+  // Removed font family setting
+
+
+  // Removed audio enabled toggle
+
+
+  // Removed reciter single-tile and bottom-sheet entry; showing inline instead
+
+  Widget _buildQuranInlineSettings(BuildContext context) {
+    final audio = QuranAudioService();
+    final reciters = audio.getAvailableReciters();
+    final s = SettingsService();
+    return FutureBuilder(
+      future: s.init(),
+      builder: (context, snapshot) {
+        final showTrans = s.getShowTransliteration();
+        final wbw = s.getWordByWordMode();
+        final currentEdition = s.getAudioEdition();
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // Get current language inside StatefulBuilder so it can be updated
+            final currentLang = s.getTranslationLanguage();
+            return Column(
+              children: [
+                // Translation language selection
+                ListTile(
+                  title: const Text('Забони тарҷума'),
+                  subtitle: Text(_getTranslationName(currentLang)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () async {
+                    await showDialog<String>(
+                      context: context,
+                      builder: (dialogContext) => TranslationSelectionDialog(
+                        currentTranslation: currentLang,
+                        onTranslationSelected: (newLang) {
+                          // Update the state immediately
+                          setState(() {});
+                        },
+                      ),
+                    );
+                    // Refresh the UI after dialog closes
+                    if (context.mounted) {
+                      setState(() {});
+                    }
+                  },
+                ),
+                const Divider(),
+                // Toggles
+                SwitchListTile(
+                  title: const Text('Намоиши транслитератсия'),
+                  value: showTrans,
+                  onChanged: (v) async { 
+                    await s.setShowTransliteration(v); 
+                    setState(() {}); 
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Ҳолати калима ба калима'),
+                  value: wbw,
+                  onChanged: (v) async { 
+                    await s.setWordByWordMode(v); 
+                    setState(() {}); 
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Намоиши танҳо матни арабӣ'),
+                  subtitle: const Text('Тарҷума ва транслитератсия пинҳон карда мешаванд'),
+                  value: s.getShowOnlyArabic(),
+                  onChanged: (v) async { 
+                    await s.setShowOnlyArabic(v); 
+                    setState(() {}); 
+                  },
+                ),
+                const Divider(),
+                // Reciter dropdown
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Қори', style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: currentEdition,
+                      isExpanded: true,
+                      items: [
+                        for (final code in reciters)
+                          DropdownMenuItem(value: code, child: Text(_mapQariName(code))),
+                      ],
+                      onChanged: (v) async { 
+                        if (v != null) { 
+                          await s.setAudioEdition(v); 
+                          setState(() {}); 
+                        } 
+                      },
+                      underline: const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildFontFamilySetting(AppSettings settings, WidgetRef ref, BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.font_download),
-      title: const Text('Хусусияти ҳарф'),
-      subtitle: Text(settings.fontFamily),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _showFontFamilyDialog(context, ref),
-    );
+  String _mapQariName(String code) {
+    switch (code) {
+      case 'ar.alafasy': return 'Mishary Alafasy';
+      case 'ar.husary': return 'Mahmoud Khalil Al-Husary';
+      case 'ar.minshawi': return 'Muhammad Siddiq Al-Minshawi';
+      default: return code;
+    }
   }
-
-
-  Widget _buildAudioEnabledSetting(AppSettings settings, WidgetRef ref) {
-    return SwitchListTile(
-      title: const Text('Тиловат'),
-      subtitle: const Text('Тиловати сура ё оят'),
-      value: settings.audioEnabled,
-      onChanged: (value) => ref.read(settingsProvider.notifier).setAudioEnabled(value),
-    );
-  }
-
-
-  Widget _buildReciterSetting(AppSettings settings, WidgetRef ref, BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.record_voice_over),
-      title: const Text('Қори'),
-      subtitle: Text(_getReciterName(settings.reciter)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _showReciterDialog(context, ref),
-    );
-  }
-
 
 
   Widget _buildAboutSettings(BuildContext context) {
@@ -374,15 +455,6 @@ class SettingsPage extends ConsumerWidget {
   }
 
 
-  String _getReciterName(String reciter) {
-    switch (reciter) {
-      case 'default': return 'Пешфарз';
-      case 'abdul_basit': return 'Абдул Босит';
-      case 'mishary': return 'Мишари Рашид';
-      default: return 'Пешфарз';
-    }
-  }
-
   // Dialog methods
   void _showThemeDialog(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -419,72 +491,40 @@ class SettingsPage extends ConsumerWidget {
                 Navigator.of(context).pop();
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  void _showFontSizeDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Андозаи ҳарф'),
-        content: StatefulBuilder(
-          builder: (context, setState) {
-            final currentSize = ref.watch(settingsProvider).fontSize;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${currentSize.toInt()}px'),
-                Slider(
-                  value: currentSize,
-                  min: 12,
-                  max: 24,
-                  divisions: 12,
-                  onChanged: (value) {
-                    setState(() {});
-                    ref.read(settingsProvider.notifier).setFontSize(value);
-                  },
-                ),
-              ],
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Пӯшидан'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFontFamilyDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Хусусияти ҳарф'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+            const Divider(),
             RadioListTile<String>(
-              title: const Text('Amiri'),
-              value: 'Amiri',
-              groupValue: ref.watch(settingsProvider).fontFamily,
+              title: const Text('Soft Beige'),
+              value: 'softBeige',
+              groupValue: ref.watch(settingsProvider).theme,
               onChanged: (value) {
-                ref.read(settingsProvider.notifier).setFontFamily(value!);
+                ref.read(settingsProvider.notifier).setTheme(value!);
                 Navigator.of(context).pop();
               },
             ),
             RadioListTile<String>(
-              title: const Text('Noto Sans Arabic'),
-              value: 'NotoSansArabic',
-              groupValue: ref.watch(settingsProvider).fontFamily,
+              title: const Text('Elegant Marble'),
+              value: 'elegantMarble',
+              groupValue: ref.watch(settingsProvider).theme,
               onChanged: (value) {
-                ref.read(settingsProvider.notifier).setFontFamily(value!);
+                ref.read(settingsProvider.notifier).setTheme(value!);
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Night Sky'),
+              value: 'nightSky',
+              groupValue: ref.watch(settingsProvider).theme,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setTheme(value!);
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Silver Light'),
+              value: 'silverLight',
+              groupValue: ref.watch(settingsProvider).theme,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setTheme(value!);
                 Navigator.of(context).pop();
               },
             ),
@@ -494,47 +534,12 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showReciterDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Интихоби қориъ'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String>(
-              title: const Text('Пешфарз'),
-              value: 'default',
-              groupValue: ref.watch(settingsProvider).reciter,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setReciter(value!);
-                Navigator.of(context).pop();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Абдул Босит'),
-              value: 'abdul_basit',
-              groupValue: ref.watch(settingsProvider).reciter,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setReciter(value!);
-                Navigator.of(context).pop();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Мишори Рашид'),
-              value: 'mishary',
-              groupValue: ref.watch(settingsProvider).reciter,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setReciter(value!);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
+  // Removed font size dialog
+
+  // Removed font family dialog
+
+  // Removed reciter dialog (using inline dropdown instead)
 
   void _showAboutDialog(BuildContext context) {
     showDialog(
@@ -799,5 +804,9 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _getTranslationName(String lang) {
+    return AppConstants.getTranslationName(lang);
   }
 }

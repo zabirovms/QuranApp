@@ -14,6 +14,9 @@ class DuaModel extends Equatable {
   final String? category;
   final String? description;
   final bool? isFavorite;
+  final String? prophet;
+  @JsonKey(name: 'prophet_arabic')
+  final String? prophetArabic;
 
   const DuaModel({
     required this.surah,
@@ -25,6 +28,8 @@ class DuaModel extends Equatable {
     this.category,
     this.description,
     this.isFavorite,
+    this.prophet,
+    this.prophetArabic,
   });
 
   factory DuaModel.fromJson(Map<String, dynamic> json) =>
@@ -42,6 +47,8 @@ class DuaModel extends Equatable {
     String? category,
     String? description,
     bool? isFavorite,
+    String? prophet,
+    String? prophetArabic,
   }) {
     return DuaModel(
       surah: surah ?? this.surah,
@@ -53,6 +60,8 @@ class DuaModel extends Equatable {
       category: category ?? this.category,
       description: description ?? this.description,
       isFavorite: isFavorite ?? this.isFavorite,
+      prophet: prophet ?? this.prophet,
+      prophetArabic: prophetArabic ?? this.prophetArabic,
     );
   }
 
@@ -67,6 +76,8 @@ class DuaModel extends Equatable {
         category,
         description,
         isFavorite,
+        prophet,
+        prophetArabic,
       ];
 
   @override

@@ -12,6 +12,12 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('android/app/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
     flutterVersionCode = '1'
@@ -23,13 +29,14 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.quranapp"
+    namespace "com.quran.tj.quranapp"
     compileSdk flutter.compileSdkVersion
     ndkVersion "29.0.14206865"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -41,7 +48,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.quranapp"
+        applicationId "com.quran.tj.quranapp"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
@@ -50,20 +57,35 @@ android {
 
     signingConfigs {
         release {
-            // Production signing configuration
-            // TODO: Replace with your actual keystore details
-            keyAlias 'quran-app-key'
-            keyPassword 'YOUR_KEY_PASSWORD'
-            storeFile file('quran-app-release-key.keystore')
-            storePassword 'YOUR_KEYSTORE_PASSWORD'
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : file('quran-app-release-key.keystore')
+                storePassword keystoreProperties['storePassword']
+            } else {
+                keyAlias 'quran-tj-key'
+                keyPassword 'quranapp123'
+                storeFile file('quran-tj-release-key.keystore')
+                storePassword 'quranapp123'
+            }
+        }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include "arm64-v8a", "armeabi-v7a", "x86_64"
+            universalApk true
         }
     }
 
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
             signingConfig signingConfigs.debug
@@ -73,4 +95,8 @@ android {
 
 flutter {
     source '../..'
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

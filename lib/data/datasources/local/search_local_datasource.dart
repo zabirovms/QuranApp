@@ -5,6 +5,10 @@ import '../../../core/utils/compressed_json_loader.dart';
 class SearchLocalDataSource {
   static const String _arabicJsonPath = 'assets/data/alquran_cloud_complete_quran.json.gz';
   static const String _translationsJsonPath = 'assets/data/quran_mirror_with_translations.json.gz';
+  static const String _russianJsonPath = 'assets/data/quran_ru.json.gz';
+  static const String _tj2JsonPath = 'assets/data/quran_tj_2_AbuAlomuddin.json.gz';
+  static const String _tj3JsonPath = 'assets/data/quran_tj_3_PioneersTranslationCenter.json.gz';
+  static const String _farsiJsonPath = 'assets/data/quran_farsi_Farsi.json.gz';
   static const String _recentTermsKey = 'recent_search_terms';
   
   List<VerseModel>? _cachedVerses;
@@ -12,6 +16,107 @@ class SearchLocalDataSource {
 
   static const int _maxResults = 200; // cap to avoid heavy UI rebuilds
   
+  // Load Russian translations from JSON file
+  Future<Map<String, Map<int, String>>> _loadAllRussianTranslations() async {
+    try {
+      final Map<String, dynamic> russianData = await CompressedJsonLoader.loadCompressedJsonAsMap(_russianJsonPath);
+      
+      final Map<String, Map<int, String>> allRussianMap = {};
+      for (final entry in russianData.entries) {
+        final surahKey = entry.key;
+        final List<dynamic> verses = entry.value as List;
+        final Map<int, String> surahMap = {};
+        for (var verseData in verses) {
+          final verseNum = verseData['verse'] as int?;
+          final text = verseData['text'] as String?;
+          if (verseNum != null && text != null && text.isNotEmpty) {
+            surahMap[verseNum] = text;
+          }
+        }
+        allRussianMap[surahKey] = surahMap;
+      }
+      return allRussianMap;
+    } catch (e) {
+      // If Russian file doesn't exist or fails to load, return empty map
+      return {};
+    }
+  }
+  
+  // Load tj_2 translations from JSON file
+  Future<Map<String, Map<int, String>>> _loadAllTj2Translations() async {
+    try {
+      final Map<String, dynamic> tj2Data = await CompressedJsonLoader.loadCompressedJsonAsMap(_tj2JsonPath);
+      
+      final Map<String, Map<int, String>> allTj2Map = {};
+      for (final entry in tj2Data.entries) {
+        final surahKey = entry.key;
+        final List<dynamic> verses = entry.value as List;
+        final Map<int, String> surahMap = {};
+        for (var verseData in verses) {
+          final verseNum = verseData['verse'] as int?;
+          final text = verseData['text'] as String?;
+          if (verseNum != null && text != null && text.isNotEmpty) {
+            surahMap[verseNum] = text;
+          }
+        }
+        allTj2Map[surahKey] = surahMap;
+      }
+      return allTj2Map;
+    } catch (e) {
+      return {};
+    }
+  }
+  
+  // Load tj_3 translations from JSON file
+  Future<Map<String, Map<int, String>>> _loadAllTj3Translations() async {
+    try {
+      final Map<String, dynamic> tj3Data = await CompressedJsonLoader.loadCompressedJsonAsMap(_tj3JsonPath);
+      
+      final Map<String, Map<int, String>> allTj3Map = {};
+      for (final entry in tj3Data.entries) {
+        final surahKey = entry.key;
+        final List<dynamic> verses = entry.value as List;
+        final Map<int, String> surahMap = {};
+        for (var verseData in verses) {
+          final verseNum = verseData['verse'] as int?;
+          final text = verseData['text'] as String?;
+          if (verseNum != null && text != null && text.isNotEmpty) {
+            surahMap[verseNum] = text;
+          }
+        }
+        allTj3Map[surahKey] = surahMap;
+      }
+      return allTj3Map;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // Load Farsi translations from JSON file
+  Future<Map<String, Map<int, String>>> _loadAllFarsiTranslations() async {
+    try {
+      final Map<String, dynamic> farsiData = await CompressedJsonLoader.loadCompressedJsonAsMap(_farsiJsonPath);
+      
+      final Map<String, Map<int, String>> allFarsiMap = {};
+      for (final entry in farsiData.entries) {
+        final surahKey = entry.key;
+        final List<dynamic> verses = entry.value as List;
+        final Map<int, String> surahMap = {};
+        for (var verseData in verses) {
+          final verseNum = verseData['verse'] as int?;
+          final text = verseData['text'] as String?;
+          if (verseNum != null && text != null && text.isNotEmpty) {
+            surahMap[verseNum] = text;
+          }
+        }
+        allFarsiMap[surahKey] = surahMap;
+      }
+      return allFarsiMap;
+    } catch (e) {
+      return {};
+    }
+  }
+
   // Cache all verses for fast searching
   Future<List<VerseModel>> _getAllVerses() async {
     if (_cachedVerses != null) {
@@ -24,6 +129,15 @@ class SearchLocalDataSource {
       
       // Load translations from compressed file
       final Map<String, dynamic> translationsData = await CompressedJsonLoader.loadCompressedJsonAsMap(_translationsJsonPath);
+      
+      // Load Russian translations
+      final Map<String, Map<int, String>> russianTranslations = await _loadAllRussianTranslations();
+      
+      // Load tj_2 and tj_3 translations
+      final Map<String, Map<int, String>> tj2Translations = await _loadAllTj2Translations();
+      final Map<String, Map<int, String>> tj3Translations = await _loadAllTj3Translations();
+      // Load Farsi translations
+      final Map<String, Map<int, String>> farsiTranslations = await _loadAllFarsiTranslations();
       
       final List<VerseModel> allVerses = [];
       
@@ -48,9 +162,25 @@ class SearchLocalDataSource {
         final surahNumber = arabicSurahData['number'] as int;
         final List<dynamic> arabicAyahs = arabicSurahData['ayahs'] as List;
         
+        // Get Russian translations for this surah
+        final surahRussianMap = russianTranslations[surahNumber.toString()] ?? {};
+        
+        // Get tj_2 and tj_3 translations for this surah
+        final surahTj2Map = tj2Translations[surahNumber.toString()] ?? {};
+        final surahTj3Map = tj3Translations[surahNumber.toString()] ?? {};
+        final surahFarsiMap = farsiTranslations[surahNumber.toString()] ?? {};
+        
         for (var arabicAyah in arabicAyahs) {
           final verseNumber = arabicAyah['numberInSurah'] as int;
           final translation = translationMap[surahNumber]?[arabicAyah['numberInSurah']];
+          
+          // Get Russian translation if available
+          final russianText = surahRussianMap[verseNumber];
+          
+          // Get tj_2 and tj_3 translations from local files
+          final tj2Text = surahTj2Map[verseNumber];
+          final tj3Text = surahTj3Map[verseNumber];
+          final farsiText = surahFarsiMap[verseNumber];
           
           final verse = VerseModel(
             id: arabicAyah['number'] as int,
@@ -59,8 +189,10 @@ class SearchLocalDataSource {
             arabicText: arabicAyah['text'] as String,
             tajikText: translation?['tajik_text'] as String? ?? '',
             transliteration: translation?['transliteration'] as String? ?? '',
-            farsi: null, // Not available in this data source
-            russian: null, // Not available in this data source
+            tj2: tj2Text ?? translation?['tj_2'] as String?,
+            tj3: tj3Text ?? translation?['tj_3'] as String?,
+            farsi: farsiText ?? translation?['farsi'] as String?,
+            russian: russianText ?? translation?['russian'] as String?,
             tafsir: translation?['tafsir'] as String?,
             page: arabicAyah['page'] as int?,
             juz: arabicAyah['juz'] as int?,
@@ -71,7 +203,7 @@ class SearchLocalDataSource {
       }
       
       _cachedVerses = allVerses;
-      // Build index lazily after verses load
+      // Build index after verses load
       _buildIndex(allVerses);
       return allVerses;
     } catch (e) {
@@ -81,12 +213,16 @@ class SearchLocalDataSource {
 
   void _buildIndex(List<VerseModel> verses) {
     // Build normalized fields once to avoid regex/split on every keystroke
-    // Exclude tafsir from index to improve performance and reduce memory usage
+    // Include all translations for comprehensive search
     _index = verses.map((v) => _VerseIndexEntry(
       verse: v,
       arabic: _normalizeText(v.arabicText),
       translit: _normalizeText(v.transliteration ?? ''),
       tajik: _normalizeText(v.tajikText),
+      tj2: _normalizeText(v.tj2 ?? ''),
+      tj3: _normalizeText(v.tj3 ?? ''),
+      farsi: _normalizeText(v.farsi ?? ''),
+      russian: _normalizeText(v.russian ?? ''),
       tafsir: '', // Not used in search anymore
     )).toList(growable: false);
   }
@@ -120,7 +256,7 @@ class SearchLocalDataSource {
   String _normalizeText(String text) {
     return text
         .toLowerCase()
-        .replaceAll(RegExp(r'[^\w\s\u0600-\u06FF]'), '') // Keep Arabic and alphanumeric
+        .replaceAll(RegExp(r'[^\w\s\u0600-\u06FF\u0400-\u04FF]'), '') // Keep Arabic, Cyrillic (Tajik/Russian), and alphanumeric
         .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
         .trim();
   }
@@ -141,10 +277,22 @@ class SearchLocalDataSource {
     }
     
     final allVerses = await _getAllVerses();
-    _index ?? _buildIndex(allVerses);
+    if (_index == null) {
+      _buildIndex(allVerses);
+    }
     final List<VerseModel> results = [];
     
     final normalizedQuery = _normalizeText(query);
+    
+    // Ensure normalized query is not empty
+    if (normalizedQuery.isEmpty) {
+      return [];
+    }
+    
+    // Ensure index is not null
+    if (_index == null || _index!.isEmpty) {
+      return [];
+    }
 
     for (final entry in _index!) {
       final verse = entry.verse;
@@ -166,15 +314,32 @@ class SearchLocalDataSource {
         case 'tajik':
           matches = entry.tajik.contains(normalizedQuery);
           break;
+        case 'tj_2':
+          matches = entry.tj2.contains(normalizedQuery);
+          break;
+        case 'tj_3':
+          matches = entry.tj3.contains(normalizedQuery);
+          break;
+        case 'farsi':
+          matches = entry.farsi.contains(normalizedQuery);
+          break;
+        case 'russian':
+          matches = entry.russian.contains(normalizedQuery);
+          break;
         case 'both':
         default:
-          // Search in Arabic, transliteration, and Tajik only - tafsir excluded
+          // Search in Arabic, transliteration, and all translations
           matches = entry.arabic.contains(normalizedQuery) ||
                     entry.translit.contains(normalizedQuery) ||
-                    entry.tajik.contains(normalizedQuery);
+                    entry.tajik.contains(normalizedQuery) ||
+                    entry.tj2.contains(normalizedQuery) ||
+                    entry.tj3.contains(normalizedQuery) ||
+                    entry.farsi.contains(normalizedQuery) ||
+                    entry.russian.contains(normalizedQuery);
           break;
       }
       
+      // Only add if it actually matches
       if (matches) {
         results.add(verse);
         if (results.length >= _maxResults) break; // cap results early
@@ -185,14 +350,22 @@ class SearchLocalDataSource {
     results.sort((a, b) {
       final queryLower = query.toLowerCase();
       
-      // Check for exact matches in different fields (excluding tafsir)
+      // Check for exact matches in different fields (all translations)
       final aExact = a.arabicText.toLowerCase().contains(queryLower) ||
                      (a.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
-                     a.tajikText.toLowerCase().contains(queryLower);
+                     a.tajikText.toLowerCase().contains(queryLower) ||
+                     (a.tj2?.toLowerCase().contains(queryLower) ?? false) ||
+                     (a.tj3?.toLowerCase().contains(queryLower) ?? false) ||
+                     (a.farsi?.toLowerCase().contains(queryLower) ?? false) ||
+                     (a.russian?.toLowerCase().contains(queryLower) ?? false);
       
       final bExact = b.arabicText.toLowerCase().contains(queryLower) ||
                      (b.transliteration?.toLowerCase().contains(queryLower) ?? false) ||
-                     b.tajikText.toLowerCase().contains(queryLower);
+                     b.tajikText.toLowerCase().contains(queryLower) ||
+                     (b.tj2?.toLowerCase().contains(queryLower) ?? false) ||
+                     (b.tj3?.toLowerCase().contains(queryLower) ?? false) ||
+                     (b.farsi?.toLowerCase().contains(queryLower) ?? false) ||
+                     (b.russian?.toLowerCase().contains(queryLower) ?? false);
       
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
@@ -256,6 +429,10 @@ class _VerseIndexEntry {
   final String arabic;
   final String translit;
   final String tajik;
+  final String tj2;
+  final String tj3;
+  final String farsi;
+  final String russian;
   final String tafsir;
 
   _VerseIndexEntry({
@@ -263,6 +440,10 @@ class _VerseIndexEntry {
     required this.arabic,
     required this.translit,
     required this.tajik,
+    required this.tj2,
+    required this.tj3,
+    required this.farsi,
+    required this.russian,
     required this.tafsir,
   });
 }

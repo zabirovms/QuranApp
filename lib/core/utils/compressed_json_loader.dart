@@ -32,4 +32,24 @@ class CompressedJsonLoader {
     final String jsonString = await loadCompressedJson(assetPath);
     return json.decode(jsonString) as List<dynamic>;
   }
+
+  /// Load a regular (non-compressed) JSON file and parse it as a List
+  static Future<List<dynamic>> loadJsonAsList(String assetPath) async {
+    try {
+      final String jsonString = await rootBundle.loadString(assetPath);
+      return json.decode(jsonString) as List<dynamic>;
+    } catch (e) {
+      throw Exception('Failed to load JSON from $assetPath: $e');
+    }
+  }
+
+  /// Load a regular (non-compressed) JSON file and parse it as a Map
+  static Future<Map<String, dynamic>> loadJsonAsMap(String assetPath) async {
+    try {
+      final String jsonString = await rootBundle.loadString(assetPath);
+      return json.decode(jsonString) as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to load JSON from $assetPath: $e');
+    }
+  }
 }

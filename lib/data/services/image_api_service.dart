@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../models/image_data.dart';
 
 class ImageApiException implements Exception {
   final String message;
@@ -13,8 +14,8 @@ class ImageApiException implements Exception {
 class ImageApiService {
   static const String _baseUrl = 'https://storage.googleapis.com/storage/v1/b/quran-tajik/o?prefix=pictures/';
   
-  /// Fetches all image URLs from Google Cloud Storage
-  Future<List<String>> fetchImageUrls() async {
+  /// Fetches all image data (URL and name) from Google Cloud Storage
+  Future<List<ImageData>> fetchImageData() async {
     try {
       final response = await http.get(Uri.parse(_baseUrl));
       
@@ -22,8 +23,8 @@ class ImageApiService {
         final data = json.decode(response.body);
         final items = data['items'] as List<dynamic>? ?? [];
         
-        // Filter for image files and extract download URLs
-        final imageUrls = items
+        // Filter for image files and extract download URLs with names
+        final imageDataList = items
             .where((item) {
               final name = item['name'] as String? ?? '';
               return name.toLowerCase().endsWith('.jpg') ||
@@ -36,11 +37,20 @@ class ImageApiService {
               // Construct the public download URL with proper encoding
               final name = item['name'] as String? ?? '';
               final encodedName = Uri.encodeComponent(name);
-              return 'https://storage.googleapis.com/quran-tajik/$encodedName';
+              final url = 'https://storage.googleapis.com/quran-tajik/$encodedName';
+              
+              // Extract clean name from filename
+              final nameWithoutExt = name.split('/').last.split('.').first;
+              final cleanName = nameWithoutExt.replaceAll('_', ' ').replaceAll('-', ' ');
+              
+              return ImageData(
+                url: url,
+                name: cleanName,
+              );
             })
             .toList();
         
-        return imageUrls;
+        return imageDataList;
       } else {
         throw ImageApiException('Failed to load images: HTTP ${response.statusCode}');
       }
@@ -53,6 +63,12 @@ class ImageApiService {
     } catch (e) {
       throw ImageApiException('Unexpected error: $e');
     }
+  }
+  
+  /// Fetches all image URLs from Google Cloud Storage (for backward compatibility)
+  Future<List<String>> fetchImageUrls() async {
+    final imageData = await fetchImageData();
+    return imageData.map((data) => data.url).toList();
   }
   
   /// Extracts image title from URL

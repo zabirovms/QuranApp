@@ -5,6 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:audio_service/audio_service.dart';
+import 'data/services/audio_service.dart';
+import 'data/services/notification_service.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import 'package:permission_handler/permission_handler.dart';
 
 import 'app/app.dart';
 import 'core/constants/app_constants.dart';
@@ -42,6 +48,42 @@ void main() async {
     ),
   );
   
+  // Initialize audio handler for media notifications
+  // This MUST be called before any playback starts
+  // The builder creates the handler instance, which is stored in QuranAudioHandler._instance
+  // This is the SAME instance that Android will use for notification controls
+  await AudioService.init(
+    builder: () => QuranAudioHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'com.quran.tj.audio',
+      androidNotificationChannelName: 'Quran Playback',
+      androidNotificationOngoing: true,
+    ),
+  );
+  
+  // Verify the handler instance was created
+  final handler = QuranAudioHandler.instance;
+  if (handler != null) {
+    debugPrint('[Main] AudioService handler instance verified: ${handler.runtimeType}');
+    debugPrint('[Main] Handler instance hash: ${identityHashCode(handler)}');
+    debugPrint('[Main] This is the instance Android will use for notification controls');
+  } else {
+    debugPrint('[Main] Warning: Handler instance not available after AudioService.init()');
+  }
+
+  // Initialize local notifications and schedule reminders
+  await NotificationService().initialize();
+  await NotificationService().scheduleWeeklyKahfReminder();
+  // Note: Test notification removed - Juma Mubarak notification only shows on Fridays
+
+  // Android 13+ notification permission (one-time)
+  if (Platform.isAndroid) {
+    final status = await Permission.notification.status;
+    if (status.isDenied || status.isRestricted) {
+      await Permission.notification.request();
+    }
+  }
+
   runApp(
     const ProviderScope(
       child: _BackHandler(child: TajikQuranApp()),
@@ -55,16 +97,39 @@ class TajikQuranApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final mode = () {
-      switch (settings.theme) {
-        case 'light':
-          return ThemeMode.light;
-        case 'dark':
-          return ThemeMode.dark;
-        default:
-          return ThemeMode.system;
-      }
-    }();
+
+    // Map settings.theme to ThemeData and ThemeMode
+    final selectedTheme = settings.theme;
+    ThemeData lightTheme = AppTheme.lightTheme;
+    ThemeData darkTheme = AppTheme.darkTheme;
+    ThemeMode themeMode = ThemeMode.system;
+
+    switch (selectedTheme) {
+      case 'light':
+        themeMode = ThemeMode.light;
+        break;
+      case 'dark':
+        themeMode = ThemeMode.dark;
+        break;
+      case 'softBeige':
+        lightTheme = AppTheme.softBeigeTheme;
+        themeMode = ThemeMode.light;
+        break;
+      case 'elegantMarble':
+        lightTheme = AppTheme.elegantMarbleTheme;
+        themeMode = ThemeMode.light;
+        break;
+      case 'nightSky':
+        darkTheme = AppTheme.nightSkyTheme;
+        themeMode = ThemeMode.dark;
+        break;
+      case 'silverLight':
+        lightTheme = AppTheme.silverLightTheme;
+        themeMode = ThemeMode.light;
+        break;
+      default:
+        themeMode = ThemeMode.system;
+    }
     return ScreenUtilInit(
       designSize: const Size(375, 812), // iPhone X design size
       minTextAdapt: true,
@@ -73,16 +138,16 @@ class TajikQuranApp extends ConsumerWidget {
         return MaterialApp.router(
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: mode,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
           routerConfig: ref.watch(routerProvider),
           builder: (context, child) {
             return MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 textScaler: const TextScaler.linear(1.0),
               ),
-              child: child!,
+              child: NotificationRouterBridge(child: child!),
             );
           },
         );

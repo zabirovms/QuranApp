@@ -201,9 +201,18 @@ class _TasbeehPageState extends ConsumerState<TasbeehPage>
   }
 
   void _showCompletionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const CompletionDialog(),
+    final settings = ref.read(tasbeehSettingsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Center(
+          child: Text(
+            '✅ Ин зикрро ${settings.targetCount} маротиба гуфтед',
+            textAlign: TextAlign.center,
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -629,73 +638,7 @@ class ProgressCirclePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class CompletionDialog extends ConsumerWidget {
-  const CompletionDialog({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(tasbeehSettingsProvider);
-    final tasbeehDataAsync = ref.watch(tasbeehDataProvider);
-    
-    return AlertDialog(
-      title: Column(
-        children: [
-          const Text('✨ Тасбеҳ пурра шуд ✨'),
-          Text(
-            'Шумо ${settings.targetCount} маротиба ин зикрро хондед',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-      content: tasbeehDataAsync.when(
-        data: (tasbeehs) {
-          if (tasbeehs.isEmpty) return const SizedBox.shrink();
-          final currentTasbeeh = tasbeehs[settings.currentTasbeehIndex];
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                currentTasbeeh.arabic,
-                style: const TextStyle(fontSize: 24),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                currentTasbeeh.tajikTransliteration,
-                style: TextStyle(fontSize: 16, color: const Color.fromARGB(221, 37, 36, 36)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                currentTasbeeh.tajikTranslation,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          );
-        },
-        loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Идома додан'),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Мубодила карда шуд')),
-            );
-          },
-          icon: const Icon(Icons.share),
-          label: const Text('Мубодила'),
-        ),
-      ],
-    );
-  }
-}
+// Simplified UX: no intrusive dialog or share; lightweight snackbar instead (see _showCompletionDialog)
 
 // --- Updated SettingsDialog ---
 class SettingsDialog extends ConsumerWidget {
@@ -704,7 +647,7 @@ class SettingsDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(tasbeehSettingsProvider);
-    final availableTargetCounts = [33, 99, 100, 500];
+    final availableTargetCounts = [33, 99];
 
     return Dialog(
       insetPadding: const EdgeInsets.all(20),
@@ -745,6 +688,31 @@ class SettingsDialog extends ConsumerWidget {
                     },
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    hintText: 'Ҳадафи худро навис...',
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    hintStyle: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                  ),
+                  onSubmitted: (value) {
+                    final v = int.tryParse(value.trim());
+                    if (v != null && v > 0) {
+                      ref.read(tasbeehSettingsProvider.notifier).setTargetCount(v);
+                    }
+                  },
+                ),
               ),
               const SizedBox(height: 16),
               SwitchListTile(

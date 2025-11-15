@@ -117,9 +117,10 @@ class BookmarksPage extends ConsumerWidget {
             context.push('/surah/${bookmark.surahNumber}/verse/${bookmark.verseNumber}');
           },
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Surah and verse info
                 Row(
@@ -152,33 +153,38 @@ class BookmarksPage extends ConsumerWidget {
                       onPressed: () => _removeBookmark(context, ref, bookmark),
                       icon: const Icon(Icons.bookmark, color: Colors.red),
                       tooltip: 'Remove bookmark',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 
-                // Arabic text
+                // Arabic text - fixed spacing
                 Text(
                   bookmark.arabicText,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontFamily: 'Amiri',
-                    height: 1.8,
+                    height: 1.5,
+                    letterSpacing: 0,
+                    fontSize: 18,
                   ),
                   textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.right,
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 
                 // Tajik translation
                 Text(
                   bookmark.tajikText,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.4,
+                    height: 1.3,
                   ),
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 
                 // Created date
                 Text(
@@ -247,32 +253,67 @@ class BookmarksPage extends ConsumerWidget {
     print('Bookmark to remove: ID=${bookmark.id}, verseKey=${bookmark.verseKey}, surah=${bookmark.surahNumber}:${bookmark.verseNumber}');
     
     final notifier = ref.read(bookmarkNotifierProvider(userId).notifier);
+    bool success = false;
+    String? errorMessage;
     
-    // Try verse key-based removal first
-    bool success = await notifier.removeBookmarkByVerseKey(bookmark.verseKey);
-    
-    // If that fails, try ID-based removal as fallback
-    if (!success && bookmark.id > 0) {
-      print('Verse key removal failed, trying ID-based removal');
-      success = await notifier.removeBookmark(bookmark.id);
+    try {
+      // Try verse key-based removal first (most reliable)
+      if (bookmark.verseKey.isNotEmpty) {
+        print('Attempting removal by verse key: ${bookmark.verseKey}');
+        success = await notifier.removeBookmarkByVerseKey(bookmark.verseKey);
+        print('Verse key removal result: $success');
+      }
+      
+      // If verse key removal failed and we have a valid ID, try ID-based removal
+      if (!success && bookmark.id > 0) {
+        print('Verse key removal failed, trying ID-based removal with ID: ${bookmark.id}');
+        success = await notifier.removeBookmark(bookmark.id);
+        print('ID-based removal result: $success');
+      }
+      
+      // If both failed, check if bookmark still exists in state
+      if (!success) {
+        print('Both removal methods failed. Checking bookmark state...');
+        final bookmarkState = ref.read(bookmarkNotifierProvider(userId));
+        final stillExists = bookmarkState.bookmarks.any((b) => 
+          b.verseKey == bookmark.verseKey || b.id == bookmark.id
+        );
+        print('Bookmark still exists in state: $stillExists');
+        
+        // If it doesn't exist in state, it might have been removed already
+        if (!stillExists) {
+          print('Bookmark not found in state, refreshing from database...');
+          await notifier.refreshBookmarks();
+          success = true; // Consider it successful if it's not in state
+        }
+      }
+    } catch (e, stackTrace) {
+      print('Error during bookmark removal: $e');
+      print('Stack trace: $stackTrace');
+      errorMessage = e.toString();
+      success = false;
     }
     
-    print('Remove bookmark success: $success');
+    print('Final removal success: $success');
     
-    if (success && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Захира хориҷ карда шуд'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Хатоги дар хориҷ кардани захира'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+    if (context.mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Захира хориҷ карда шуд'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage != null 
+              ? 'Хатоги: $errorMessage' 
+              : 'Хатоги дар хориҷ кардани захира'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

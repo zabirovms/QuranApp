@@ -15,6 +15,7 @@ class HiveUtils {
     await Hive.openBox(AppConstants.searchHistoryBox);
     await Hive.openBox(AppConstants.tasbeehBox);
     await Hive.openBox(AppConstants.wordLearningBox);
+    await Hive.openBox(AppConstants.downloadedTranslationsBox);
   }
   
   // Settings Box
@@ -34,6 +35,9 @@ class HiveUtils {
   
   // Word Learning Box
   static Box get wordLearningBox => Hive.box(AppConstants.wordLearningBox);
+  
+  // Downloaded Translations Box
+  static Box get downloadedTranslationsBox => Hive.box(AppConstants.downloadedTranslationsBox);
   
   // Generic methods for all boxes
   static Future<void> put(String boxName, String key, dynamic value) async {

@@ -19,6 +19,7 @@ class AppConstants {
   static const String searchHistoryBox = 'search_history';
   static const String tasbeehBox = 'tasbeeh';
   static const String wordLearningBox = 'word_learning';
+  static const String downloadedTranslationsBox = 'downloaded_translations';
   
   // Audio Configuration
   static const String audioBaseUrl = 'https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy';
@@ -65,7 +66,25 @@ class AppConstants {
   ];
   
   // Default Language
-  static const String defaultLanguage = 'tajik';
+  static const String defaultLanguage = 'tj_2'; // Абуаломуддин
+  
+  // Translation Names
+  static String getTranslationName(String languageCode) {
+    switch (languageCode) {
+      case 'tajik':
+        return 'Абдул Муҳаммад Оятӣ';
+      case 'tj_2':
+        return 'Абуаломуддин (бо тафсир)';
+      case 'tj_3':
+        return 'Pioneers of Translation Center';
+      case 'farsi':
+        return 'Форсӣ';
+      case 'russian':
+        return 'Эльмир Кулиев';
+      default:
+        return 'Тоҷикӣ';
+    }
+  }
   
   // Font Sizes
   static const double minFontSize = 12.0;

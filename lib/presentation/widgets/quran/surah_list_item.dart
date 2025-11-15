@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../data/models/surah_model.dart';
 
-class SurahListItem extends ConsumerWidget {
+class SurahListItem extends ConsumerStatefulWidget {
   final SurahModel surah;
   final VoidCallback? onTap;
 
@@ -15,32 +15,46 @@ class SurahListItem extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SurahListItem> createState() => _SurahListItemState();
+}
+
+class _SurahListItemState extends ConsumerState<SurahListItem> {
+  bool _showArabicName = true;
+
+  void _toggleDisplay() {
+    setState(() {
+      _showArabicName = !_showArabicName;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
-        onTap: onTap ?? () => context.push('/surah/${surah.number}'),
+        onTap: widget.onTap ?? () => context.push('/surah/${widget.surah.number}'),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Surah number
+              // Surah number (outlined circle, no fill)
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary,
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: colorScheme.onSurface.withOpacity(0.4), width: 2),
                 ),
                 child: Center(
                   child: Text(
-                    '${surah.number}',
+                    '${widget.surah.number}',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onPrimary,
+                      color: colorScheme.onSurface.withOpacity(0.8),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -54,22 +68,22 @@ class SurahListItem extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Arabic name
+                    // Tajik name (Сураи {nameTajik})
                     Text(
-                      surah.nameArabic,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      'Сураи ${widget.surah.nameTajik}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
                       ),
-                      textDirection: TextDirection.rtl,
                     ),
                     
                     const SizedBox(height: 4),
                     
-                    // Tajik name
+                    // Revelation type (under Tajik name, always visible)
                     Text(
-                      surah.nameTajik,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.8),
+                      widget.surah.revelationType,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.6),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -78,7 +92,7 @@ class SurahListItem extends ConsumerWidget {
                     
                     // Verses count (localized)
                     Text(
-                      '${surah.versesCount} оят',
+                      '${widget.surah.versesCount} оят',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurface.withOpacity(0.6),
                       ),
@@ -87,22 +101,17 @@ class SurahListItem extends ConsumerWidget {
                 ),
               ),
               
-              // Revelation type indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: surah.revelationType == 'Маккӣ' 
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  surah.revelationType,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: surah.revelationType == 'Маккӣ' 
-                        ? Colors.green[700]
-                        : Colors.blue[700],
-                    fontWeight: FontWeight.w500,
+              // Arabic name or revelation type (toggleable - on right side)
+              GestureDetector(
+                onTap: _toggleDisplay,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Text(
+                    _showArabicName ? widget.surah.nameArabic : widget.surah.revelationType,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textDirection: _showArabicName ? TextDirection.rtl : TextDirection.ltr,
                   ),
                 ),
               ),

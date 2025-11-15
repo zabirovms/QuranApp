@@ -16,6 +16,8 @@ DuaModel _$DuaModelFromJson(Map<String, dynamic> json) => DuaModel(
       category: json['category'] as String?,
       description: json['description'] as String?,
       isFavorite: json['isFavorite'] as bool?,
+      prophet: json['prophet'] as String?,
+      prophetArabic: json['prophet_arabic'] as String?,
     );
 
 Map<String, dynamic> _$DuaModelToJson(DuaModel instance) => <String, dynamic>{
@@ -28,4 +30,6 @@ Map<String, dynamic> _$DuaModelToJson(DuaModel instance) => <String, dynamic>{
       'category': instance.category,
       'description': instance.description,
       'isFavorite': instance.isFavorite,
+      'prophet': instance.prophet,
+      'prophet_arabic': instance.prophetArabic,
     };

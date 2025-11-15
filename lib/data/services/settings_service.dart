@@ -108,6 +108,14 @@ class SettingsService {
     return _prefs.getBool('word_by_word_mode') ?? false;
   }
 
+  Future<void> setShowOnlyArabic(bool show) async {
+    await _prefs.setBool('show_only_arabic', show);
+  }
+
+  bool getShowOnlyArabic() {
+    return _prefs.getBool('show_only_arabic') ?? false;
+  }
+
   // Content view mode
   Future<void> setContentViewMode(String mode) async {
     await _prefs.setString('content_view_mode', mode);
@@ -243,6 +251,7 @@ class SettingsService {
       'show_transliteration': getShowTransliteration(),
       'show_tafsir': getShowTafsir(),
       'word_by_word_mode': getWordByWordMode(),
+      'show_only_arabic': getShowOnlyArabic(),
       'content_view_mode': getContentViewMode(),
       'tasbeeh_target': getTasbeehTarget(),
       'vibration_enabled': getVibrationEnabled(),
@@ -290,6 +299,9 @@ class SettingsService {
           break;
         case 'word_by_word_mode':
           await setWordByWordMode(value as bool);
+          break;
+        case 'show_only_arabic':
+          await setShowOnlyArabic(value as bool);
           break;
         case 'content_view_mode':
           await setContentViewMode(value as String);

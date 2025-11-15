@@ -1,0 +1,1491 @@
+{
+  "code": 200,
+  "status": "OK",
+  "data": [
+    {
+      "name": "الرَّحْمَنُ",
+      "transliteration": "Ar Rahmaan",
+      "number": 1,
+      "found": "(1:3) (17:110)",
+      "en": {
+        "meaning": "The Beneficent",
+        "desc": "He who wills goodness and mercy for all His creatures"
+      },
+      "tajik": {
+        "transliteration": "Ар-Раҳмон",
+        "meaning": "Бениҳоят бахшанда",
+        "description": "Он ки барои ҳамаи мавҷудоти Худ некӣ ва раҳмат мехоҳад."
+      }
+    },
+    {
+      "name": "الرَّحِيمُ",
+      "transliteration": "Ar Raheem",
+      "number": 2,
+      "found": "(2:163) (3: 31) (4:100) (5:3)",
+      "en": {
+        "meaning": "The Merciful",
+        "desc": "He who acts with extreme kindness "
+      },
+      "tajik": {
+        "transliteration": "Ар-Раҳим",
+        "meaning": "Бениҳоят меҳрубон",
+        "description": "Он ки бо меҳрубонии бепоён амал мекунад."
+      }
+    },
+    {
+      "name": "الْمَلِكُ",
+      "transliteration": "Al Malik",
+      "number": 3,
+      "found": "(20:114)(23:116)(59:23)(62:1)",
+      "en": {
+        "meaning": "The King / Eternal Lord",
+        "desc": "The Sovereign Lord, The One with the complete Dominion, the One Whose Dominion is clear from imperfection "
+      },
+      "tajik": {
+        "transliteration": "Ал-Малик",
+        "meaning": "Подшоҳ / Парвардигори абадӣ",
+        "description": "Подшоҳи Мутлақ, Он Зоте, ки тамоми Ҳокимиятро дорад, Он Зоте, ки Ҳокимияташ аз нуқсонҳо пок аст."
+      }
+    },
+    {
+      "name": "الْقُدُّوسُ",
+      "transliteration": "Al Quddus",
+      "number": 4,
+      "found": "(59:23) (62:1)",
+      "en": {
+        "meaning": "The Purest",
+        "desc": "The One who is pure from any imperfection and clear from children and adversaries"
+      },
+      "tajik": {
+        "transliteration": "Ал-Қуддус",
+        "meaning": "Поктарин",
+        "description": "Он Зоте, ки аз ҳар гуна нуқсон пок аст ва аз фарзандон ва шарикон/ҳамтоён орӣ аст."
+      }
+    },
+    {
+      "name": "السَّلاَمُ",
+      "transliteration": "As Salaam",
+      "number": 5,
+      "found": "(59:23)",
+      "en": {
+        "meaning": "The Source of Peace",
+        "desc": "The one who provides peace, calm and serenity. By citing this name, we declare peace for ourselves and for those around us."
+      },
+      "tajik": {
+        "transliteration": "Ас-Салом",
+        "meaning": "Манбаи сулҳ",
+        "description": "Он Зоте, ки сулҳ, оромиш, субот ва таскинро ато мекунад. Бо зикри ин Ном, мо барои худ ва атрофиёнамон сулҳу осоиштагиро талаб мекунем."
+      }
+    },
+    {
+      "name": "الْمُؤْمِنُ",
+      "transliteration": "Al Mu'min",
+      "number": 6,
+      "found": "(59:23)",
+      "en": {
+        "meaning": "The inspirer of faith",
+        "desc": "This name is mysterious even for Muslims because \\\"Al-Mu'min\\\" comes from the name \\\"Al-iman\\\" which means to believe, from where comes the name \\\"Al-Mu'minoune\\\" which means believers, it is is the name of the Koran for people who believe in 6 things: the oneness of God, the existence of angels, holy books (Torah, Gospel and Psalms (Zabor) unmodified and the Koran), the prophets, the last day (the day of judgment) and fate its evil and its good. The exact meaning of this name is very difficult to pin down in its original meaning but can be understood from a deeper and more mystical point of view."
+      },
+      "tajik": {
+        "transliteration": "Ал-Муъмин",
+        "meaning": "Атокунандаи оромиш / Манбаи имон",
+        "description": "Ин ном ҳатто барои мусалмонон сирромез аст, зеро 'Ал-Муъмин' аз номи 'Ал-Имон' сарчашма мегирад, ки маънои бовар карданро дорад. Аз ҳамин ҷо номи 'Ал-Муъминун' ба вуҷуд омадааст, ки маънояш мӯъминон аст. Ин номи Қуръон барои одамонест, ки ба 6 чиз бовар доранд: ягонагии Худо, вуҷуди фариштагон, китобҳои муқаддас (Таврот, Инҷил ва Забур дар ҳолати тағйирнаёфта ва Қуръон), паёмбарон, рӯзи охират (рӯзи қиёмат) ва қазою қадар бо ҳамаи некию бадиаш. Дарёфти маънои дақиқи ин ном дар мафҳуми аслии он хеле душвор аст, аммо онро аз нуқтаи назари амиқтар ва ирфонӣ дарк кардан мумкин аст."
+      }
+    },
+    {
+      "name": "الْمُهَيْمِنُ",
+      "transliteration": "Al Muhaymin",
+      "number": 7,
+      "found": "(59:23)",
+      "en": {
+        "meaning": "The Guardian",
+        "desc": "Whoever dominates His creation and by His omnipotence in all aspects, no state or aspect in this world or the other escapes His will."
+      },
+      "tajik": {
+        "transliteration": "Ал-Муҳаймин",
+        "meaning": "Муҳофиз",
+        "description": "Он Зоте, ки бар офаридаҳои Худ ҳукмрон аст ва бо қудрати мутлақи Худ дар ҳама ҷиҳатҳо ғолиб аст, ҳеҷ ҳолат ё ҷиҳате дар ин дунё ва ё охират аз иродаи Ӯ берун намемонад."
+      }
+    },
+    {
+      "name": "الْعَزِيزُ",
+      "transliteration": "Al Azeez",
+      "number": 8,
+      "found": "(3:6)(4:15 8)(9:40)(4 8:7)",
+      "en": {
+        "meaning": "The Precious / The Most Mighty",
+        "desc": "The Glorious by His supremacy and His greatness, El-Aziz means in a sense the one who is dear and precious in the eyes of His creatures. He is not the servant of any creature, and no creature dictates to him what to do."
+      },
+      "tajik": {
+        "transliteration": "Ал-Азиз",
+        "meaning": "Азиз / Бисёр Қавӣ",
+        "description": null
+      }
+    },
+    {
+      "name": "الْجَبَّارُ",
+      "transliteration": "Al Jabbaar",
+      "number": 9,
+      "found": "(59:23)",
+      "en": {
+        "meaning": "The Compeller",
+        "desc": "The grandiose, the ultimate powerful by His greatness and His unlimited strength. When He destroys the oppressors (unjust and sinners) He applies His sentence with righteousness."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҷаббор",
+        "meaning": "Ҷаббор",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُتَكَبِّرُ",
+      "transliteration": "Al Mutakabbir",
+      "number": 10,
+      "found": "(59:23)",
+      "en": {
+        "meaning": "The Greatest",
+        "desc": "He who is superior to His creatures, no creature has the right to claim greatness."
+      },
+      "tajik": {
+        "transliteration": "Ал-Мутакаббир",
+        "meaning": "Бузургтарин",
+        "description": null
+      }
+    },
+    {
+      "name": "الْخَالِقُ",
+      "transliteration": "Al Khaaliq",
+      "number": 11,
+      "found": "(6:102)(13:16)(39:62)(40:62)(59:24)",
+      "en": {
+        "meaning": "The Creator",
+        "desc": "The Creator of all existences, living or dead, mobile or frozen."
+      },
+      "tajik": {
+        "transliteration": "Ал-Холиқ",
+        "meaning": "Офаридгор",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَارِئُ",
+      "transliteration": "Al Baari",
+      "number": 12,
+      "found": "(59:24)",
+      "en": {
+        "meaning": "The Maker of Order",
+        "desc": "He who lifts His creation above all faults or imperfections."
+      },
+      "tajik": {
+        "transliteration": "Ал-Бориъ",
+        "meaning": "Тартибдиҳанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُصَوِّرُ",
+      "transliteration": "Al Musawwir",
+      "number": 13,
+      "found": "(59:24)",
+      "en": {
+        "meaning": "The Shaper of Beauty",
+        "desc": "The one who gives the look and the appearance to each creation from the inside as well as from the outside. In lost Arabic, literally, this word means sculptor and, in modern Arabic, literally means designer."
+      },
+      "tajik": {
+        "transliteration": "Ал-Мусаввир",
+        "meaning": "Суратофар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْغَفَّارُ",
+      "transliteration": "Al Ghaffaar",
+      "number": 14,
+      "found": "(20:82)(38:66)(39:5)(40:42)(71:10)",
+      "en": {
+        "meaning": "The Forgiving",
+        "desc": "Is the One who forgives what He wants to whom He wants."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ғаффор",
+        "meaning": "Бахшоянда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْقَهَّارُ",
+      "transliteration": "Al Qahhaar",
+      "number": 15,
+      "found": "(13:16)(14:48)(38:65)(39:4)(40:16)",
+      "en": {
+        "meaning": "The Subduer",
+        "desc": "Is the One who is almighty to submit all creation to His will."
+      },
+      "tajik": {
+        "transliteration": "Ал-Қаҳҳор",
+        "meaning": "Зуҳуркунанда / Ғолиби Мутлақ",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَهَّابُ",
+      "transliteration": "Al Wahhaab",
+      "number": 16,
+      "found": "(3:8)(38:9)(38:35)",
+      "en": {
+        "meaning": "The Giver of All",
+        "desc": "Is the One who gives immensely without receiving anything in return"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ваҳҳоб",
+        "meaning": "Атокунандаи ҳама чиз",
+        "description": null
+      }
+    },
+    {
+      "name": "الرَّزَّاقُ",
+      "transliteration": "Ar Razzaaq",
+      "number": 17,
+      "found": "(51:58)",
+      "en": {
+        "meaning": "The Sustainer",
+        "desc": "Is the One who makes distribute to every creature what it needs."
+      },
+      "tajik": {
+        "transliteration": "Ар-Раззоқ",
+        "meaning": "Ризқдиҳанда, Рӯзидиҳанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْفَتَّاحُ",
+      "transliteration": "Al Fattaah",
+      "number": 18,
+      "found": "(34:26)",
+      "en": {
+        "meaning": "The Opener",
+        "desc": "Is He Who alone knows the keys to the future and the unknown, by His knowledge and by His wisdom. This name is often associated with the following name \"Al-‘Alīm\"."
+      },
+      "tajik": {
+        "transliteration": "Ал-Фаттоҳ",
+        "meaning": "Кӯшоянда",
+        "description": null
+      }
+    },
+    {
+      "name": "اَلْعَلِيْمُ",
+      "transliteration": "Al 'Aleem",
+      "number": 19,
+      "found": "(2:158)(3:92)(4:35)(24:41)(33:40)",
+      "en": {
+        "meaning": "The Knower of all",
+        "desc": "The one from whom nothing can hide, for He knows everything and is aware of everything."
+      },
+      "tajik": {
+        "transliteration": "Ал-'Алим",
+        "meaning": "Донои ҳама чиз",
+        "description": null
+      }
+    },
+    {
+      "name": "الْقَابِضُ",
+      "transliteration": "Al Qaabid",
+      "number": 20,
+      "found": "(2:245)",
+      "en": {
+        "meaning": "The Constrictor",
+        "desc": "Is the One who restricts His good according to wisdom."
+      },
+      "tajik": {
+        "transliteration": "Ал-Қобиз",
+        "meaning": "Камкунандаи ризқ / Маҳдудкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَاسِطُ",
+      "transliteration": "Al Baasit",
+      "number": 21,
+      "found": "(2:245)",
+      "en": {
+        "meaning": "The Reliever",
+        "desc": "Is the One who frees, increases and multiplies his good according to wisdom."
+      },
+      "tajik": {
+        "transliteration": "Ал-Босит",
+        "meaning": "Фароху Васеъкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْخَافِضُ",
+      "transliteration": "Al Khaafid",
+      "number": 22,
+      "found": "(56:3)",
+      "en": {
+        "meaning": "The Abaser",
+        "desc": "Is the One who destines the oppressors and the proud to demeanor and chastisement."
+      },
+      "tajik": {
+        "transliteration": "Ал-Хофиз",
+        "meaning": "Пасткунандаи мартаба",
+        "description": null
+      }
+    },
+    {
+      "name": "الرَّافِعُ",
+      "transliteration": "Ar Raafi'",
+      "number": 23,
+      "found": "(58:11)(6:83)",
+      "en": {
+        "meaning": "The Exalter",
+        "desc": "The Breeder in the sense of raising, the one who elevates the honor, the status and the prestige of a being in this lower world and in the hereafter."
+      },
+      "tajik": {
+        "transliteration": "Ар-Рофиъ'",
+        "meaning": "Баландкунандаи мартаба",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُعِزُّ",
+      "transliteration": "Al Mu'iz",
+      "number": 24,
+      "found": "(3:26)",
+      "en": {
+        "meaning": "The Bestower of Honour",
+        "desc": "One who offers honor and precious value."
+      },
+      "tajik": {
+        "transliteration": "Ал-Муъиз",
+        "meaning": "Иззатдиҳанда",
+        "description": null
+      }
+    },
+    {
+      "name": "المُذِلُّ",
+      "transliteration": "Al Mudhil",
+      "number": 25,
+      "found": "(3:26)",
+      "en": {
+        "meaning": "The Humiliator",
+        "desc": "Is the One who can humiliate and devalue any valiant."
+      },
+      "tajik": {
+        "transliteration": "Ал-Музил",
+        "meaning": "Хоркунанда / Залилкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "السَّمِيعُ",
+      "transliteration": "As Samee'",
+      "number": 26,
+      "found": "(2:127)(2:256)(8:17)(49:1)",
+      "en": {
+        "meaning": "The Hearer of all",
+        "desc": "One who hears any noise or sound in His kingdom emanating from any creature and also One who listens to the invocations of His creatures to respond to their invocations."
+      },
+      "tajik": {
+        "transliteration": "Ас-Самиъ",
+        "meaning": "Шунаванда / Гӯшкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَصِيرُ",
+      "transliteration": "Al Baseer",
+      "number": 27,
+      "found": "(4:58)(17:1)(42:11)(42:27)",
+      "en": {
+        "meaning": "The Seer of all",
+        "desc": "Is the One from whom nothing that exists or comes into existence can escape without the slightest use of an eye, instrument or organ."
+      },
+      "tajik": {
+        "transliteration": "Ал-Басир",
+        "meaning": "Бинанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَكَمُ",
+      "transliteration": "Al Hakam",
+      "number": 28,
+      "found": "(22:69)",
+      "en": {
+        "meaning": "The Judge",
+        "desc": "He is the One who judges and decides between creatures here below and in the hereafter and He who ensures equity between the creatures and no one else will and will not be able to decide between them and judge them; and the Judgment in the hereafter will be perfectly just and appropriate."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳакам",
+        "meaning": "Довар / Ҳукмдиҳанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْعَدْلُ",
+      "transliteration": "Al 'Adl",
+      "number": 29,
+      "found": "(6:115)",
+      "en": {
+        "meaning": "The Just",
+        "desc": "Is the One who is free from all forms of injustice and / or oppression."
+      },
+      "tajik": {
+        "transliteration": "Ал-Адл",
+        "meaning": "Адолатпеша",
+        "description": null
+      }
+    },
+    {
+      "name": "اللَّطِيفُ",
+      "transliteration": "Al Lateef",
+      "number": 30,
+      "found": "(6:103)(22:63)(31:16)(33:34)",
+      "en": {
+        "meaning": "The Subtle One",
+        "desc": "Is the One who grants his creatures His gentleness and His benevolence."
+      },
+      "tajik": {
+        "transliteration": "Ал-Латиф",
+        "meaning": "Нозук / Борикбин / Бо лутфу карам",
+        "description": null
+      }
+    },
+    {
+      "name": "الْخَبِيرُ",
+      "transliteration": "Al Khabeer",
+      "number": 31,
+      "found": "(6:18)(17:30)(49:13)(59:18)",
+      "en": {
+        "meaning": "The All Aware",
+        "desc": "He is the One from whom cannot be hidden the reality of everything that exists, that is to say the truth of things; no detail escapes Him, neither the thing as a whole, nor each of its parts; and to claim to be able to hide things from the One who creates everything is a delusion and a disbelief."
+      },
+      "tajik": {
+        "transliteration": "Ал-Хабир",
+        "meaning": "Огоҳ, Бохабар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَلِيمُ",
+      "transliteration": "Al Haleem",
+      "number": 32,
+      "found": "(2:235)(17:44)(22:59)(35:41)",
+      "en": {
+        "meaning": "The Forebearing",
+        "desc": "Is the One whose patience towards the disbeliefs of sinners exceeds all imagination (it is possible that forgiveness will be granted to them)."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳалим",
+        "meaning": "Сабур, Ботаҳаммул",
+        "description": null
+      }
+    },
+    {
+      "name": "الْعَظِيمُ",
+      "transliteration": "Al 'Azeem",
+      "number": 33,
+      "found": "(2:255)(42:4)(56:96)",
+      "en": {
+        "meaning": "The Maginificent",
+        "desc": "This name is difficult to translate because it includes several French words that do not share the same spiritual meaning, but it can be approached as follows: \"Al-Adhīm\" He who is Gigantic Majestic and Fantastically Grandiose far from any bodily or material imperfection"
+      },
+      "tajik": {
+        "transliteration": "Ал-'Азим",
+        "meaning": "Бузург",
+        "description": null
+      }
+    },
+    {
+      "name": "الْغَفُورُ",
+      "transliteration": "Al Ghafoor",
+      "number": 34,
+      "found": "(2:173)(8:69)(16:110)(41:32)",
+      "en": {
+        "meaning": "The Great Forgiver",
+        "desc": "Is the One who forgives immensely over and over again."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ғафур",
+        "meaning": "Бахшандаи Бузург, Бахшандатарин",
+        "description": null
+      }
+    },
+    {
+      "name": "الشَّكُورُ",
+      "transliteration": "Ash Shakoor",
+      "number": 35,
+      "found": "(35:30)(35:34)(42:23)(64:17)",
+      "en": {
+        "meaning": "The Rewarder of Thankfulness",
+        "desc": "Is the One who shows His gratitude for worshipers, however incredibly easy to perform."
+      },
+      "tajik": {
+        "transliteration": "Аш-Шакур",
+        "meaning": "Беҳтарин Қадрдон",
+        "description": null
+      }
+    },
+    {
+      "name": "الْعَلِيُّ",
+      "transliteration": "Al 'Aliyy",
+      "number": 36,
+      "found": "(4:34)(31:30)(42:4)(42:51)",
+      "en": {
+        "meaning": "The Highest",
+        "desc": "Is the One who is above all that He created perfectly and unimaginably."
+      },
+      "tajik": {
+        "transliteration": "Ал-'Алий",
+        "meaning": "Бартар / Аъло",
+        "description": null
+      }
+    },
+    {
+      "name": "الْكَبِيرُ",
+      "transliteration": "Al Kabeer",
+      "number": 37,
+      "found": "(13:9)(22:62)(31:30)",
+      "en": {
+        "meaning": "The Greatest",
+        "desc": "The Great: One who is greater than His creation, a greatness that only He knows."
+      },
+      "tajik": {
+        "transliteration": "Ал-Кабир",
+        "meaning": "Бузургтарин",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَفِيظُ",
+      "transliteration": "Al Hafeez",
+      "number": 38,
+      "found": "(11:57)(34:21)(42:6)",
+      "en": {
+        "meaning": "The Preserver",
+        "desc": "Is the One who protects and preserves His good."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳофиз",
+        "meaning": "Нигаҳбони ҳама",
+        "description": null
+      }
+    },
+    {
+      "name": "المُقيِت",
+      "transliteration": "Al Muqeet",
+      "number": 39,
+      "found": "(4:85)",
+      "en": {
+        "meaning": "The Sustainer",
+        "desc": "this word is among the lost words of the ancient Arabic language; very difficult to translate even in modern Arabic}. It would mean: Is the One who leaves no detail when He judges, even the most trivial."
+      },
+      "tajik": {
+        "transliteration": "Ал-Муқит",
+        "meaning": "Қувватдиҳанда, Нигаҳдоранда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحسِيبُ",
+      "transliteration": "Al Haseeb",
+      "number": 40,
+      "found": "(4:6)(4:86)(33:39)",
+      "en": {
+        "meaning": "The Reckoner, The Sufficient",
+        "desc": "He is the One who will count all the facts of His creatures without forgetting or error."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳасиб",
+        "meaning": "Ҳисобгар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْجَلِيلُ",
+      "transliteration": "Al Jaleel",
+      "number": 41,
+      "found": "(55:27)(39:14)(7:143)",
+      "en": {
+        "meaning": "The Majestic",
+        "desc": "Is the One who is perfectly exempt from being compared to His creatures or from being like Him."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҷалил",
+        "meaning": "Шукӯҳманд, Олимартаба",
+        "description": null
+      }
+    },
+    {
+      "name": "الْكَرِيمُ",
+      "transliteration": "Al Kareem",
+      "number": 42,
+      "found": "(27:40)(82:6)",
+      "en": {
+        "meaning": "The Most Generous, The Most Esteemed",
+        "desc": "Is the One who flooded His creation with His generosity."
+      },
+      "tajik": {
+        "transliteration": "Ал-Карим",
+        "meaning": "Бо Карам ва Эҳсон",
+        "description": null
+      }
+    },
+    {
+      "name": "الرَّقِيبُ",
+      "transliteration": "Ar Raqeeb",
+      "number": 43,
+      "found": "(4:1)(5:117)",
+      "en": {
+        "meaning": "The Watchful One",
+        "desc": "Is the One who observes and beholds all that He has created (and the actions of creatures are also creations)."
+      },
+      "tajik": {
+        "transliteration": "Ар-Рақиб",
+        "meaning": "Нигаҳбон",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُجِيبُ",
+      "transliteration": "Al Mujeeb ",
+      "number": 44,
+      "found": "(11:61)",
+      "en": {
+        "meaning": "The Responder to Prayer",
+        "desc": "Is the One who answers the invocations of His creatures if He wills and to whom He wills."
+      },
+      "tajik": {
+        "transliteration": "Ал-Муҷиб",
+        "meaning": "Ҷавобдиҳанда, Иҷобаткунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَاسِعُ",
+      "transliteration": "Al Waasi'",
+      "number": 45,
+      "found": "(2:268)(3:73)(5:54)",
+      "en": {
+        "meaning": "The All-Encompassing, the Boundless",
+        "desc": "This name in Arabic means: immensely wide, but to qualify God it is understood that He has filled every void and has contained all things in a way that only He knows."
+      },
+      "tajik": {
+        "transliteration": "Ал-Восиъ'",
+        "meaning": "Ҳамагир, Беканор",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَكِيمُ",
+      "transliteration": "Al Hakeem",
+      "number": 46,
+      "found": "(31:27)(46:2)(57:1)(66:2)",
+      "en": {
+        "meaning": "The Perfectly Wise",
+        "desc": "He whose Wisdom has dazzled, dazzled and will dazzle any conscious and intelligent mind."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳаким",
+        "meaning": "Боҳикмат, Ҳамадон, Донандаи ҳақиқати ҳама чиз",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَدُودُ",
+      "transliteration": "Al Wudood",
+      "number": 47,
+      "found": "(11:90)(85:14)",
+      "en": {
+        "meaning": "The Most Loving",
+        "desc": "This word in Arabic means: The one who draws near to his beloved by mercy, pity and beneficence, but when one reads this name in the \"Koran\", one feels each time different meanings which are difficult to translate into words}. We can try to translate it: The one who draws near to His servants out of pity although they move away from Him and do not glorify Him."
+      },
+      "tajik": {
+        "transliteration": "Ал-Вадуд",
+        "meaning": "Дӯстдоранда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمَجِيدُ",
+      "transliteration": "Al Majeed",
+      "number": 48,
+      "found": "(11:73) ",
+      "en": {
+        "meaning": "The Glorious One, The Most Honorable",
+        "desc": "Is the One who is glorified in the infinitely past, present and eternal."
+      },
+      "tajik": {
+        "transliteration": "Ал-Маҷид",
+        "meaning": "Шоистаи шараф / Муҳтарамтарин",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَاعِثُ",
+      "transliteration": "Al Baa'ith",
+      "number": 49,
+      "found": "(22:7)",
+      "en": {
+        "meaning": "The Resurrector",
+        "desc": "Is the One who raises the dead and deploys life in whatever He wants, be they men, animals or simply earth."
+      },
+      "tajik": {
+        "transliteration": "Ал-Боъис",
+        "meaning": "Зиндакунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الشَّهِيدُ",
+      "transliteration": "Ash Shaheed",
+      "number": 50,
+      "found": "(4:166)(22:17)(41:53)(48:28)",
+      "en": {
+        "meaning": "The Witness",
+        "desc": "Le T\\u00E9moin : Allah est l'ultime et parfait t\\u00E9moin de tout ce qui s'est pass\\u00E9 dans Son royaume, avec des preuves claires et flagrantes, parfaitement irr\\u00E9prochables."
+      },
+      "tajik": {
+        "transliteration": "Аш-Шаҳид",
+        "meaning": "Гувоҳ, Шоҳид",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَقُّ",
+      "transliteration": "Al Haqq",
+      "number": 51,
+      "found": "(6:62)(22:6)(23:116)(24:25)",
+      "en": {
+        "meaning": "The Truth",
+        "desc": "Is the One who holds the absolute Truth."
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳаққ",
+        "meaning": "Ҳақ, Барҳақ",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَكِيلُ",
+      "transliteration": "Al Wakeel",
+      "number": 52,
+      "found": "(3:173)(4:171)(28:28)(73:9)",
+      "en": {
+        "meaning": "The Trustee",
+        "desc": "Is the One who guarantees the sustenance of creatures and the One from whom nothing of their every state can be concealed"
+      },
+      "tajik": {
+        "transliteration": "Ал-Вакил",
+        "meaning": "Вакил / Корсоз / Намоянда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْقَوِيُّ",
+      "transliteration": "Al Qawiyy",
+      "number": 53,
+      "found": "(22:40)(22:74)(42:19)(57:25)",
+      "en": {
+        "meaning": "The Possessor of all strength",
+        "desc": "The Mighty: Allah is the most powerful, the strongest, his strength has no limit and is not described with definitions of physical strength."
+      },
+      "tajik": {
+        "transliteration": "Ал-Қавий",
+        "meaning": "Қавӣ, Пурқудраттарин",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمَتِينُ",
+      "transliteration": "Al Mateen",
+      "number": 54,
+      "found": "(51:58)",
+      "en": {
+        "meaning": "The Forceful",
+        "desc": "The Enduring: An endurance worthy of Him, unlimited, indefatigable, and which is not marred by any weakness, without pause, without interruption and which no factor can attenuate."
+      },
+      "tajik": {
+        "transliteration": "Ал-Матин",
+        "meaning": "Устувор / Мустаҳкам",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَلِيُّ",
+      "transliteration": "Al Waliyy",
+      "number": 55,
+      "found": "(4:45)(7:196)(42:28)(45:19)",
+      "en": {
+        "meaning": "The Protector",
+        "desc": "Is the One who preserves the believing servants, so the prophets and those who follow them are those who are the \"preserved people\" in the sense that they have been guided to the obligatory thanks to Him who makes them exist, that is, that is to say with regard to Allah"
+      },
+      "tajik": {
+        "transliteration": "Ал-Валий",
+        "meaning": "Дӯст ва Ҳимоягар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَمِيدُ",
+      "transliteration": "Al Hameed",
+      "number": 56,
+      "found": "(14:8)(31:12)(31:26)(41:42)",
+      "en": {
+        "meaning": "The Praised",
+        "desc": "Is the One who deserves the thanksgiving, the glorification and the song of praise more than any other"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳамид",
+        "meaning": "Сазовори Ситоиш",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُحْصِي",
+      "transliteration": "Al Muhsi",
+      "number": 57,
+      "found": "(72:28)(78:29)(82:10-12)",
+      "en": {
+        "meaning": "The All-Enumerating, The Counter",
+        "desc": "Literally translated as the counter but means the One who counts every creature, every act, every speck of dust in his kingdom and of whom nothing escapes his knowledge"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муҳсий",
+        "meaning": "Ҳисобгар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُبْدِئُ",
+      "transliteration": "Al Mubdi",
+      "number": 58,
+      "found": "(10:34)(27:64)(29:19)(85:13)",
+      "en": {
+        "meaning": "The Originator",
+        "desc": "Is the One who gives a beginning to what does not exist without a beginning, without a model, that is to say, the One who creates creatures"
+      },
+      "tajik": {
+        "transliteration": "Ал-Мубди'",
+        "meaning": "Оғозгар / Офаридгори аввал",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُعِيدُ",
+      "transliteration": "Al Mu'eed",
+      "number": 59,
+      "found": "(10:34)(27:64)(29:19)(85:13)",
+      "en": {
+        "meaning": "The Restorer",
+        "desc": "Is the One who brings the living back to death after life and the One who brings the dead back to life after death"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муъид",
+        "meaning": "Бозбарқароркунанда, Дубора Баргадонанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُحْيِي",
+      "transliteration": "Al Muhiy",
+      "number": 60,
+      "found": "(7:158)(15:23)(30:50)(57:2)",
+      "en": {
+        "meaning": "The Giver of life",
+        "desc": "Is the One who gives life to a mixture of maniyy, that is to say of seminal liquid, devoid of soul and makes him a living being and the One who gives life to the bodies of humans, jinns and angels by reuniting them with their souls during the resurrection"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муҳйи",
+        "meaning": "Зиндакунанда, Ҷондеҳ, Диҳандаи ҳаёт",
+        "description": null
+      }
+    },
+    {
+      "name": "اَلْمُمِيتُ",
+      "transliteration": "Al Mumeet",
+      "number": 61,
+      "found": "(3:156)(7:158)(15:23)(57:2)",
+      "en": {
+        "meaning": "The Taker of life",
+        "desc": "He is the One who kills living beings and the One who cancels out the power of the powerful of this world by death"
+      },
+      "tajik": {
+        "transliteration": "Ал-Мумит",
+        "meaning": "Миронанда, Гирандаи ҳаёт",
+        "description": null
+      }
+    },
+    {
+      "name": "الْحَيُّ",
+      "transliteration": "Al Haiyy",
+      "number": 62,
+      "found": "(2:255)(3:2)(25:58)(40:65)",
+      "en": {
+        "meaning": "The Ever Living",
+        "desc": "The Living One: Is the One who does not come into existence and yet exists, and the One who possesses a hayah and this attribute is not a life as is the hayah of creatures made up of a combination of soul, flesh and of blood Imam At-Tahawiyy said in his treatise on belief that \"he who attributes to Allah an attribute in a sense which is among those which can be attributed to human beings is disbeliever\""
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳайй",
+        "meaning": "Доимо Зинда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْقَيُّومُ",
+      "transliteration": "Al Qayyoom",
+      "number": 63,
+      "found": "(2:255)(3:2)(20:111)",
+      "en": {
+        "meaning": "The Self Existing",
+        "desc": "Is the One who exists, is eternal and does not change and the One who is not affected by non-existence or annihilation and is in no way affected by controlling and creating the acts of human beings"
+      },
+      "tajik": {
+        "transliteration": "Ал-Қайюм",
+        "meaning": "Пойдор / Абадӣ",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَاجِدُ",
+      "transliteration": "Al Waajid",
+      "number": 64,
+      "found": "(38:44)",
+      "en": {
+        "meaning": "The Perceiver",
+        "desc": "Is the One who does not need anything and is not reached or concerned with want, lack or need"
+      },
+      "tajik": {
+        "transliteration": "Ал-Воҷид",
+        "meaning": "Ёбандаи ҳар чизе",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمَاجِدُ",
+      "transliteration": "Al Maajid",
+      "number": 65,
+      "found": "(11:73)",
+      "en": {
+        "meaning": "The Glorious",
+        "desc": "Is the One who is better than any other and the One who bestows innumerable benefits very widely and without compensation"
+      },
+      "tajik": {
+        "transliteration": "Ал-Маҷид",
+        "meaning": "Бо Шаъну Шараф, Олиқадр",
+        "description": null
+      }
+    },
+    {
+      "name": "الْواحِدُ",
+      "transliteration": "Al Waahid",
+      "number": 66,
+      "found": "(2:163)(5:73)(9:31)(18:110)",
+      "en": {
+        "meaning": "The Only One",
+        "desc": "The Unique: Is the One who has no alter ego, whether in His Being, in His Act, or in His Attributes. Nothing is like him"
+      },
+      "tajik": {
+        "transliteration": "Ал-Воҳид",
+        "meaning": "Якто, Ягона",
+        "description": null
+      }
+    },
+    {
+      "name": "اَلاَحَدُ",
+      "transliteration": "Al Ahad",
+      "number": 67,
+      "found": "(112:1)",
+      "en": {
+        "meaning": "The One",
+        "desc": "The One: Is He Who has uniqueness as an attribute"
+      },
+      "tajik": {
+        "transliteration": "Ал-Аҳад",
+        "meaning": "Якто, Ягона",
+        "description": null
+      }
+    },
+    {
+      "name": "الصَّمَدُ",
+      "transliteration": "As Samad",
+      "number": 68,
+      "found": "(112:2)",
+      "en": {
+        "meaning": "The Supreme Provider",
+        "desc": "Is the One to whom we can rely for any business and who can be called upon for all our needs; One who has no children or parents, neither like nor equivalent, according to Al-Hakim's explanation; The One who needs nothing and the One who everything needs, in order to exist, etc."
+      },
+      "tajik": {
+        "transliteration": "Ас-Самад",
+        "meaning": "Бениёз, Ҳоҷатбарор",
+        "description": null
+      }
+    },
+    {
+      "name": "الْقَادِرُ",
+      "transliteration": "Al Qaadir",
+      "number": 69,
+      "found": "(6:65)(36:81)(46:33)(75:40)",
+      "en": {
+        "meaning": "The Powerful",
+        "desc": "Is the One who is unaffected by weakness, the One whose power is absolute and dominates all creatures and the One whom absolutely nothing can weaken"
+      },
+      "tajik": {
+        "transliteration": "Ал-Қодир",
+        "meaning": "Тавоно / Қодир",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُقْتَدِرُ",
+      "transliteration": "Al Muqtadir",
+      "number": 70,
+      "found": "(18:45)(54:42)(54:55)",
+      "en": {
+        "meaning": "The Creator of all power",
+        "desc": "Is the One who is mighty over all things and the One whose capacities are absolutely limitless"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муқтадир",
+        "meaning": "Таъинкунандаи қудрат, Соҳиби қудрати комил",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُقَدِّمُ",
+      "transliteration": "Al Muqaddim",
+      "number": 71,
+      "found": "(16:61)(17:34)",
+      "en": {
+        "meaning": "The Expediter",
+        "desc": "Is He who is free from the characteristics of creatures and better than any creature; He who fixes the speed of events, accelerates certain things in the eyes of people according to a destiny and grants each thing a value, a rank, a time and characteristics which suit Him according to wisdom"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муқаддим",
+        "meaning": "Пешгузашта, Пешкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُؤَخِّرُ",
+      "transliteration": "Al Mu’akhir",
+      "number": 72,
+      "found": "(71:4)",
+      "en": {
+        "meaning": "The Delayer",
+        "desc": "Is He who is free from the characteristics of creatures and better than any creature; The one who intends the slowness of events and slows down certain things in the eyes of people according to a destiny and grants each thing a value, a rank, a time and characteristics which suit it according to a wisdom (cf no 71)"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муаххир",
+        "meaning": "Таъхиркунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الأوَّلُ",
+      "transliteration": "Al Awwal",
+      "number": 73,
+      "found": "(57:3)",
+      "en": {
+        "meaning": "The First",
+        "desc": "The First: Is the One who exists without creatures, without beginning and without time; One who is exempt from being created, from the appearance of a new attribute and from change, One who exists without coming into existence"
+      },
+      "tajik": {
+        "transliteration": "Ал-Аввал",
+        "meaning": "Аввалин",
+        "description": null
+      }
+    },
+    {
+      "name": "الآخِرُ",
+      "transliteration": "Al Aakhir",
+      "number": 74,
+      "found": "(57:3)",
+      "en": {
+        "meaning": "The Last",
+        "desc": "The Last: Is the One who exists without interruption while the creatures are annihilated at every moment; He who is eternal, He who annihilates and is exempt from being annihilated and the disappearance of one or more attributes; The one that exists without being concerned by the notion of end and annihilation"
+      },
+      "tajik": {
+        "transliteration": "Ал-Охир",
+        "meaning": "Охирин",
+        "description": null
+      }
+    },
+    {
+      "name": "الظَّاهِرُ",
+      "transliteration": "Az Zaahir",
+      "number": 75,
+      "found": "(57:3)",
+      "en": {
+        "meaning": "The Manifest",
+        "desc": "Is the One whose existence is manifested in everything by proofs, from the point of view of power and domination and not what would be present in any body from the point of view of place, image and how"
+      },
+      "tajik": {
+        "transliteration": "Аз-Зоҳир",
+        "meaning": "Ошкор, Зоҳир",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَاطِنُ",
+      "transliteration": "Al Baatin",
+      "number": 76,
+      "found": "(57:3)",
+      "en": {
+        "meaning": "The Hidden",
+        "desc": "Is the One who is preserved from the delusions of creatures attempting to attribute to the Creator human characteristics or characteristics of creatures and the One who creates the characteristics of creatures and their images"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ботин",
+        "meaning": "Пинҳон, Ботин",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَالِي",
+      "transliteration": "Al Waali",
+      "number": 77,
+      "found": "(13:11)(22:7)",
+      "en": {
+        "meaning": "The Governor",
+        "desc": "Is the One who owns, manages and controls all things and the One who creates everything according to wisdom"
+      },
+      "tajik": {
+        "transliteration": "Ал-Воли",
+        "meaning": "Валӣ",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُتَعَالِي",
+      "transliteration": "Al Muta’ali",
+      "number": 78,
+      "found": "(13:9)",
+      "en": {
+        "meaning": "The Supreme One",
+        "desc": "Is the One who is free from the attributes of creatures and the One whose power over creatures is boundless"
+      },
+      "tajik": {
+        "transliteration": "Ал-Мутаъолий",
+        "meaning": "Бартар / Боло",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَرُّ",
+      "transliteration": "Al Barr",
+      "number": 79,
+      "found": "(52:28)",
+      "en": {
+        "meaning": "The Doer of Good",
+        "desc": "Is the One who has the ability to bestow faith and blessings on all creatures, and among them some are grateful and some are not: the former are called Muslims or believers and others are called non-Muslims or non-Muslims. -believers"
+      },
+      "tajik": {
+        "transliteration": "Ал-Барр",
+        "meaning": "Дорои аъмол ва ахлоқи нек",
+        "description": null
+      }
+    },
+    {
+      "name": "التَّوَابُ",
+      "transliteration": "At Tawwaab",
+      "number": 80,
+      "found": "(2:128)(4:64)(49:12)(110:3)",
+      "en": {
+        "meaning": "The Guide to Repentence",
+        "desc": "Is the One who grants forgiveness to those who repent every time they repent"
+      },
+      "tajik": {
+        "transliteration": "Ат-Таввоб",
+        "meaning": "Қабулкунандаи Тавба",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُنْتَقِمُ",
+      "transliteration": "Al Muntaqim",
+      "number": 81,
+      "found": "(32:22)(43:41)(44:16)",
+      "en": {
+        "meaning": "The Avenger",
+        "desc": "Is the avenger"
+      },
+      "tajik": {
+        "transliteration": "Ал-Мунтақим",
+        "meaning": "Интиқомгир / Тавоно бар интиқом",
+        "description": null
+      }
+    },
+    {
+      "name": "العَفُوُّ",
+      "transliteration": "Al Afuww",
+      "number": 82,
+      "found": "(4:99)(4:149)(22:60) ",
+      "en": {
+        "meaning": "The Forgiver",
+        "desc": "Is the One who sets aside and forgives sin and the One who preserves in every seemingly hopeless situation a door to honor, maintenance and blessings or to immediate repentance"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ъафувв",
+        "meaning": "Бисёр Авфкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الرَّؤُوفُ",
+      "transliteration": "Ar Ra’oof",
+      "number": 83,
+      "found": "(3:30)(9:117)(57:9)(59:10)",
+      "en": {
+        "meaning": "The Most Kind",
+        "desc": "Is the One who can offer an immensity of benefits without counterpart and without necessity"
+      },
+      "tajik": {
+        "transliteration": "Ар-Раъуф",
+        "meaning": "Бениҳоят Меҳрубон / Мушфиқ",
+        "description": null
+      }
+    },
+    {
+      "name": "مَالِكُ الْمُلْكِ",
+      "transliteration": "Maalik Ul Mulk",
+      "number": 84,
+      "found": "(3:26)",
+      "en": {
+        "meaning": "The Owner / Soverign of All",
+        "desc": "Is the One who creates and attributes according to a destiny all sovereignty, domination, property and all broad power which are granted to certain creatures in this lower world"
+      },
+      "tajik": {
+        "transliteration": "Моликул-Мулк",
+        "meaning": "Соҳиби тамоми мулк",
+        "description": null
+      }
+    },
+    {
+      "name": "ذُوالْجَلاَلِ وَالإكْرَامِ",
+      "transliteration": "Dhu Al Jalaali Wa Al Ikraam",
+      "number": 85,
+      "found": "(55:27)(55:78)",
+      "en": {
+        "meaning": "Possessor of Majesty and Bounty",
+        "desc": "That is, Allah is the One who is better than any other in reality and all the evidence confirms this and denies the contrary so it is not valid to dispute this point, to deny it or to be hostile against this subject; is the One who fills with blessings those who will have understood this who will know the general holiness, will have success and will be well guided on the Day of Judgment"
+      },
+      "tajik": {
+        "transliteration": "Зул-Ҷалали Ва-л-Икром",
+        "meaning": "Соҳиби Ҷалол ва Карам",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُقْسِطُ",
+      "transliteration": "Al Muqsit",
+      "number": 86,
+      "found": "(7:29)(3:18)",
+      "en": {
+        "meaning": "The Equitable One",
+        "desc": "Is the One who judges according to the greatest justice, the One who is free from all forms of injustice and tyranny, and the One who has absolutely no accountability"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муқсит",
+        "meaning": "Адолатпарвар",
+        "description": null
+      }
+    },
+    {
+      "name": "الْجَامِعُ",
+      "transliteration": "Al Jaami'",
+      "number": 87,
+      "found": "(3:9)",
+      "en": {
+        "meaning": "The Gatherer",
+        "desc": "Is the One who gathers creatures together on a day of which there is no doubt, the Day of Judgment"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҷомиъ",
+        "meaning": "Ҷамъкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْغَنِيُّ",
+      "transliteration": "Al Ghaniyy",
+      "number": 88,
+      "found": "(3:97)(39:7)(47:38)(57:24)",
+      "en": {
+        "meaning": "The Rich One",
+        "desc": "Is the One who has no need of creatures and whose creatures cannot do without al-Ghaniyy [who is the One who makes them exist and keeps them in existence and constantly changes them]"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ғаний",
+        "meaning": "Бе ниёз, Бой, Доро",
+        "description": null
+      }
+    },
+    {
+      "name": "الْمُغْنِي",
+      "transliteration": "Al Mughni",
+      "number": 89,
+      "found": "(9:28)",
+      "en": {
+        "meaning": "The Enricher",
+        "desc": "Is the One who satisfies the needs of creatures and the One who brings them their sustenance"
+      },
+      "tajik": {
+        "transliteration": "Ал-Муғний",
+        "meaning": "Саховатбахш / Ғаникунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "اَلْمَانِعُ",
+      "transliteration": "Al Maani'",
+      "number": 90,
+      "found": "(67:21)",
+      "en": {
+        "meaning": "The Preventer of harm",
+        "desc": "Is the One who intends for each creature his victories, his protections and the One from whom they must always be preserved according to a destiny"
+      },
+      "tajik": {
+        "transliteration": "Ал-Мониъ'",
+        "meaning": "Манъкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الضَّارَّ",
+      "transliteration": "Ad Daaarr",
+      "number": 91,
+      "found": "(6:17)",
+      "en": {
+        "meaning": "The Creator of the harmful",
+        "desc": "Is the One who is almighty to bring inevitably the nuisance which must reach a creature according to a destiny"
+      },
+      "tajik": {
+        "transliteration": "Ад-Зорр",
+        "meaning": "Зараррасонанда, Дорои қудрат бар зарар расондан",
+        "description": null
+      }
+    },
+    {
+      "name": "النَّافِعُ",
+      "transliteration": "An Naafi’",
+      "number": 92,
+      "found": "(30:37)",
+      "en": {
+        "meaning": "The Bestower of Benefits",
+        "desc": "Is the One who is almighty to bring inevitably the profit that a creature must receive according to a destiny"
+      },
+      "tajik": {
+        "transliteration": "Ан-Нофиъ'",
+        "meaning": "Фоидабахш, Нафърасон",
+        "description": null
+      }
+    },
+    {
+      "name": "النُّورُ",
+      "transliteration": "An Noor",
+      "number": 93,
+      "found": "(24:35)",
+      "en": {
+        "meaning": "The Light",
+        "desc": "The Light: Is the One who guides to their goal those who are prey to temptation and puts them in the right direction according to a destiny; Allah is the One who guides believers to the light of faith, creates light and is not a light that is only a creature"
+      },
+      "tajik": {
+        "transliteration": "Ан-Нур",
+        "meaning": "Нур",
+        "description": null
+      }
+    },
+    {
+      "name": "الْهَادِي",
+      "transliteration": "Al Haadi",
+      "number": 94,
+      "found": "(25:31)",
+      "en": {
+        "meaning": "The Guider",
+        "desc": "Is the One who intends for certain creatures the benefit of being well guided and of knowing righteousness"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ҳоди",
+        "meaning": "Роҳнамо, Ҳидояткунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الْبَدِيعُ",
+      "transliteration": "Al Badi'",
+      "number": 95,
+      "found": "(2:117)(6:101)",
+      "en": {
+        "meaning": "The Incomparable Originator",
+        "desc": "Is the One who brings creatures and this world into existence, not from pre-existing matter or in the image of an earlier model, but on the contrary without precursor, model and unprecedented"
+      },
+      "tajik": {
+        "transliteration": "Ал-Бади'",
+        "meaning": "Офаринандаи беназир",
+        "description": null
+      }
+    },
+    {
+      "name": "اَلْبَاقِي",
+      "transliteration": "Al Baaqi",
+      "number": 96,
+      "found": "(55:27)",
+      "en": {
+        "meaning": "The Everlasting One",
+        "desc": "Is the One whose existence free from annihilation and change is imposed on sound reason which cannot claim the contrary"
+      },
+      "tajik": {
+        "transliteration": "Ал-Боқи",
+        "meaning": "Доиман Мавҷуд / Пойдор",
+        "description": null
+      }
+    },
+    {
+      "name": "الْوَارِثُ",
+      "transliteration": "Al Waarith",
+      "number": 97,
+      "found": "(15:23)",
+      "en": {
+        "meaning": "The Inhertior",
+        "desc": "Is the One who exists and does not change as creatures are wiped out"
+      },
+      "tajik": {
+        "transliteration": "Ал-Ворис",
+        "meaning": "Меросгир",
+        "description": null
+      }
+    },
+    {
+      "name": "الرَّشِيدُ",
+      "transliteration": "Ar Rasheed",
+      "number": 98,
+      "found": "(2:256)",
+      "en": {
+        "meaning": "The Most Righteous Guide",
+        "desc": "Is the One who guides creatures to what is in their best interests"
+      },
+      "tajik": {
+        "transliteration": "Ар-Рашид",
+        "meaning": "Ростию Некӣ Писандкунанда",
+        "description": null
+      }
+    },
+    {
+      "name": "الصَّبُورُ",
+      "transliteration": "As Saboor",
+      "number": 99,
+      "found": "(2:153)(3:200)(103:3)",
+      "en": {
+        "meaning": "The Patient One",
+        "desc": "Is the One who delays the punishment of sinners by adjusting the accounts of each until a definite day and gives them their ease and time until a time of which they all do not know the date."
+      },
+      "tajik": {
+        "transliteration": "Ас-Сабур",
+        "meaning": "Сабур, Соҳиби таҳамул ва бардошт",
+        "description": null
+      }
+    }
+  ]
+}
